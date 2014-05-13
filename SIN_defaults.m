@@ -109,7 +109,7 @@ defaults.anl.modcheck.map=zeros(256,1); defaults.anl.modcheck.map(defaults.anl.m
 
 % General %
 % Root directory of HINT stimuli 
-defaults.hint.root='C:\Users\cwbishop\Documents\GitHub\MATLAB\SIN\playback\HINT';
+defaults.hint.root='C:\Users\cwbishop\Documents\GitHub\SIN\playback\HINT';
 defaults.hint.playback_channels=[1 2]; % play sound to channels 1 and 2. 
 defaults.hint.fs=defaults.fs; % inherit default sampling rate. 
 defaults.hint.playback=defaults.playback; % grab the default playback device. 

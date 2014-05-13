@@ -34,11 +34,11 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 %               assumes that all data traces (time series, typically) have
 %               a uniform sampling rate.
 %       'datatype': integer array describing the accepted data types to
-%                   load. Typically, functions invoking AA_loaddata will
+%                   load. Typically, functions invoking SIN_loaddata will
 %                   only support analysis/plotting with specific data
 %                   types. If this is the case, include the integer
 %                   identifier of the data types that the invoking function
-%                   supports. AA_loaddata will throw an error if the data
+%                   supports. SIN_loaddata will throw an error if the data
 %                   type loaded is not supported. 
 %       'chans':    integer array of channels to load. XXX Future
 %                   development may include an option to include channel
@@ -189,7 +189,7 @@ elseif isa(X, 'char')
     X={X};
     
     % Sommersault
-    [X, FS, LABELS, ODAT, DTYPE]=AA_loaddata(X,p); 
+    [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X,p); 
 elseif isa(X, 'cell') 
     % Filenames will be necessarily stored in a cell array.
     
@@ -255,7 +255,7 @@ elseif isa(X, 'cell')
     if ~isempty(FS), p.fs=FS; end 
     dtype=p.datatype;
     p.datatype=[];
-    [X, FS, LABELS]=AA_loaddata(X, p);              
+    [X, FS, LABELS]=SIN_loaddata(X, p);              
     p.datatype=dtype;
     clear dtype; 
 elseif iscntstruct(X)
@@ -286,7 +286,7 @@ elseif iscntstruct(X)
         tx=X(n).data(p.chans, 1:round(p.lddur*FS)); 
         % massage into uniform format
         p.maxts=Inf; % infinite data traces OK
-        tx=AA_loaddata(tx, p); 
+        tx=SIN_loaddata(tx, p); 
         % Reassign
         x(:,:,n)=tx;
     end % for n=1:length(X)
@@ -318,7 +318,7 @@ elseif iserpstruct(X)
             tx=squeeze(X(n).bindata(p.chans(c), :, p.bins)); 
         
             % Sommersault to reset data dimensions if necessary
-            [tx]=AA_loaddata(tx, p); 
+            [tx]=SIN_loaddata(tx, p); 
             
             % Assign to growing data structure
             x(c,:,:,n)=tx; 
@@ -340,16 +340,16 @@ end  % if ...
 
 %% CHECK DATA TYPE
 %   Make sure the data type that is being loaded is supported by the
-%   function invoking AA_loaddata
+%   function invoking SIN_loaddata
 if ~ismember(DTYPE, p.datatype)
     error('Data type not supported by invoking function');
 end % if ~ismember(DTYPE, p.datatype)
 
 % Check sampling rate
-%   Set sampling rate if it's unknown from AA_loaddata but specified by the
+%   Set sampling rate if it's unknown from SIN_loaddata but specified by the
 %   user. 
 %
-%   If FS is unknown by AA_loaddata and the user doesn't supply one, then
+%   If FS is unknown by SIN_loaddata and the user doesn't supply one, then
 %   throw an error. We won't be able to make much sense out of this later
 %   during plotting routines.
 if ~isempty(p.fs) && isempty(FS)
@@ -358,4 +358,4 @@ elseif isempty(p.fs) && isempty(FS)
     error('Sampling rate undefined.'); 
 end % if ~isempty(p.fs) && ... 
 
-end % function AA_loaddata
+end % function SIN_loaddata
