@@ -26,7 +26,7 @@ function [rec]=Hagerman_record(X, Y, varargin)
 %
 %   X:  single or multi channel time series. The number of channels must
 %       match the number of elements in 'playback_channels' below. Supports
-%       wav format or double/single data matrices. (see AA_loaddata for
+%       wav format or double/single data matrices. (see SIN_loaddata for
 %       more information)
 %
 %   Y:  " " (same as X)
@@ -157,10 +157,10 @@ clear p;
 %   (infinite).
 t.datatype=[1 2];
 if isfield(d, 'fsx') && ~isempty(d.fsx), t.fs=d.fsx; end 
-[X, fsx]=AA_loaddata(X, t); 
+[X, fsx]=SIN_loaddata(X, t); 
 
 if isfield(d, 'fsy') && ~isempty(d.fsy), t.fs=d.fsy; end 
-[Y, fsy]=AA_loaddata(Y, t); 
+[Y, fsy]=SIN_loaddata(Y, t); 
 
 % Playback channel check
 %   Confirm that the number of playback channels corresponds to the number

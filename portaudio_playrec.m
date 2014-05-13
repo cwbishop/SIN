@@ -38,7 +38,7 @@ function [Y, FS]=portaudio_playrec(IN, OUT, X, FS, varargin)
 %       channels. Add zeros to channels you do not want sound to play from.
 %
 %       Alternatively, X can be the path to a wav file or other data type
-%       supported by AA_loaddata. 
+%       supported by SIN_loaddata. 
 %
 %   FS: sampling rate for sound playback and recording. (default=44100)
 %
@@ -190,7 +190,7 @@ if ~isempty(X)
     else
         t.fs=[];
     end % if 
-    [X, fs]=AA_loaddata(X, t);     
+    [X, fs]=SIN_loaddata(X, t);     
     
     % Resample output to match overall sample rate
     %   Will only be done if data are loaded from a WAV file and the sampling

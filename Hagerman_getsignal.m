@@ -16,7 +16,7 @@ function [D, FS]=Hagerman_getsignal(X, Y, varargin)
 %
 %   X:  time series 1. This can either be a single/double matrix (time
 %       series) or a string with the path information to a single-channel
-%       wav file. Data are loaded via AA_loaddata; see AA_loaddata for more
+%       wav file. Data are loaded via SIN_loaddata; see SIN_loaddata for more
 %       information and potential for extending support to other file
 %       types.
 %
@@ -73,10 +73,10 @@ end %
 t.maxts=1; 
 t.datatype=[1 2];
 if isfield(p, 'fsx') && ~isempty(p.fsx), t.fs=p.fsx; end 
-[X, fsx]=AA_loaddata(X, t); 
+[X, fsx]=SIN_loaddata(X, t); 
 
 if isfield(p, 'fsy') && ~isempty(p.fsy), t.fs=p.fsy; end 
-[Y, fsy]=AA_loaddata(Y, t); 
+[Y, fsy]=SIN_loaddata(Y, t); 
 
 clear t; 
 

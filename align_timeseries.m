@@ -108,10 +108,10 @@ if ~isfield(p, 'pflag') || isempty(p.pflag), p.pflag=0; end % no plots by defaul
 % For X series, only allow a single time series as a reference. 
 % Y series can have an infinite number of time series. 
 t.maxts=1; t.fs=p.fsx;
-[X, fsx]=AA_loaddata(X, t); 
+[X, fsx]=SIN_loaddata(X, t); 
 clear t;
 t.fs=p.fsy; 
-[Y, fsy]=AA_loaddata(Y, t); 
+[Y, fsy]=SIN_loaddata(Y, t); 
 
 %% CHECK SAMPLING RATES
 if (isfield(p, 'fsx') && isempty(p.fsx)) && ~isempty(fsx)
@@ -222,18 +222,18 @@ if p.pflag>0
     
     % Get Labels for Y series
     %   Used to creat figure titles below. 
-    [~, ~, LABELS]=AA_loaddata(ones(size(Y,2), 10), 'fs', p.fsx);
+    [~, ~, LABELS]=SIN_loaddata(ones(size(Y,2), 10), 'fs', p.fsx);
     
     % Generate a single plot for each realigned signal pair
     for i=1:size(Y_align,2)
         % Plot X data
         T=0:1/p.fsx:(size(X,1)-1)/p.fsx;     
-        T=AA_loaddata(T, 'fs', p.fsx);  % set correct dimensions
+        T=SIN_loaddata(T, 'fs', p.fsx);  % set correct dimensions
         lineplot2d(T, X, 'linewidth', 3, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Aligned Time Series', 'linestyle', '--'); % opens a new figure 
     
         % Plot Y (orig) data
         T=0:1/p.fsx:(size(Y,1)-1)/p.fsx;     
-        T=AA_loaddata(T, 'fs', p.fsx);  % set correct dimensions
+        T=SIN_loaddata(T, 'fs', p.fsx);  % set correct dimensions
                                         % data resample to fsx, so keep
                                         % sampling rate the same.
         lineplot2d(T, Y(:,i), 'linewidth', 3, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Aligned Time Series', 'linestyle', '--', 'startat', 1, 'fignum', gcf); % opens a new figure 

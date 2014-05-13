@@ -288,7 +288,7 @@ FS=d.fs;
 %
 %   1. Support only wav files. 
 %       - Things break if we accept single/double data series with variable
-%       lengths (can't append data types easily using AA_loaddata). So,
+%       lengths (can't append data types easily using SIN_loaddata). So,
 %       just force the user to supply wav files. That should be fine. 
 %
 %   2. Resample data to match the output sample rate. 
@@ -301,7 +301,7 @@ t.datatype=2;
 % Store time series in cell array (stim)
 stim=cell(length(playback_list),1); % preallocate for speed.
 for i=1:length(playback_list)
-    [tstim, fsx]=AA_loaddata(playback_list{i}, t);
+    [tstim, fsx]=SIN_loaddata(playback_list{i}, t);
     stim{i}=resample(tstim, FS, fsx); 
     
     % Playback channel check
@@ -358,7 +358,7 @@ if isequal(d.adaptive_mode, 'realtime') || isequal(d.adaptive_mode, 'byfile')
     % Open second handle for unmodulated sound playback
     if ~isempty(d.unmod_playback)        
         shand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
-        uX = AA_loaddata(d.unmod_playback); 
+        uX = SIN_loaddata(d.unmod_playback); 
     end % if ~isempty(d.unmod_...
     
 end % 
