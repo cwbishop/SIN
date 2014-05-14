@@ -15,12 +15,12 @@ function [rec]=Hagerman_record(X, Y, varargin)
 %   sound playback and recording), then a "signal tag" can be used to aid
 %   with post-hoc realignment. 
 %
-%   The "signal tag" can be anything the user wants, really. To maintain 
+%   The "signal tag" can be anything the user wants, really. To maintain
+%   flexibility, CWB used a switch statement for signal tag selection that
+%   can be easily expanded upon. 
 %
 %   Function also writes the recordings to file, following a specific
-%   naming convention XXX need to figure out how best to handle this while
-%   allowing it to remain flexible XXX. XXX Use values set in SIN_defaults.
-%   Should be flexible *enough* XXX   
+%   naming convention.
 %
 % INPUT:
 %
@@ -62,6 +62,7 @@ function [rec]=Hagerman_record(X, Y, varargin)
 %                       typical. 
 %
 %   'write':    bool, flag to write wav data to file. 
+%
 %   'write_nbits':  bit depth for written wav files (default = 16 bit). 
 %
 %   'pflag':    integer, specifies plotting information.
@@ -109,6 +110,7 @@ function [rec]=Hagerman_record(X, Y, varargin)
 % Development:
 %
 %   1. Find a smarter way to deal with potential clipping problems. 
+%
 %   2. Need to make sure that output of signals when mixed matches whatever
 %   our calibration procedure is. 
 %
@@ -116,31 +118,9 @@ function [rec]=Hagerman_record(X, Y, varargin)
 %   University of Washington
 %   5/14
 
-%% MASSAGE INPUT ARGS
-% Convert inputs to structure
-%   Users may also pass a parameter structure directly, which makes CWB's
-%   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
-
-%% INPUT CHECK AND DEFAULTS
-%   Load defaults from SIN_defaults, then overwrite these by user specific
-%   inputs. 
-defs=SIN_defaults; 
-d=defs.hagerman; 
+%% LOAD INPUT PARAMETERS
+d=varargin2struct(varargin{:}); 
 FS=d.fs; 
-
-% OVERWRITE DEFAULTS
-%   Overwrite defaults if user specifies something different.
-flds=fieldnames(p);
-for i=1:length(flds)
-    d.(flds{i})=p.(flds{i}); 
-end % i=1:length(flds)
 
 % Check mixing_matrix field
 if size(d.mixing_matrix,2)~=2
@@ -184,7 +164,15 @@ end % if size(X,1) ~= size(Y,1)
 %   Get these from SIN_defaults as well. 
 %   Pass to portaudio_GetDevices to get index, then pass this to
 %   portaudio_playrec.m.
-InitializePsychSound; 
+try
+    % Get playback device information 
+    [pstruct]=portaudio_GetDevice(d.playback.device);
+    [rstruct]=portaudio_GetDevice(d.record.device);
+catch
+    InitializePsychSound; 
+    [pstruct]=portaudio_GetDevice(d.playback.device);
+    [rstruct]=portaudio_GetDevice(d.record.device);
+end % 
 
 %% CREATE SIGNAL TAG IF SPECIFIED
 %   Users can provide a function handle to create a signal tag.
@@ -249,13 +237,13 @@ for i=1:size(d.mixing_matrix, 1)
     end % max(max ...
     
     % Create empty playback buffer
-    buf=zeros(size(out,1), defs.playback.device.NrOutputChannels);
+    buf=zeros(size(out,1), pstruct.NrOutputChannels);
     
     % Add mixed signal to appropriate channels
     buf(:, d.playback_channels) = out; 
     
     % Playback and record
-    trec=portaudio_playrec(defs.record.device, defs.playback.device, buf, FS, 'fsx', FS); 
+    trec=portaudio_playrec(rstruct, pstruct, buf, FS, 'fsx', FS); 
     rec{i}=trec; 
 
     %% WRITE DATA TO FILE 
@@ -266,9 +254,9 @@ for i=1:size(d.mixing_matrix, 1)
         fname=[d.filename_root '_' num2str(d.mixing_matrix(i,1)) d.xtag '_' num2str(d.mixing_matrix(i,2)) d.ytag '.wav'];
         
         % Write the file at specified wav depth. 
-        wavwrite(rec{i}, FS, d.write_nbits, fname); 
+%         wavwrite(rec{i}, FS, d.write_nbits, fname); 
+        audiowrite(fname, rec{i}, FS, 'BitsPerSample', d.write_nbits); 
         
     end % if p.write ...
     
 end % for i=1:size(d.mixing_matrix, 1)
-

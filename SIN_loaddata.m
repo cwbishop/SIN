@@ -204,7 +204,7 @@ elseif isa(X, 'cell')
             case {'.wav'}
                 % If this is a WAV file
                 DTYPE=2;
-                [tx, FS]=wavread(X{n});  %#ok<DWVRD>
+                [tx, FS]=audioread(X{n}); 
                 x=[x tx]; % multichannel support                
                
             case {'.mat', '.erp', '.set'}

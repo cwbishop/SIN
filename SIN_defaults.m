@@ -1,4 +1,4 @@
-function defaults=SIN_defaults
+function [defaults]=SIN_defaults
 %% DESCRIPTION:
 %
 %   Function to set and retrun defaults for speech in noise (SIN) testing
@@ -30,6 +30,9 @@ beep off;
 % Default sampling rate
 defaults.fs=44100; 
 
+% SIN root directory
+defaults.root='C:\Users\cwbishop\Documents\GitHub\SIN';
+
 % Default playback device
 %   Use portaudio_GetDevice to get the proper playback device information.
 %       Hardcoded to what CWB needs to test his PC for the time being. 
@@ -50,6 +53,8 @@ defaults.playback.block_dur=0.08; % 80 ms buffer block by default
 %   Defaults for Hagerman_record (used for standard Hagerman style, phase
 %   inverted recordings). 
 defaults.hagerman.fs=defaults.fs;
+defaults.hagerman.playback=defaults.playback; % grab the default playback device
+defaults.hagerman.record=defaults.record; % grab default recording device 
 defaults.hagerman.playback_channels=2;  % play to right channel only
 defaults.hagerman.sigtag_type='10Hzclicktrain'; % see Hagerman_record for other options.
 defaults.hagerman.sigtag_loc='pre'; 
@@ -63,7 +68,7 @@ defaults.hagerman.mixing_matrix=[... % presets adjusted for testing with Alice
 defaults.hagerman.pflag=0; % don't plot anything by default.
 defaults.hagerman.xtag='Sp'; % tag for target speech
 defaults.hagerman.ytag='No'; % tag for noise (babbly or speech shaped noise) 
-defaults.hagerman.filename_root=''; % don't provide a filename root by default, force user to enter this. 
+% defaults.hagerman.filename_root=''; % don't provide a filename root by default, force user to enter this. 
 defaults.hagerman.write_nbits=32; % bit depth for written wav files from hagerman_record
 defaults.hagerman.write=true; % write wav files by default 
 
@@ -109,7 +114,7 @@ defaults.anl.modcheck.map=zeros(256,1); defaults.anl.modcheck.map(defaults.anl.m
 
 % General %
 % Root directory of HINT stimuli 
-defaults.hint.root='C:\Users\cwbishop\Documents\GitHub\SIN\playback\HINT';
+defaults.hint.root=fullfile(defaults.root, 'playback', 'HINT'); 
 defaults.hint.playback_channels=[1 2]; % play sound to channels 1 and 2. 
 defaults.hint.fs=defaults.fs; % inherit default sampling rate. 
 defaults.hint.playback=defaults.playback; % grab the default playback device. 
@@ -162,3 +167,13 @@ defaults.hint.unmod_playbackmode='stopafter'; % Loop the noise
 defaults.hint.unmod_channels=[1 2]; % two channel file
 defaults.hint.unmod_leadtime=1; % 1 second leadtime for noise plyback
 defaults.hint.unmod_lagtime=1; 
+
+%% TEST LIST
+%   The test list is used by top-level functions to list available tests.
+%   This is pretty barebones at the moment, but CWB has vague plans to
+%   extend this to be far more informative. 
+defaults.testlist(1).name = 'HINT (SNR-50)'; % Hearing In Noise Test
+defaults.testlist(2).name = 'ANL'; % acceptable noise level
+defaults.testlist(3).name = 'PPT'; % perceptual performance test 
+defaults.testlist(4).name = 'MLST'; % mutlimodal lexical sentence test
+defaults.testlist(5).name = 'Hagerman'; 

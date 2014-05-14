@@ -41,7 +41,7 @@ end %
 %   matrix or wav file (types 1 and 2; see AA_loaddata for details). 
 t.maxts=1; t.datatype=[1 2];
 if isfield(p, 'fsx') && ~isempty(p.fsx), t.fs=p.fsx; end 
-[X, FS]=AA_loaddata(X, t); 
+[X, FS]=SIN_loaddata(X, t); 
 
 %% PAD TO SOA
 %   Zero pad to requested SOA
@@ -55,4 +55,4 @@ X=X*ones(1, nreps);
 X=reshape(X, numel(X), 1); 
 
 %% DOUBLE CHECK DATA DIMENSION
-X=AA_loaddata(X, t); 
+X=SIN_loaddata(X, t); 
