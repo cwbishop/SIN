@@ -73,33 +73,27 @@ d=varargin2struct(varargin{:});
 %   This should only be run during initialization. 
 %       - Read in sentence information from xlsx file. 
 %       - Very slow step, so keep calls to a minimum. 
-if ~isfield(d, 'sentence') || isempty(d.sentence)
+if ~isfield(d.modcheck, 'sentence') || isempty(d.modcheck.sentence)
     
     % Grab sentence information
-    o=importHINT; 
-    
-    % Get fieldnames
-    flds=fieldnames(o);
-    
-    % Copy this information over into the larger data structure. 
-    for i=1:length(flds)
-        d.(flds{i})=o.(flds{i}); 
-    end % i=1:length(flds)
-    
-    clear o;
+    %   This initial step will update the 'modcheck' field by adding in
+    %   HINT list information from an XLS spreadsheet.
+    d=importHINT(d); 
     
     %% SET INITIALIZATION FLAG
+    %   CWB can't recall why this flag is important at the moment ...
     d.modcheck.initialized=true; 
     
     %% Initialize other fields
     
     % Plotting information for HINT_GUI
+    %   Initialize other fields that are important later. 
     d.modcheck.xdata=[];
     d.modcheck.ydata=[];
     d.modcheck.xlabel='Trial #';
     d.modcheck.ylabel='SNR (dB)'; 
     d.modcheck.ntrials=length(d.playback_list); % number of trials (sets axes later)
-    d.modcheck.score_labels={'Correct', 'Incorrect'}; 
+%     d.modcheck.score_labels={'Correct', 'Incorrect'}; % This is set in SIN_defaults
 
     % Scoring information
     %   Use dynamic field names 
@@ -110,7 +104,6 @@ if ~isfield(d, 'sentence') || isempty(d.sentence)
     % After we initialize, return control to invoking function
     %   This way we don't bring up the scoring GUI until after the first
     %   sentence is complete. 
-%     mod_code=[]; % kick back an empty mod_code since we don't want to track any changes for initialization
     return; 
     
 end % if ~isfield p ...
@@ -123,7 +116,12 @@ fname=d.playback_list{trial};
 fname=fname(end-12:end); 
 
 % Find sentence information by matching the filepath between. 
-o=importHINT('filepath', fname); 
+%   Don't reassign 'd' return, since this will be updated in stupid ways on
+%   account of the additional search parameters. Essentially there will be
+%   an added 'filepath' field that will be very confusing. In comparison,
+%   the 'o' structure should contain just the information we're looking
+%   for. 
+[~, o]=importHINT(d, 'filepath', fname); 
 
 %% DETERMINE SCORING VECTOR
 %   Scoring vector will change depending on the 'scoring_method' parameter.
@@ -139,6 +137,9 @@ w=strsplit(o.sentence{1});
 % Set scores to zero to begin with
 isscored=false(length(w),1); 
 
+% Determine scoring method
+%   Each scoring method has slightly different characteristics. These
+%   options can be expanded to incorporate nearly any scoring scheme. 
 switch d.modcheck.scoring_method
     case {'word_based', 'sentence_based'}
         % All words are scored, but the # of correct is based on the number
