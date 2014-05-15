@@ -1,4 +1,4 @@
-function [status, e]=SIN_register_subject(sid, varargin)
+function [status, m]=SIN_register_subject(sid, varargin)
 %% DESCRIPTION:
 %
 %   Function that will (hopefully) handle subject registration cleanly.
@@ -29,7 +29,7 @@ function [status, e]=SIN_register_subject(sid, varargin)
 %   status: bool, true if all register_tasks were completed successfully.
 %           False if *any* of the register tasks failed.
 %
-%   e:      string, error message. Useful for error feedback in SIN gui. 
+%   m:      string, error message. Useful for error feedback in SIN gui. 
 %
 % Development:
 %
@@ -52,15 +52,15 @@ d=varargin2struct(varargin{:});
 if ~isfield(d, 'register_tasks') || isempty(d.register_tasks), d.register_tasks={'create'}; end
 
 % Initialize error message to nothing
-e=[];
+m=[];
 for t=1:numel(d.register_tasks)
     switch d.register_tasks{t}
         
         case {'create'}
             
             % Sommersault to validate subject ID
-            if ~SIN_register_subject(sid, 'register_tasks', {{'validateID'}})
-                e=errmsg('validateID');
+            if ~SIN_register_subject(sid, 'register_tasks', {{'validateID'}}, 'subjectID_regexp', d.subjectID_regexp)
+                m=msg('validateID');
                 status=false;
                 return;
             end % if ~SIN_register_subject ...
@@ -80,7 +80,7 @@ for t=1:numel(d.register_tasks)
             %% CHECK TO SEE IF SUBJECT DIRECTORY EXISTS
             if exist(fullfile(d.root, 'subject_data', sid), 'dir')
                 status=false;
-                e=errmsg([sid ' exists.']);
+                m=msg([sid ' exists.']);
                 return;
             end % if exist
             
@@ -100,7 +100,7 @@ for t=1:numel(d.register_tasks)
             
             % Create error message if necessary
             if ~status
-                e=errmsg(d.register_tasks{t});
+                m=msg(d.register_tasks{t});
                 return;
             end % if 
             
@@ -115,7 +115,7 @@ for t=1:numel(d.register_tasks)
             % For more information on how to set this up properly, see
             %
             %   http://www.mathworks.com/help/matlab/ref/regexp.html
-            startIndex=regexp(sid, '^[1 2][0-9]{3}$');  
+            startIndex=regexp(sid, d.subjectID_regexp);  % pulled from SIN_defaults.
             
             % If there's one and only one match, then we're golden.
             % Otherwise, something stupid happened.
@@ -127,7 +127,7 @@ for t=1:numel(d.register_tasks)
                 status=false; 
                 
                 % Generate error message 
-                e=errmsg(d.register_tasks{t});
+                m=msg(d.register_tasks{t});
                 
                 return; 
             end % 
@@ -140,7 +140,7 @@ for t=1:numel(d.register_tasks)
     
 end % for t=1:numel(d.register_tasks)
 
-function [msg]=errmsg(str, varargin)
+function [msg]=msg(str, varargin)
 %% DESCRIPTION:
 %
 %   Function to generate generic error message for SIN_register_subject.m.

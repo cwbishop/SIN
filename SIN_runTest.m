@@ -48,7 +48,7 @@ for t=1:length(testID)
             % Get the HINT options
             opts = d.hint;
             
-            % Get file list
+            % Get available playback lists
             list_id= regexpdir(opts.root, '^List[0-9]{2}', false);
             
             % Shuffle list order, grab first list. We'll use this for
