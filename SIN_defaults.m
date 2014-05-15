@@ -10,7 +10,9 @@ function [defaults]=SIN_defaults
 %
 % OUTPUT:
 %
-%   defaults:   structure with lots of default values
+%   defaults:   SIN data structure. The data structure contains all of the
+%               parameters necessary to run SIN from the GUI or
+%               commandline. 
 %                   The details of this are evolving too much to include a
 %                   description at present.
 %
@@ -40,10 +42,10 @@ defaults.root='C:\Users\cwbishop\Documents\GitHub\SIN';
 %       if devices are added or removed. That would be bad and lead to
 %       weird erros. CWB still hasn't found a consistent way to grab the
 %       same device every time. 
-defaults.playback.device=portaudio_GetDevice(8); 
+defaults.playback.device=portaudio_GetDevice(10); 
 
 % Default recording device
-defaults.record.device=portaudio_GetDevice(6); 
+defaults.record.device=portaudio_GetDevice(7); 
 
 % Default buffer duration (used for 'realtime' adaptive_mode in
 % portaudio_adaptiveplay.m
@@ -59,6 +61,7 @@ defaults.playback.block_dur=0.08; % 80 ms buffer block by default
 %   form 0 - 9. These three digits are the subject identifier for the
 %   specific test site. 
 defaults.subjectID_regexp='^[1 2][0-9]{3}$';
+
 %% HAGERMAN RECORDING DEFAULTS
 %   Defaults for Hagerman_record (used for standard Hagerman style, phase
 %   inverted recordings). 
@@ -84,6 +87,7 @@ defaults.hagerman.write=true; % write wav files by default
 
 %% Acceptable Noise Level (ANL) defaults
 % Set sampling rate to the default study sampling rate
+defaults.anl.root=fullfile(defaults.root, 'playback', 'ANL'); % root directory for ANL stimuli
 defaults.anl.fs=defaults.fs;
 defaults.anl.playback=defaults.playback; % grab the default playback device. 
 
@@ -129,6 +133,7 @@ defaults.hint.list_filt='List[0-9]{2}';
 defaults.hint.playback_channels=[1 2]; % play sound to channels 1 and 2. 
 defaults.hint.fs=defaults.fs; % inherit default sampling rate. 
 defaults.hint.playback=defaults.playback; % grab the default playback device. 
+defaults.hint.randomize = true; % randomize files by default. Used in SIN_runTest.m. 
 
 % portaudio_adaptiveplay %
 % Adaptive algorithm 
@@ -174,7 +179,7 @@ defaults.hint.modifier{2}.channels=1;
 
 % HINT Noise
 defaults.hint.unmod_playback={fullfile(defaults.hint.root, 'HINT-Noise.wav')};
-defaults.hint.unmod_playbackmode='stopafter'; % Loop the noise
+defaults.hint.unmod_playbackmode='stopafter'; % unmodulated sounds are stopped after each trial (interupted noise)
 defaults.hint.unmod_channels=[1 2]; % two channel file
 defaults.hint.unmod_leadtime=1; % 1 second leadtime for noise plyback
 defaults.hint.unmod_lagtime=1; 

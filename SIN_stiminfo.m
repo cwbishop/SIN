@@ -1,4 +1,4 @@
-function varargout=SIN_stiminfo(testID, d)
+function [list_dir, wavfiles]=SIN_stiminfo(testID, d, varargin)
 %% DESCRIPTION:
 %
 %   Function to return stimulus lists (directories, filenames) for the
@@ -12,6 +12,15 @@ function varargout=SIN_stiminfo(testID, d)
 %       automatically load. This to protect the user from doing something
 %       stupid. 
 %
+% Parameters:
+%
+%   Fields to overwrite in d. Proved useful when retrieving wav files from
+%   a specific directory from SIN_GUI. See SIN_defaults for a full field
+%   description. Here are some commonly replaced values important to this
+%   particular function
+%
+%       'list_filt':   regular expression, list filter.  
+%
 % OUTPUT:
 %
 %   The output may vary by the test ID since different information might be
@@ -22,16 +31,13 @@ function varargout=SIN_stiminfo(testID, d)
 %
 %       1) Cell array, full directory paths
 %
-%       2) cell array, short hand list names (e.g., 'List01', 'List02',...)
-%
-%       3) Cell array, wav file lists by directory
-%
+%       2) Cell array, wav file lists by directory
 %
 %   Examples:
 %   
 %       % Return HINT (SNR-50) information 
 %       defs=SIN_defaults;
-%       [list_dir, list_name, wavfiles]=SIN_stiminfo('HINT (SNR-50)', defs);
+%       [list_dir, wavfiles]=SIN_stiminfo('HINT (SNR-50)', defs);
 %
 % Development:
 %
@@ -43,6 +49,20 @@ function varargout=SIN_stiminfo(testID, d)
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
+
+%% GET ADDITIONAL PARAMTERS
+%   o is a structure with additional options set by user
+o=varargin2struct(varargin{:}); 
+
+% Overwrite values in d
+flds=fieldnames(o);
+for i=1:length(flds)
+    d.(flds{i})=o.(flds{i});
+end % for i=1:length(flds)
+
+%% INITIALIZE RETURN VARIABLES
+list_dir={};
+wavfiles={}; 
 
 %% GET FILE INFORMATION
 %   File information grabbed for test matching testID
@@ -68,11 +88,13 @@ switch testID
         end % for i=1:length(list_id)
         
         % Assign to return variable
-        varargout{1}=list_dir;
-        varargout{2}=list_name; 
-        varargout{3}=wavfiles; 
-        
+%         varargout{1}=list_dir;
+%         varargout{2}=list_name; 
+%         varargout{3}=wavfiles; 
+    case {'ANL'}
+        warning('ANL SIN_stiminfo not well vetted');                 
+        opts=d.anl;
+        wavfiles=regexpdir(opts.root, '.wav$', false);
     otherwise 
-        error(['No stimulus information available for ' testID]);
-        
+        error(['No stimulus information available for ' testID]);        
 end % switch testID

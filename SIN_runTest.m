@@ -1,4 +1,4 @@
-function SIN_runTest(testID, varargin)
+function SIN_runTest(testID, d, varargin)
 %% DESCRIPTION:
 %
 %   Master control function to run various tests associated with SIN. The
@@ -14,28 +14,56 @@ function SIN_runTest(testID, varargin)
 %               a sequence of tests in a specific order - perhaps a
 %               randomized order). 
 %
+%   d:  SIN structure. See SIN_defaults. SIN_defaults will not be loaded if
+%       d is omitted. 
+%
 % Parameters:
 %
-%   XXX
+%   'play_list':    cell array, stimulus play_list. ALternatively, this can
+%                   be a cell array of directories from which all sounds
+%                   are to be added to the playlist. 
+%
+%   'randomize':    bool, randomize play_list. (true | false ). Must be set
+%                   in SIN_defaults. 
 %
 % OUTPUT:
 %
-%   XXX
+%   None (yet) 
 %
 % Development:
+%
+%   1) Complete ANL test administration.   
+%
+%   2) Make randomization more modular (so we can use for multiple tests,
+%   not just HINT).
 %
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
 
 %% GET ADDITIONAL PARAMTERS
-d=varargin2struct(varargin{:}); 
+%   o is a structure with additional options set by user
+o=varargin2struct(varargin{:}); 
 
-% For now, only allow a single test
+% Input checks
 if numel(testID)~=1, error('Incorrect number of testIDs'); end 
+if ~isfield(o, 'play_list') || isempty(o.play_list), error('No play list specified'); end 
 
-% Randomly seed random number generator
-rng('shuffle', 'twister');
+% Grab variables we need to run our tests 
+play_list=o.play_list;
+
+clear o; % clear o to remove temptation 
+
+%% RANDOMIZE PLAY LIST
+%   Randomize play list if specified by user
+if randomize
+    
+    % Seed random number generator
+    rng('shuffle', 'twister');
+    
+    play_list=play_list{randperm(length(play_list))}; 
+    
+end % if o.randomize
 
 % Loop through all tests (eventually)
 for t=1:length(testID)
@@ -48,21 +76,16 @@ for t=1:length(testID)
             % Get the HINT options
             opts = d.hint;
             
-            % Get available playback lists
-            list_id= regexpdir(opts.root, '^List[0-9]{2}', false);
+            if opts.randomize
+    
+                % Seed random number generator
+                rng('shuffle', 'twister');
+    
+                play_list=play_list{randperm(length(play_list))}; 
+    
+            end % if o.randomize
             
-            % Shuffle list order, grab first list. We'll use this for
-            % playback.
-            mask = randperm(length(list_id)); 
-            list_id = list_id(mask(1));
             
-            % Safety check, although this should never happen. 
-            if numel(list_id) ~= 1
-                error('something went wrong with list selection');
-            end % 
-            
-            % Now, grab all the wav files
-            play_list = regexpdir(list_id{1}, '.wav', false);
             
             % Now, launch HINT (SNR-50)
             portaudio_adaptiveplay(play_list, opts); 

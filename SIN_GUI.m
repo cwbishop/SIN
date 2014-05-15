@@ -19,10 +19,20 @@ function varargout = SIN_GUI(varargin)
 %      instance to run (singleton)".
 %
 %
+% Parameters:
+%
+%   'defaults': structure, a SIN structure. This will allow the user to
+%               incorporate custom settings into the GUI. This, in theory,
+%               should then be inherited seamlessly throughout the funct
+%
 % Development:
 %
-%   1) Refresh list popup in a smarter way. Possibly incorporate it into
-%   refresh_popups. 
+%   1) Add subject and calibration validation to run_test callback. Need to
+%   make sure we have a valid subject ID selected, etc. 
+%
+%   2) Once tests have started, lock subject ID.
+%
+%   3) Once tests have started, lock calibration file. 
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
@@ -61,13 +71,22 @@ function SIN_GUI_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for SIN_GUI
 handles.output = hObject;
 
+%% GET ADDITIONAL PARAMTERS
+%   o is a structure with additional options set by user
+o=varargin2struct(varargin{:}); 
+
 % Load defaults, store them as GUI data (makes it easier for other
 % functions to have access to defaults without having to deal with passing
 % variables or globals)
 %
 % Motivation for this approach from :
 %       http://www.matlabtips.com/handle-the-handles-in-guidata/
-handles.SIN_defaults=SIN_defaults; 
+if isfield(o, 'defaults')
+    handles.SIN_defaults=o.defaults;
+    clear o; 
+else
+    handles.SIN_defaults=SIN_defaults; 
+end % if isfield(o.defaults)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -101,22 +120,10 @@ function test_popup_Callback(hObject, eventdata, handles)
 
 % Get SIN_defaults from handles structure
 %   This field is populated in the opening function.
-d=handles.SIN_defaults;
 
-% Now, get popup menu information
-val=get(handles.test_popup, 'Value'); 
-testID=get(handles.test_popup, 'String');
+% Refresh popup information
+refresh_popups(hObject, eventdata, handles);
 
-% The first option is just for 'Select Test' string. We don't need to do
-% anything for this 
-if val ~= 1
-    [list_dir, list_names, wavfiles]=SIN_stiminfo(testID{val}, d);
-end % if val ~= 1
-    
-% Now, populate List selection if there's list information available
-if ~isempty(list_names)
-    set(handles.list_popup, 'String', list_names)
-end % ~isempty(list_names) ...
 
 % --- Executes during object creation, after setting all properties.
 function test_popup_CreateFcn(hObject, eventdata, handles)
@@ -137,7 +144,41 @@ function run_test_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% See which test is selected in the popup menu
+% Get wavfiles from GUI handle
+wavfiles=handles.wavfiles; 
+
+% Get test selection
+test_val = get(handles.test_popup, 'Value'); 
+testID = get(handles.test_popup, 'String');
+
+% Validate list selection
+if test_val ==1
+    post_feedback(hObject, eventdata, handles, 'Error: Invalid Test', false);
+    return
+else 
+    post_feedback(hObject, eventdata, handles, 'Valid test selected', true);
+end 
+% Get list selection
+list_val = get(handles.list_popup, 'Value'); 
+
+% Launch the appropriate test
+if list_val ~= 1 && length(wavfiles)>1
+    
+    % If there's a list selected, then present those sounds
+    SIN_runTest({testID{test_val}}, handles.SIN_defaults, 'play_list', {wavfiles{list_val-1}});
+    
+elseif list_val == 1 && length(wavfiles)==1
+    
+    % Run the first cell array in wavfiles
+    SIN_runTest({testID{test_val}}, handles.SIN_defaults, 'play_list', {wavfiles{1}});
+    
+else 
+    post_feedback(hObject, eventdata, handles, 'Error: List Selection', false);    
+    return;
+end % if list_val ~= 1
+
+% Post completion status
+post_feedback(hObject, eventdata, handles, [testID{test_val} ' complete'], true);    
 
 % --- Executes on selection change in calibration_popup.
 function calibration_popup_Callback(hObject, eventdata, handles)
@@ -251,6 +292,43 @@ set(handles.calibration_popup, 'String', [{'Select File'} cal_files]);
 d=handles.SIN_defaults; 
 set(handles.test_popup, 'String', [{'Select Test'} {d.testlist.name}]); 
 
+% test list popup
+
+% Now, get popup menu information
+val=get(handles.test_popup, 'Value'); 
+testID=get(handles.test_popup, 'String');
+
+% The first option is just for 'Select Test' string. We don't need to do
+% anything for this 
+if val ~= 1
+    
+    % Wavfiles
+    [list_dir, wavfiles]=SIN_stiminfo(testID{val}, d);
+    
+    % Put wav file information in the handle structure
+    handles.wavfiles=wavfiles;
+    
+    % Put data back in the GUI
+    guidata(hObject, handles);
+    
+else
+    list_dir={}; 
+    wavfiles={};
+end % if val ~= 1
+    
+% Now, populate List selection if there's list information available
+if ~isempty(list_dir)
+    
+    % Make list selection visible
+    set(handles.list_popup, 'Visible', 'on');
+    set(handles.list_popup, 'String', {'Select List' list_dir{:}});
+    set(handles.list_popup, 'Value', 1); % set to the first item ('Select List') 
+    
+else
+    set(handles.list_popup, 'Value', 1); % rest list value to the first position ('Select List')
+    set(handles.list_popup, 'Visible', 'off');
+end % ~isempty(list_names) ...
+
 function subjectid_Callback(hObject, eventdata, handles)
 % hObject    handle to subjectid (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -324,7 +402,6 @@ function list_popup_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns list_popup contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from list_popup
-
 
 % --- Executes during object creation, after setting all properties.
 function list_popup_CreateFcn(hObject, eventdata, handles)
