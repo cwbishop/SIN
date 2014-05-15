@@ -49,6 +49,16 @@ defaults.record.device=portaudio_GetDevice(6);
 % portaudio_adaptiveplay.m
 defaults.playback.block_dur=0.08; % 80 ms buffer block by default
 
+% Default subject ID pattern
+%   SIN_register_subject uses a regular experession (see help regexp) to
+%   verify that a subject ID is in the appropriate format. The entry below
+%   stores the regular expression used by SIN_register_subject.m.
+%
+%   As written, this allows a 1 or 2 as the first digit. This serves as a
+%   site specific ID. This is followed by three additional digits ranging
+%   form 0 - 9. These three digits are the subject identifier for the
+%   specific test site. 
+defaults.subjectID_regexp='^[1 2][0-9]{3}$';
 %% HAGERMAN RECORDING DEFAULTS
 %   Defaults for Hagerman_record (used for standard Hagerman style, phase
 %   inverted recordings). 
@@ -115,6 +125,7 @@ defaults.anl.modcheck.map=zeros(256,1); defaults.anl.modcheck.map(defaults.anl.m
 % General %
 % Root directory of HINT stimuli 
 defaults.hint.root=fullfile(defaults.root, 'playback', 'HINT'); 
+defaults.hint.list_filt='List[0-9]{2}';
 defaults.hint.playback_channels=[1 2]; % play sound to channels 1 and 2. 
 defaults.hint.fs=defaults.fs; % inherit default sampling rate. 
 defaults.hint.playback=defaults.playback; % grab the default playback device. 
@@ -141,7 +152,7 @@ defaults.hint.list.sheetnum=2;
 defaults.hint.modcheck.fhandle=@HINT_modcheck_GUI;
 defaults.hint.modcheck.target=0.50; % proportion of correct responses to target
 defaults.hint.modcheck.scoring_method='sentence_based'; 
-defaults.hint.modcheck.scoring_labels={'Correct' 'Incorrect'}; 
+defaults.hint.modcheck.score_labels={'Correct' 'Incorrect'}; 
 
 % Speech modifier %
 % modifier_dBscale %
