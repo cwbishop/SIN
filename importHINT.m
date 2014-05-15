@@ -1,4 +1,4 @@
-function varargout=importHINT(varargin)
+function [d, o]=importHINT(varargin)
 %% DESCRIPTION:
 %
 %   Function to import HINT information from XLSX file. Can also return
@@ -43,36 +43,16 @@ function varargout=importHINT(varargin)
 %   University of Washington 
 %   5/14
 
-%% MASSAGE INPUT ARGS
-% Convert inputs to structure
-%   Users may also pass a parameter structure directly, which makes CWB's
-%   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GATHER ADDITIONAL PARAMETERS
+d=varargin2struct(varargin{:}); 
 
-%% INPUT CHECK AND DEFAULTS
-defs=SIN_defaults;
-d=defs.hint; 
-
-% OVERWRITE DEFAULTS
-%   Overwrite defaults if user specifies something different.
-flds=fieldnames(p);
-for i=1:length(flds)
-    d.(flds{i})=p.(flds{i}); 
-end % i=1:length(flds)
-
-% Clear p to remove temptation to use it
-clear p; 
+%% EMPTY o STRUCTURE
+o=struct(); 
 
 %% LOAD INFORMATION FROM XLSX FILE
 %   Only load information from the text file if the data are not already
 %   available in the data structure
-if ~isfield(d, 'id') || ~isfield(d, 'filepath') || ~isfield(d, 'sentence') || ~isfield(d, 'scoringunits')
+if ~isfield(d.modcheck, 'id') || ~isfield(d.modcheck, 'filepath') || ~isfield(d.modcheck, 'sentence') || ~isfield(d.modcheck, 'scoringunits')
     
     [~,t,r]=xlsread(d.list.filename, d.list.sheetnum);
     
@@ -85,7 +65,26 @@ if ~isfield(d, 'id') || ~isfield(d, 'filepath') || ~isfield(d, 'sentence') || ~i
     sentence={r{2:end,3}}; % skip header
     scoringunits={r{2:end,4}}; % skip header, not working
     
-end 
+    % Store the full information in the larger data structure passed around
+    % portaudio_adaptiveplay and friends. 
+    %
+    % Below, we copy over the trial-specific information into a temporary
+    % structure, o, that is then used for scoring purposes. 
+    d.modcheck.id=id;
+    d.modcheck.filepath=filepath;
+    d.modcheck.sentence=sentence;
+    d.modcheck.scoringunits=scoringunits;
+
+else
+    
+    % If we've already loaded the table information, then copy over the
+    % relevant fields. 
+    id=d.modcheck.id;
+    filepath=d.modcheck.filepath;
+    sentence=d.modcheck.sentence;
+    scoringunits=d.modcheck.scoringunits; 
+    
+end % if ~isfield ...
 
 % Search by id
 id_mask=false(length(id),1);
@@ -124,7 +123,4 @@ mask=id_mask & filepath_mask & sentence_mask & scoringunits_mask;
 o.id={id{mask}};
 o.filepath={filepath{mask}};
 o.sentence={sentence{mask}};
-o.scoringunits={scoringunits{mask}}; 
-
-% Assign to return variable 
-varargout{1}=o; 
+o.scoringunits={scoringunits{mask}};
