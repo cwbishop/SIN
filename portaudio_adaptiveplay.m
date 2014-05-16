@@ -255,6 +255,11 @@ function d=portaudio_adaptiveplay(X, varargin)
 %   13. Improve d.unmod_leadtime so the relative start times are reasonably
 %   close. 
 %
+%   14. Add option to record playback from a recording device. Write data
+%   to file or data structure (not sure which is more helpful yet). 
+%
+%   15. How do we terminate playback at an arbitrary time?
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
