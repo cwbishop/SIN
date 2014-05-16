@@ -71,38 +71,40 @@ global trial;
 mod_code=0;
 
 %% INPUT ARGS TO STRUCTURE
-d=varargin2struct(varargin{:}); 
+d=varargin2struct(varargin{:});
+
+if ~isfield(d, 'player')
+    d.player=d; 
+end % opts
 
 %% IMPORT SENTENCES FROM FILE
 %   This should only be run during initialization. 
 %       - Read in sentence information from xlsx file. 
 %       - Very slow step, so keep calls to a minimum. 
-if ~isfield(d.modcheck, 'sentence') || isempty(d.modcheck.sentence)
+if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence)
     
     % Grab sentence information
     %   This initial step will update the 'modcheck' field by adding in
     %   HINT list information from an XLS spreadsheet.
     d=importHINT(d); 
     
-    %% SET INITIALIZATION FLAG
-    %   CWB can't recall why this flag is important at the moment ...
-    d.modcheck.initialized=true; 
-    
     %% Initialize other fields
     
     % Plotting information for HINT_GUI
     %   Initialize other fields that are important later. 
-    d.modcheck.xdata=[];
-    d.modcheck.ydata=[];
-    d.modcheck.xlabel='Trial #';
-    d.modcheck.ylabel='SNR (dB)'; 
-    d.modcheck.ntrials=length(d.playback_list); % number of trials (sets axes later)
+%     d.player.modcheck.xdata=[]; % no gain
+%     d.player.modcheck.ydata=[]; % no gain
+    d.specific.xdata=1; % first trial
+    d.specific.ydata=0; % no changes applied
+    d.player.modcheck.xlabel='Trial #';
+    d.player.modcheck.ylabel='SNR (dB)'; 
+    d.player.modcheck.ntrials=length(d.playback_list); % number of trials (sets axes later)
 %     d.modcheck.score_labels={'Correct', 'Incorrect'}; % This is set in SIN_defaults
 
     % Scoring information
     %   Use dynamic field names 
-    for i=1:length(d.modcheck.score_labels)
-        d.modcheck.(d.modcheck.score_labels{i})=0;        
+    for i=1:length(d.player.modcheck.score_labels)
+        d.player.modcheck.(d.player.modcheck.score_labels{i})=0;        
     end % for i=1:length ...
     
     % After we initialize, return control to invoking function
@@ -144,7 +146,7 @@ isscored=false(length(w),1);
 % Determine scoring method
 %   Each scoring method has slightly different characteristics. These
 %   options can be expanded to incorporate nearly any scoring scheme. 
-switch d.modcheck.scoring_method
+switch d.player.modcheck.scoring_method
     case {'word_based', 'sentence_based'}
         % All words are scored, but the # of correct is based on the number
         % of correct words. 
@@ -187,20 +189,28 @@ end % switch/otherwise
 [fhand, score]=HINT_GUI(...
     'title', ['HINT: ' o.id{1} ' (' num2str(numel(isscored(isscored))) ' possible)'], ...
     'words', {w}, ...
-    'xdata', d.modcheck.xdata, ...
-    'ydata', d.modcheck.ydata, ...
-    'xlabel', d.modcheck.xlabel, ...
-    'ylabel', d.modcheck.ylabel, ...
-    'ntrials', d.modcheck.ntrials, ...
-    'score_labels', {d.modcheck.score_labels}, ...
+    'xdata',  d.specific.xdata, ...
+    'ydata',  d.specific.ydata, ...
+    'xlabel', d.player.modcheck.xlabel, ...
+    'ylabel', d.player.modcheck.ylabel, ...
+    'ntrials', d.player.modcheck.ntrials, ...
+    'score_labels', {d.player.modcheck.score_labels}, ...
     'isscored', isscored); 
 
 % Copy figure handle over to d structure.
-d.modcheck.figure=fhand; 
+d.player.modcheck.handles=guidata(fhand); 
+
+% Get all handles
+h=guidata(fhand);
+
+% Assign axis handle back to a more central location (so other functions
+% can plot if necessary).
+d.specific.axes=h.panel_plot; 
+d.specific.figure=h.figure1; 
 
 %% DETERMINE SCORE
 %   This will vary depending on the scoring_method parameter
-switch d.modcheck.scoring_method
+switch d.player.modcheck.scoring_method
     
     case {'keyword_based', 'word_based'}
         
@@ -208,20 +218,20 @@ switch d.modcheck.scoring_method
         % generalizable. 
         %   Use isscored as masker so we only look at words that were
         %   intended to be scored
-        d.modcheck.(d.score_labels{1})=d.modcheck.(d.score_labels{1}) + numel(find(score(isscored)==1));
-        d.modcheck.(d.score_labels{2})=d.modcheck.(d.score_labels{2}) + numel(find(score(isscored)==2));
+        d.player.modcheck.(d.player.score_labels{1})=d.player.modcheck.(d.player.score_labels{1}) + numel(find(score(isscored)==1));
+        d.player.modcheck.(d.player.score_labels{2})=d.player.modcheck.(d.player.score_labels{2}) + numel(find(score(isscored)==2));
         
     case {'sentence_based'}
         
         % Only count as correct if the whole sentence is scored as 100%
         % correct. 
         if score(isscored)==1 % if everything is correct
-            d.modcheck.(d.modcheck.score_labels{1})=d.modcheck.(d.modcheck.score_labels{1})+1;
+            d.player.modcheck.(d.player.modcheck.score_labels{1})=d.player.modcheck.(d.player.modcheck.score_labels{1})+1;
             
             % Make the sound quieter
             mod_code=-1;
         else
-            d.modcheck.(d.modcheck.score_labels{2})=d.modcheck.(d.modcheck.score_labels{2})+1;
+            d.player.modcheck.(d.player.modcheck.score_labels{2})=d.player.modcheck.(d.player.modcheck.score_labels{2})+1;
             
             % Make the sound louder
             mod_code=1;
@@ -238,10 +248,10 @@ end % switch
 %% COPY SCORE INFORMATION OVER TO d STRUCTURE
 
 % Save the raw scores for error checking later
-d.modcheck.score{trial}=score; 
+d.player.modcheck.score{trial}=score; 
 
 %% CLOSE GUI
 %   Only close it down if we're done. 
 if trial==length(d.playback_list)
-    close(d.modcheck.figure);
+    close(d.specific.figure);
 end % 

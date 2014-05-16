@@ -91,7 +91,7 @@ switch testID
         opts.player.modcheck=struct(...
             'fhandle',         @HINT_modcheck_GUI, ...
             'scoring_method',  'sentence_based', ... % score whole sentence (as traditionally done)
-            'scoring_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
+            'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         
         % ============================
         % Modifier configuration        
@@ -103,7 +103,8 @@ switch testID
             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
             'change_step', [1 5], ...   % trial on which to change the step size
             'channels', 2, ...  % apply modification to channel 2
-            'scale_mode',   'cumulative');  % use cumulative scale mode. 
+            'scale_mode',   'cumulative', ...% use cumulative scale mode. 
+            'plot', 1);  % plot results (to HINT_GUI)
             
     otherwise
         

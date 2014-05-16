@@ -1,4 +1,4 @@
-function d=portaudio_adaptiveplay(X, varargin)
+function results=portaudio_adaptiveplay(X, varargin)
 %% DESCRIPTION:
 %
 %   This function is designed to allow adaptive audio playback. The
@@ -260,6 +260,13 @@ function d=portaudio_adaptiveplay(X, varargin)
 %
 %   15. How do we terminate playback at an arbitrary time?
 %
+%   16. Change 'byfile' to 'bytrial'. Change 'realtime' to 'continuous'. 
+%
+%   17. Remove all default settings. We want the user to specify precisely
+%   what he/she wants.
+%
+%   18. change unmod_playbackmode names to something more informative. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -267,27 +274,22 @@ function d=portaudio_adaptiveplay(X, varargin)
 %% GATHER PARAMETERS
 d=varargin2struct(varargin{:}); 
 
-%% FUNCTION SPECIFIC DEFAULTS
-%   - Use a Hanning windowing function by default
-%   - Use 5 ms ramp time
-%   - Do not append files by default 
-%   - Abort if we encounter issues with the sound playback buffer. 
-if ~isfield(d, 'window_fhandle') || isempty(d.window_fhandle), d.window_fhandle=@hann; end
-if ~isfield(d, 'window_dur') || isempty(d.window_dur), d.window_dur=0.005; end 
-if ~isfield(d, 'append_files') || isempty(d.append_files), d.append_files=false; end 
-if ~isfield(d, 'stop_if_error') || isempty(d.stop_if_error), d.stop_if_error=true; end 
+% Assign original input to results structure
+results.UserOptions = d; 
 
-% unmod device defaults
-if ~isfield(d, 'unmod_leadtime') || isempty(d.unmod_leadtime), d.unmod_leadtime=0; end 
-if ~isfield(d, 'unmod_playback'), d.unmod_playback={}; end % no unmod playback file by default
-if ~isfield(d, 'unmod_playbackmode') || isempty(d.unmod_playbackmode), d.unmod_playbackmode=''; end 
-if ~isempty(d.unmod_playback) && (~isfield(d, 'unmod_channels') || isempty(d.unmod_channels)), d.unmod_channels=d.playback_channels; end     
-% Save file names
+% The player is made to work with a "SIN" style structure. If the user has
+% defined inputs just at the commandline, then reassign to make it
+% compatible.
+if ~isfield(d, 'player')
+    d.player = d; 
+end % if
+
+%% ADD PLAYBACK LIST TO d
 playback_list=X; 
-clear X; 
+d.voice_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
 
-% Set sampling rate
-FS=d.fs; 
+% Get sampling rate for playback
+FS = d.player.playback.fs; 
 
 %% LOAD DATA
 %
@@ -312,7 +314,7 @@ for i=1:length(playback_list)
     % Playback channel check
     %   Confirm that the number of playback channels corresponds to the
     %   number of columns in stim{i}
-    if numel(d.playback_channels) ~= size(stim{i},2)
+    if numel(d.player.playback_channels) ~= size(stim{i},2)
         error(['Incorrect number of playback channels specified for file ' playback_list{i}]); 
     end % if numel(p.playback_channels) ...
     
@@ -324,7 +326,7 @@ clear tstim fsx;
 d.playback_list=playback_list;
 
 % Append playback files if flag is set
-if d.append_files
+if d.player.append_files
     
     tstim=[];
     
@@ -343,10 +345,10 @@ end % if d.append_files
 %   overhead. 
 try
     % Get playback device information 
-    [pstruct]=portaudio_GetDevice(d.playback.device);
+    [pstruct]=portaudio_GetDevice(d.player.playback.device);
 catch
     InitializePsychSound; 
-    [pstruct]=portaudio_GetDevice(d.playback.device);
+    [pstruct]=portaudio_GetDevice(d.player.playback.device);
 end % 
 
 % Open the playback device 
@@ -355,15 +357,15 @@ end %
 %
 %   We now use buffered playback for both realtime and byfile
 %   adaptive playback. So, open the handle if either is selected
-if isequal(d.adaptive_mode, 'realtime') || isequal(d.adaptive_mode, 'byfile')
+if isequal(d.player.adaptive_mode, 'realtime') || isequal(d.player.adaptive_mode, 'byfile')
     
     % Open the unmodulated device buffer
     phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
     
     % Open second handle for unmodulated sound playback
-    if ~isempty(d.unmod_playback)        
+    if ~isempty(d.player.unmod_playback)        
         shand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
-        uX = SIN_loaddata(d.unmod_playback); 
+        uX = SIN_loaddata(d.player.unmod_playback); 
     end % if ~isempty(d.unmod_...
     
 end % 
@@ -374,9 +376,9 @@ end %
 %   repeatedly, but these values do not change over stimuli). 
 %
 %   Use buffer information for 'byfile' adaptive mode now as well. 
-if isequal(d.adaptive_mode, 'realtime') || isequal(d.adaptive_mode, 'byfile')
+if isequal(d.player.adaptive_mode, 'realtime') || isequal(d.player.adaptive_mode, 'byfile')
     % Create empty playback buffer
-    buffer_nsamps=round(d.block_dur*FS)*2; % need 2 x the buffer duration
+    buffer_nsamps=round(d.player.playback.block_dur*FS)*2; % need 2 x the buffer duration
 
     % block_nsamps
     %   This prooved useful in the indexing below. CWB opted to use a two block
@@ -408,12 +410,12 @@ global modifier_num;
 %   device initialized).
 
 % Call modcheck
-[mod_code, d]=d.modcheck.fhandle(d);      
+[mod_code, d]=d.player.modcheck.fhandle(d);
 
 % Initialized modifiers
 %   Multiple modifiers possible
-for modifier_num=1:length(d.modifier)
-    [~, d]=d.modifier{modifier_num}.fhandle([], mod_code, d); 
+for modifier_num=1:length(d.player.modifier)
+    [~, d]=d.player.modifier{modifier_num}.fhandle([], mod_code, d); 
 end % for modifier_num
 
 for trial=1:length(stim)
@@ -427,23 +429,37 @@ for trial=1:length(stim)
     %   select the correct playback channels. 
     x=zeros(size(X,1), pstruct.NrOutputChannels);
     
-    x(:, d.playback_channels)=X; % copy data over into playback channels
+    x(:, d.player.playback_channels)=X; % copy data over into playback channels
     X=x; % reassign X
 
     % Clear temporary variable x 
     clear x; 
-                        
+               
+    % By file modcheck and data modification. 
+    %   We check at the beginning of each "trial" and scale the upcoming
+    %   sound appropriately. 
+    if isequal(d.player.adaptive_mode, 'byfile') && trial > 1
+                
+        % Call modcheck     
+%         [mod_code, d]=d.player.modcheck.fhandle(d);
+                
+        for modifier_num=1:length(d.player.modifier)
+            [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d);
+        end % for modifier_num                
+
+    end % isequal(d.player.adaptive_mode, 'byfile')           
+    
     % Switch to determine mode of adaptive playback. 
-    switch lower(d.adaptive_mode)
+    switch lower(d.player.adaptive_mode)
         
-        case {'realtime', 'byfile'} 
+        case {'realtime', 'byfile'}             
             
             % SETUP unmod DEVICE
             %   - Fill the buffer
             %   - Wait for an appropriate lead time (see
             %   'unmod_leadtime'). 
-            if ~isempty(d.unmod_playbackmode)
-                switch d.unmod_playbackmode
+            if ~isempty(d.player.unmod_playbackmode)
+                switch d.player.unmod_playbackmode
                     case {'looped'}
     
                         % If this is looped playback, then start the playback of the
@@ -468,17 +484,17 @@ for trial=1:length(stim)
                 end % switch/otherwise 
         
                 % Crude wait time.                         
-                WaitSecs(d.unmod_leadtime); 
+                WaitSecs(d.player.unmod_leadtime); 
                 
                 % Now wait 
                 
-            end % if ~isempty(d.unmod_playbackmode 
+            end % if ~isempty(d.player.unmod_playbackmode 
     
             %% CREATE WINDOWING FUNCTION (ramp on/off)
             %   This is used for realtime adaptive mode. The windowing function can
             %   be provided by the user, but it must be a function handle accepted
             %   by MATLAB's window function.    
-            win=window(d.window_fhandle, round(d.window_dur*2*FS)); % Create onset/offset ramp
+            win=window(d.player.window_fhandle, round(d.player.window_dur*2*FS)); % Create onset/offset ramp
 
             % Match number of channels
             win=win*ones(1, size(X,2)); 
@@ -510,15 +526,15 @@ for trial=1:length(stim)
                 x=data.*ramp_off;
                 
                 % Modcheck and modifier for realtime playback
-                if isequal(d.adaptive_mode, 'realtime')
+                if isequal(d.player.adaptive_mode, 'realtime')
                     
                     % Check if modification necessary
-                    [mod_code, d]=d.modcheck.fhandle(d); 
+                    [mod_code, d]=d.player.modcheck.fhandle(d); 
                     
                     % Modify main data stream
                     %   Apply all modifiers. 
-                    for modifier_num=1:length(d.modifier)
-                        [X, d]=d.modifier{modifier_num}.fhandle(X, mod_code, d); 
+                    for modifier_num=1:length(d.player.modifier)
+                        [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d); 
                     end % for modifier_num ...
                     
                 end % if isequal ...
@@ -599,10 +615,10 @@ for trial=1:length(stim)
                 end % while
                 
                 % Error checking after each loop
-                if d.stop_if_error && (pstatus.XRuns >0 || pstatus.TimeFailed >0)
+                if d.player.stop_if_error && (pstatus.XRuns >0 || pstatus.TimeFailed >0)
                     PsychPortAudio('Stop', phand); 
                     error('Error during sound playback. Check buffer_dur.'); 
-                end % if d.stop ....
+                end % if d.player.stop ....
                 
                 % Zero out the second buffer block if we happen to end in
                 % the first. 
@@ -621,33 +637,30 @@ for trial=1:length(stim)
             PsychPortAudio('Stop', phand, 1); 
             
             % Stop unmodulated noise
-            if isequal(d.unmod_playbackmode, 'stopafter')
-                WaitSecs(d.unmod_lagtime);
+            if isequal(d.player.unmod_playbackmode, 'stopafter')
+                WaitSecs(d.player.unmod_lagtime);
                 PsychPortAudio('Stop', shand, 0); 
             end % 
             
-            % By file modcheck and data modification. 
-            if isequal(d.adaptive_mode, 'byfile')
+            % Run the modcheck.
+            if isequal(d.player.adaptive_mode, 'byfile')
                 
-                for modifier_num=1:length(d.modifier)
-                    [X, d]=d.modifier{modifier_num}.fhandle(X, mod_code, d);
-                end % for modifier_num                
+                % Call modcheck     
+                [mod_code, d]=d.player.modcheck.fhandle(d);
                 
-                % Call modcheck        
-                [mod_code, d]=d.modcheck.fhandle(d); 
-
-            end % isequal(d.adaptive_mode, 'byfile')           
+            end % if isequal( ...
 
         otherwise
             
-            error(['Unknown adaptive mode (' d.adaptive_mode '). See ''''adaptive_mode''''.']); 
+            error(['Unknown adaptive mode (' d.player.adaptive_mode '). See ''''adaptive_mode''''.']); 
             
-    end % switch d.adaptive_mode
+    end % switch d.player.adaptive_mode
 
 end % for trial=1:length(X)
 
 % Close all open audio devices
 PsychPortAudio('Close')
 
-% Save data structure and other information
-%   XXX Under development XXX
+% Attach (modified) structure to results
+%   This is returned to the user. 
+results.RunTime = d; 

@@ -51,7 +51,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
             -> fhandle: function handle
 			-> playback_list: XXX this one could be a problem XXX XXX Not if we add the playback_list to the results structure and pass that around XXX
 			-> scoring_method: 
-			-> scoring_labels: 
+			-> score_labels: 
 		
 		(Modifier): modifier information: setting will vary example below for modifier_dBscale)
 		-> modifier
@@ -62,7 +62,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
             
 =======================================================================================================
 Results Structure: Player return structure. This contains three basic fields
-	-> User Options (options provided by user, see Options structure above). This field can be used to relaunch the same test with the same settings (although playback order might change). 
+	-> User Options (UserOptions) (options provided by user, see Options structure above). This field can be used to relaunch the same test with the same settings (although playback order might change). 
 	-> RunTime: modified (and appended) options structure. This may contain additional fields not present in User Options. The fields will vary by player type. Example below for portaudio_adaptiveplay. Only additional top-level fields are desribed below.
 		-> playback_list: cell array of playback files
 		-> voice_recording: cell array of recorded responses if the player is configured to record subject responses through the recording device (see Record field above). (should be added at end of playback, I think, to keep structure size down)

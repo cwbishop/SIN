@@ -46,15 +46,22 @@ function [d, o]=importHINT(varargin)
 %% GATHER ADDITIONAL PARAMETERS
 d=varargin2struct(varargin{:}); 
 
+% The player is made to work with a "SIN" style structure. If the user has
+% defined inputs just at the commandline, then reassign to make it
+% compatible.
+if ~isfield(d, 'player')
+    d.player = d; 
+end % if
+
 %% EMPTY o STRUCTURE
 o=struct(); 
 
 %% LOAD INFORMATION FROM XLSX FILE
 %   Only load information from the text file if the data are not already
 %   available in the data structure
-if ~isfield(d.modcheck, 'id') || ~isfield(d.modcheck, 'filepath') || ~isfield(d.modcheck, 'sentence') || ~isfield(d.modcheck, 'scoringunits')
+if ~isfield(d.player.modcheck, 'id') || ~isfield(d.player.modcheck, 'filepath') || ~isfield(d.player.modcheck, 'sentence') || ~isfield(d.player.modcheck, 'scoringunits')
     
-    [~,t,r]=xlsread(d.list.filename, d.list.sheetnum);
+    [~,t,r]=xlsread(d.specific.hint_lookup.filename, d.specific.hint_lookup.sheetnum);
     
     % Clunky massaging necessary to read in scoring units properly 
     r=reshape({r{1:size(t,1),1:size(t,2)}}, size(t,1), size(t,2)); 
@@ -70,19 +77,19 @@ if ~isfield(d.modcheck, 'id') || ~isfield(d.modcheck, 'filepath') || ~isfield(d.
     %
     % Below, we copy over the trial-specific information into a temporary
     % structure, o, that is then used for scoring purposes. 
-    d.modcheck.id=id;
-    d.modcheck.filepath=filepath;
-    d.modcheck.sentence=sentence;
-    d.modcheck.scoringunits=scoringunits;
+    d.player.modcheck.id=id;
+    d.player.modcheck.filepath=filepath;
+    d.player.modcheck.sentence=sentence;
+    d.player.modcheck.scoringunits=scoringunits;
 
 else
     
     % If we've already loaded the table information, then copy over the
     % relevant fields. 
-    id=d.modcheck.id;
-    filepath=d.modcheck.filepath;
-    sentence=d.modcheck.sentence;
-    scoringunits=d.modcheck.scoringunits; 
+    id=d.player.modcheck.id;
+    filepath=d.player.modcheck.filepath;
+    sentence=d.player.modcheck.sentence;
+    scoringunits=d.player.modcheck.scoringunits; 
     
 end % if ~isfield ...
 
