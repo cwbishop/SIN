@@ -50,7 +50,11 @@ function [mod_code, d]=HINT_modcheck_GUI(varargin)
 %
 % Development:
 %
-%   1. Needs much faster initialization.
+%   1. Need to store word information for quick access later. See variable
+%   'w' below. 
+%
+%   2. Reconfigure call to HINT_GUI so HINT_GUI just refreshes the plot.
+%   The modifier should populate the data in the axis. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -241,4 +245,3 @@ d.modcheck.score{trial}=score;
 if trial==length(d.playback_list)
     close(d.modcheck.figure);
 end % 
-

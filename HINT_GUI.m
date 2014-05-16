@@ -43,6 +43,10 @@ function varargout = HINT_GUI(varargin)
 %               false value means it will not be scored (scoring box
 %               invisible). (default = false for all elements)
 %
+% Development:
+%
+%   1) Need to add individual trial tracking data (e.g., id, words, etc.)
+%
 % Christopher W. Bishop (with help of GUIDE)
 %   University of Washington
 %   5/14
@@ -118,6 +122,11 @@ if length(p.score_labels) > max_options, error('Too many scoring labels'); end
 
 % Quick check to make sure we have enough scoring information for all words
 if length(p.isscored) ~= length(p.words), error('Scoring vector does not match number of words'); end 
+
+% Clear the current axes
+%   When test is restarted, it's important to clear the data stored on the
+%   axis from any previous text.
+cla; 
 
 % Create axis labels
 %   Set XLabel, YLabel

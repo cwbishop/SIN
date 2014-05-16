@@ -86,11 +86,7 @@ switch testID
             list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.list_filt):end-1); 
             wavfiles{i}= regexpdir(list_dir{i}, '.wav$', false);
         end % for i=1:length(list_id)
-        
-        % Assign to return variable
-%         varargout{1}=list_dir;
-%         varargout{2}=list_name; 
-%         varargout{3}=wavfiles; 
+
     case {'ANL'}
         warning('ANL SIN_stiminfo not well vetted');                 
         opts=d.anl;

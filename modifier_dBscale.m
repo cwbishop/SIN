@@ -71,6 +71,12 @@ function [Y, d]=modifier_dBscale(X, mod_code, varargin)
 %   worth moving it to the modifier field ... makes more intuitive sense to
 %   have it here. 
 %
+%   4. Need a smarter way to store xdata and ydata. Perhaps provide an
+%   optional axis handle where the data can be written and stored for
+%   plotting purposes. 
+%       - Working with the figure handle will allow us to simplify and
+%       isolate how data are passed between modifier and modcheck. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
