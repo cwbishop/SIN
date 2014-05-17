@@ -27,6 +27,17 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                   faster the adaptive loop is. The longer it is, the less
 %                   likely you are to run into buffering problems. 
 %
+%   'record_mic':   bool, set to record the playback during each trial.
+%                   If set and the adaptive_mode is 'bytrial', be sure that
+%                   the recording device has a very long buffer (greater
+%                   than the total trial + response time + a healthy
+%                   window in case a subject nods off). If adaptive_mode is
+%                   set to 'continuous', then the recording buffer is
+%                   emptied during playback and can be much shorter.
+%
+%   'randomize':    bool, set to shuffle X (the playback list) before
+%                   beginning adaptive play. 
+%
 %   'modcheck': function handle. This class of functions determines whether
 %               or not a modification is necessary. At the time he wrote
 %               this, CWB could imagine circumstances in which the same
@@ -105,7 +116,7 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                       playback stream). The hope here is to include
 %                       various adaptive modes to accomodate these needs.
 %
-%                           'realtime': apply modifications in as close to
+%                           'continuous': apply modifications in as close to
 %                                       real time as possible. This will
 %                                       depend heavily on the size on the
 %                                       'block_dur' parameter above; the
@@ -117,7 +128,7 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                                       problems (like buffer underruns).
 %                                       Choose your poison. 
 %
-%                           'byfile':      apply modifications at the end 
+%                           'bytrial':      apply modifications at the end 
 %                                           of each playback file. (under
 %                                           development). This mode was
 %                                           intended to accomodate the 
@@ -140,7 +151,7 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                       kinds of error checks. (true | false; default=true)
 %
 %                       Note: at time of writing, error checking only
-%                       applies to 'realtime' adaptive playback. 
+%                       applies to 'continuous' adaptive playback. 
 %
 %                       Note: the 'TimeFailed' field does not increment for
 %                       buffer underruns. Jeez. 
@@ -156,9 +167,9 @@ function results=portaudio_adaptiveplay(X, varargin)
 %
 %   'looped_playback':  bool, if set then the playback_list (X) is 
 %
-% Windowing options (for 'realtime' playback only):
+% Windowing options (for 'continuous' playback only):
 %
-%   In 'realtime' mode, data are frequently ramped off or on (that is, fade
+%   In 'continuous' mode, data are frequently ramped off or on (that is, fade
 %   out or fade in) to create seamless transitions. These paramters allow
 %   the user to specify windowing options, including a windowing function
 %   (provided it's supported by matlab's "window" function) and a ramp
@@ -245,9 +256,6 @@ function results=portaudio_adaptiveplay(X, varargin)
 %
 %   4. Add continuously looped playback (priority 1). 
 %
-%   11. Change 'realtime' to 'ongoing'. Although close, 'realtime' is a
-%   misnomer. 
-%
 %   12. Always modify originally provided data. This will prevent, in
 %   extreme cases, digital quantization error that could lead to bizaree
 %   playback situations.
@@ -259,11 +267,6 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   to file or data structure (not sure which is more helpful yet). 
 %
 %   15. How do we terminate playback at an arbitrary time?
-%
-%   16. Change 'byfile' to 'bytrial'. Change 'realtime' to 'continuous'. 
-%
-%   17. Remove all default settings. We want the user to specify precisely
-%   what he/she wants.
 %
 %   18. change unmod_playbackmode names to something more informative. 
 %
@@ -284,9 +287,18 @@ if ~isfield(d, 'player')
     d.player = d; 
 end % if
 
-%% ADD PLAYBACK LIST TO d
+%% RANDOMIZE PLAYBACK LIST
 playback_list=X; 
-d.voice_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
+if d.player.randomize
+    
+    % Seed random number generator
+    rng('shuffle', 'twister');
+    
+    % Shuffle playlist
+    playback_list={playback_list{randperm(length(playback_list))}}; 
+end % if d.player.randomize
+
+d.sandbox.voice_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
 
 % Get sampling rate for playback
 FS = d.player.playback.fs; 
@@ -323,7 +335,7 @@ end % for i=1:length(file_list)
 clear tstim fsx;
 
 % Add file_list to d structure
-d.playback_list=playback_list;
+d.sandbox.playback_list=playback_list;
 
 % Append playback files if flag is set
 if d.player.append_files
@@ -345,19 +357,21 @@ end % if d.append_files
 %   overhead. 
 try
     % Get playback device information 
-    [pstruct]=portaudio_GetDevice(d.player.playback.device);
+    [pstruct]=portaudio_GetDevice(d.player.playback.device);    % playback device structure
+    [rstruct]=portaudio_GetDevice(d.player.record.device);      % recording device structure
 catch
     InitializePsychSound; 
     [pstruct]=portaudio_GetDevice(d.player.playback.device);
+    [rstruct]=portaudio_GetDevice(d.player.record.device); 
 end % 
 
 % Open the playback device 
-%   Only open audio device if 'realtime' selected. Otherwise, device
+%   Only open audio device if 'continuous' selected. Otherwise, device
 %   opening/closing is handled through portaudio_playrec.
 %
-%   We now use buffered playback for both realtime and byfile
+%   We now use buffered playback for both continuous and bytrial
 %   adaptive playback. So, open the handle if either is selected
-if isequal(d.player.adaptive_mode, 'realtime') || isequal(d.player.adaptive_mode, 'byfile')
+if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
     
     % Open the unmodulated device buffer
     phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
@@ -370,13 +384,24 @@ if isequal(d.player.adaptive_mode, 'realtime') || isequal(d.player.adaptive_mode
     
 end % 
 
-%% BUFFER INFORMATION
-%   This information is only used in 'realtime' adaptive playback. Moved
+% Open a recording device if specified, specify as a recording device. 
+if d.player.record_mic
+    
+    % Open recording device
+    rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, FS, rstruct.NrInputChannels); 
+
+    % Allocate Recording Buffer
+    PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
+    
+end % if d.player.record_mic
+
+%% PLAYBACK BUFFER INFORMATION
+%   This information is only used in 'continuous' adaptive playback. Moved
 %   here rather than below to minimize overhead (below this would be called
 %   repeatedly, but these values do not change over stimuli). 
 %
-%   Use buffer information for 'byfile' adaptive mode now as well. 
-if isequal(d.player.adaptive_mode, 'realtime') || isequal(d.player.adaptive_mode, 'byfile')
+%   Use buffer information for 'bytrial' adaptive mode now as well. 
+if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
     % Create empty playback buffer
     buffer_nsamps=round(d.player.playback.block_dur*FS)*2; % need 2 x the buffer duration
 
@@ -420,6 +445,9 @@ end % for modifier_num
 
 for trial=1:length(stim)
     
+    %% EMPTY RECORDING
+    rec=[]; 
+    
     %% SELECT APPROPRIATE STIMULUS
     X=stim{trial}; 
     
@@ -438,7 +466,7 @@ for trial=1:length(stim)
     % By file modcheck and data modification. 
     %   We check at the beginning of each "trial" and scale the upcoming
     %   sound appropriately. 
-    if isequal(d.player.adaptive_mode, 'byfile') && trial > 1
+    if isequal(d.player.adaptive_mode, 'bytrial') && trial > 1
                 
         % Call modcheck     
 %         [mod_code, d]=d.player.modcheck.fhandle(d);
@@ -447,12 +475,28 @@ for trial=1:length(stim)
             [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d);
         end % for modifier_num                
 
-    end % isequal(d.player.adaptive_mode, 'byfile')           
+    end % isequal(d.player.adaptive_mode, 'bytrial')           
     
     % Switch to determine mode of adaptive playback. 
     switch lower(d.player.adaptive_mode)
         
-        case {'realtime', 'byfile'}             
+        case {'continuous', 'bytrial'}             
+            
+            % Start recording device
+            %   Just start during the first trial. This will be emptied
+            %   after every trial. Should not need to restart the recording
+            %   device. 
+            if d.player.record_mic && trial ==1
+                
+                % Last input (1) tells PsychPortAudio to not move forward
+                % until the recording device has started. 
+                PsychPortAudio('Start', rhand, [], [], 1); 
+
+                % rec_start_time is the (approximate) start time of the recording. This is
+                % used to track the total recording time. 
+                rec_start_time=GetSecs;
+                
+            end % if d.player.record_mic
             
             % SETUP unmod DEVICE
             %   - Fill the buffer
@@ -491,7 +535,7 @@ for trial=1:length(stim)
             end % if ~isempty(d.player.unmod_playbackmode 
     
             %% CREATE WINDOWING FUNCTION (ramp on/off)
-            %   This is used for realtime adaptive mode. The windowing function can
+            %   This is used for continuous adaptive mode. The windowing function can
             %   be provided by the user, but it must be a function handle accepted
             %   by MATLAB's window function.    
             win=window(d.player.window_fhandle, round(d.player.window_dur*2*FS)); % Create onset/offset ramp
@@ -504,12 +548,12 @@ for trial=1:length(stim)
             ramp_off=win(ceil(length(win)/2):end,:); ramp_off=[ramp_off; zeros(block_nsamps - size(ramp_off,1), size(ramp_off,2))];    
             
             % nblocks
-            %   Variable only used by 'realtime' plaback
+            %   Variable only used by 'continuous' plaback
             nblocks=ceil(size(X,1)./size(ramp_on,1)); 
             
             % Loop through each section of the playback loop. 
             for i=1:nblocks
-%                 tic
+
                 % Which buffer block are we filling?
                 %   Find start and end of the block
                 startofblock=block_start(1+mod(i-1,2));
@@ -525,8 +569,8 @@ for trial=1:length(stim)
                 % Save upcoming data
                 x=data.*ramp_off;
                 
-                % Modcheck and modifier for realtime playback
-                if isequal(d.player.adaptive_mode, 'realtime')
+                % Modcheck and modifier for continuous playback
+                if isequal(d.player.adaptive_mode, 'continuous')
                     
                     % Check if modification necessary
                     [mod_code, d]=d.player.modcheck.fhandle(d); 
@@ -561,9 +605,10 @@ for trial=1:length(stim)
                 % Basic clipping check
                 %   Kill any audio devices when this happens, then throw an
                 %   error. 
-                if max(max(abs(data))) > 1, 
+                if max(max(abs(data))) > 1 && d.player.stop_if_error, 
                     PsychPortAudio('Close'); 
-                    error('Signal clipped!'); 
+                    warning('Signal clipped!'); 
+                    return % return what was complete. At some point, maybe CWB will write a way to continue an incomplete test. 
                 end % if max(max(abs(data))) > 1
                     
                 % First time through, we need to start playback
@@ -577,7 +622,7 @@ for trial=1:length(stim)
                     % Fill buffer with zeros
                     PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps,size(data,2))');                     
                     
-                    % Add one extra repetition to for a clean transition.
+                    % Add one extra repetition for a clean transition.
                     % Note that below we wait for the second buffer block
                     % before we fill the first, so we end up losing a
                     % single playthrough the buffer. This could be handled
@@ -603,8 +648,6 @@ for trial=1:length(stim)
                 %   encountered 0 buffer underrun errors.                 
                 PsychPortAudio('FillBuffer', phand, data', 1, []);  
                                 
-%                 toc
-
                 pstatus=PsychPortAudio('GetStatus', phand);
                 
                 % Now, loop until we're half way through the samples in 
@@ -630,6 +673,23 @@ for trial=1:length(stim)
                     PsychPortAudio('FillBuffer', phand, data', 1, []);  
                 end % if i==nblocks
                 
+                % Empty recording buffer frequently
+                if d.player.record_mic
+                    
+                    % Check to make sure we are checking our buffer faster
+                    % enough
+                    if GetSecs - rec_start_time > d.player.record.buffer_dur
+                        error('Recording buffer too short'); 
+                    end 
+                    
+                    % Empty recording buffer, if necessary. 
+                    rec=[rec; PsychPortAudio('GetAudioData', rhand)']; 
+                    
+                    % Reset recording time
+                    rec_start_time=GetSecs; 
+                    
+                end % d.player.record_mic
+                
             end % for i=1:nblocks
             
             % Schedule stop of playback device.
@@ -643,13 +703,26 @@ for trial=1:length(stim)
             end % 
             
             % Run the modcheck.
-            if isequal(d.player.adaptive_mode, 'byfile')
+            if isequal(d.player.adaptive_mode, 'bytrial')
                 
                 % Call modcheck     
                 [mod_code, d]=d.player.modcheck.fhandle(d);
                 
+                % Check to make sure we are checking our buffer faster
+                % enough
+                if GetSecs - rec_start_time > d.player.record.buffer_dur
+                    error('Recording buffer too short'); 
+                end % if GetSecs ...
+                
+                % Empty recording buffer, if necessary. 
+                rec=[rec; PsychPortAudio('GetAudioData', rhand)'];  
+                
             end % if isequal( ...
 
+            % Save recording to sandbox
+            d.sandbox.voice_recording{trial} = rec; 
+            clear rec; % just to be safe, clear the variable
+            
         otherwise
             
             error(['Unknown adaptive mode (' d.player.adaptive_mode '). See ''''adaptive_mode''''.']); 
