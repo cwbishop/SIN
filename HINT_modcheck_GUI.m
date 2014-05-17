@@ -92,13 +92,11 @@ if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence
     
     % Plotting information for HINT_GUI
     %   Initialize other fields that are important later. 
-%     d.player.modcheck.xdata=[]; % no gain
-%     d.player.modcheck.ydata=[]; % no gain
-    d.specific.xdata=1; % first trial
-    d.specific.ydata=0; % no changes applied
+    d.sandbox.xdata=1; % first trial
+    d.sandbox.ydata=0; % no changes applied
     d.player.modcheck.xlabel='Trial #';
     d.player.modcheck.ylabel='SNR (dB)'; 
-    d.player.modcheck.ntrials=length(d.playback_list); % number of trials (sets axes later)
+    d.player.modcheck.ntrials=length(d.sandbox.playback_list); % number of trials (sets axes later)
 %     d.modcheck.score_labels={'Correct', 'Incorrect'}; % This is set in SIN_defaults
 
     % Scoring information
@@ -116,7 +114,7 @@ end % if ~isfield p ...
 
 % FIND SENTENCE FOR SCORING
 %   finds information for the sentence to be sored.
-fname=d.playback_list{trial}; 
+fname=d.sandbox.playback_list{trial}; 
 
 % Stupid way to handle this, but a decent place to start.
 fname=fname(end-12:end); 
@@ -189,8 +187,8 @@ end % switch/otherwise
 [fhand, score]=HINT_GUI(...
     'title', ['HINT: ' o.id{1} ' (' num2str(numel(isscored(isscored))) ' possible)'], ...
     'words', {w}, ...
-    'xdata',  d.specific.xdata, ...
-    'ydata',  d.specific.ydata, ...
+    'xdata',  d.sandbox.xdata, ...
+    'ydata',  d.sandbox.ydata, ...
     'xlabel', d.player.modcheck.xlabel, ...
     'ylabel', d.player.modcheck.ylabel, ...
     'ntrials', d.player.modcheck.ntrials, ...
@@ -205,8 +203,8 @@ h=guidata(fhand);
 
 % Assign axis handle back to a more central location (so other functions
 % can plot if necessary).
-d.specific.axes=h.panel_plot; 
-d.specific.figure=h.figure1; 
+d.sandbox.axes=h.panel_plot; 
+d.sandbox.figure=h.figure1; 
 
 %% DETERMINE SCORE
 %   This will vary depending on the scoring_method parameter
@@ -252,6 +250,6 @@ d.player.modcheck.score{trial}=score;
 
 %% CLOSE GUI
 %   Only close it down if we're done. 
-if trial==length(d.playback_list)
-    close(d.specific.figure);
+if trial==length(d.sandbox.playback_list)
+    close(d.sandbox.figure);
 end % 
