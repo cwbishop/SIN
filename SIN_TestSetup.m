@@ -5,7 +5,19 @@ opts=struct();
 
 switch testID
     
+    case 'empty'
+        
+        % Create an empty SIN testing structure
+        opts = struct( ...
+            'general', struct(), ... % general information
+            'specific', struct(), ... % test specific parameters (used by auxiliary functions like modchecks/modifiers/GUIs
+            'player', struct(), ... % player configuration structure (e.g., for portaudio_adaptiveplay)
+            'sandbox', struct());  % scratch pad for passing saved variables between different functions (e.g., data to plot, figure handles, etc.)
+        
     case 'Project AD'
+        
+        % Get an empty structure
+        opts=SIN_TestSetup('empty'); 
         
         % Set some default values, like device settings, that will be used
         % by multiple tests. 
@@ -30,8 +42,8 @@ switch testID
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(6), ... % device structure
-            'buffer_dur', 30, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
+            'device', portaudio_GetDevice(1), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording.
+            'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
@@ -74,11 +86,13 @@ switch testID
         
         opts.player = varargin2struct( ...
             opts.player, ...
-            'adaptive_mode',    'byfile', ... % 'byfile' means modchecks performed after each trial.
+            'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        true, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
-            'playback_channels',[1 2], ... % channels to present sounds to. 
-            'window_fhandle',   @hann, ...
-            'window_dur',       0.005, ... % window duration in seconds.
+            'playback_channels',[1 2], ...  % channels to present sounds to. 
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
             'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
             'unmod_channels',   [1 2], ...
             'unmod_leadtime',   1, ... % start unmodulated sound 1 sec before sentence onset

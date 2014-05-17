@@ -144,7 +144,7 @@ channels=d.player.modifier{modifier_num}.channels;
 Y=X;
 
 %% UPDATE MODIFIER HISTORY
-d.specific.xdata=1:length(d.specific.xdata)+1; 
+d.sandbox.xdata=1:length(d.sandbox.xdata)+1; 
 
 % Applies a cumulative change
 %   So changes will be remembered and applied over different stimuli. 
@@ -160,7 +160,7 @@ switch d.player.modifier{modifier_num}.scale_mode
         sc=db2amp(sum(d.player.modifier{modifier_num}.history));
         
         % For plotting purposes
-        d.specific.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
+        d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
         
     case {'immediate'}
         
@@ -168,7 +168,7 @@ switch d.player.modifier{modifier_num}.scale_mode
         sc=db2amp(d.player.modifier{modifier_num}.history(end));
         
         % For plotting
-        d.specific.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
+        d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
         
     otherwise
         error('Unknown scale_mode');

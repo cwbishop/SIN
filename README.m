@@ -60,6 +60,8 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 			-> channels: 
 			-> scale_mode: 
             
+    -> Sandbox: a dirty area where variables can be stored if necessary and accessed by different functions (e.g., figure or axis information for plotting, etc).
+    
 =======================================================================================================
 Results Structure: Player return structure. This contains three basic fields
 	-> User Options (UserOptions) (options provided by user, see Options structure above). This field can be used to relaunch the same test with the same settings (although playback order might change). 
