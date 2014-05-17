@@ -280,7 +280,9 @@ if exist('phand', 'var') && ~isempty(phand)
 else
     % If user does not want sound to playback, then set active to 0. This
     % is used in the control loop below (see while loop). 
-    pstatus.Active=false;         
+    playback_start_time=GetSecs; % fill in a dummy value for now
+    pstatus.Active=false;      
+    pstatus.PredictedLatency=0;     % used in while loop check below. 
 end % exist('phand ...
 
 %% START BUTTON QUEUE
