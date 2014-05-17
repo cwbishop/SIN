@@ -92,8 +92,8 @@ if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence
     
     % Plotting information for HINT_GUI
     %   Initialize other fields that are important later. 
-    d.sandbox.xdata=1; % first trial
-    d.sandbox.ydata=0; % no changes applied
+%     d.sandbox.xdata=1; % first trial
+%     d.sandbox.ydata=0; % no changes applied
     d.player.modcheck.xlabel='Trial #';
     d.player.modcheck.ylabel='SNR (dB)'; 
     d.player.modcheck.ntrials=length(d.sandbox.playback_list); % number of trials (sets axes later)

@@ -113,12 +113,15 @@ if ~isfield(d.player.modifier{modifier_num}, 'initialized') || isempty(d.player.
 %   - No modifications necessary, just return the data structures and
 %   original time series.
 if ~d.player.modifier{modifier_num}.initialized
+    
+    % Set the initialization flag
     d.player.modifier{modifier_num}.initialized=true;
     
     % Initialize plot data
-    d.player.modifier{modifier_num}.xdata=trial;
-    d.player.modifier{modifier_num}.ydata=0;
+    d.sandbox.xdata=[];
+    d.sandbox.ydata=[]; 
 
+    % To be safe, assign input to output. 
     Y=X; 
     return
 end % if ~d.player.modifier{modifier_num}.initialized
@@ -127,6 +130,7 @@ end % if ~d.player.modifier{modifier_num}.initialized
 dBstep=d.player.modifier{modifier_num}.dBstep(find(d.player.modifier{modifier_num}.change_step <= trial, 1, 'last'));
 
 %% WHAT TO DO?
+%   What do we do if no mod_code is provided?
 if ~isempty(mod_code)
     switch mod_code
         case {0, 1, -1}
@@ -144,8 +148,6 @@ channels=d.player.modifier{modifier_num}.channels;
 Y=X;
 
 %% UPDATE MODIFIER HISTORY
-d.sandbox.xdata=1:length(d.sandbox.xdata)+1; 
-
 % Applies a cumulative change
 %   So changes will be remembered and applied over different stimuli. 
 
@@ -160,7 +162,8 @@ switch d.player.modifier{modifier_num}.scale_mode
         sc=db2amp(sum(d.player.modifier{modifier_num}.history));
         
         % For plotting purposes
-        d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
+        y=sum(d.player.modifier{modifier_num}.history); 
+%         d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
         
     case {'immediate'}
         
@@ -168,7 +171,8 @@ switch d.player.modifier{modifier_num}.scale_mode
         sc=db2amp(d.player.modifier{modifier_num}.history(end));
         
         % For plotting
-        d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
+        y=d.player.modifier{modifier_num}.history(end);
+%         d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
         
     otherwise
         error('Unknown scale_mode');
@@ -176,3 +180,8 @@ end % switch
 
 % Scale y-data
 Y(:, channels)=Y(:, channels).*sc; 
+
+% update plotting information in Sandbox
+%   This information is sometimes useful for plotting purposes. 
+d.sandbox.xdata=1:length(d.sandbox.xdata)+1;
+d.sandbox.ydata(end+1)=y; 

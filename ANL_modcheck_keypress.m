@@ -6,6 +6,8 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %   desired keypress is made, the function returns a modification code
 %   (mod_code) that is subsequently passed on the listed 'modifier'.
 %
+%   Intended for use with ANL. 
+%
 % INPUT:
 %
 %   c:  structure, containing ... things ...
@@ -14,37 +16,34 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %
 %   XXX
 %
+%
+% Development:
+%
+%   1. Having trouble with recognizing button presses since keyboard queue
+%   is not released. 
+%       - Should release the keyboard after the test session is over
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
 
-%% MASSAGE INPUT ARGS
-% Convert inputs to structure
-%   Users may also pass a parameter structure directly, which makes CWB's
-%   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GATHER PARAMETERS
+d=varargin2struct(varargin{:}); 
 
-%% DETERMINE PARAMETERS
-%   If an input structure is provided, then we don't need to run
-%   SIN_defaults.
-%
-%   If an input strucutre is not provided, then we need to run SIN_defaults
-%   to figure out which way is up. 
-try p.modcheck.keys;
-    d=p; 
-    clear p;
-catch
-    defs=SIN_defaults;
-    d=defs.anl;
-end % 
+% The player is made to work with a "SIN" style structure. If the user has
+% defined inputs just at the commandline, then reassign to make it
+% compatible.
+if ~isfield(d, 'player')
+    d.player = d; 
+end % if
+
+% Initialize modcheck
+mod_code=[]; 
 
 % Keyboard check
+%   Replace the try catch here with an "initialization" check, similar to
+%   that used by HINT_modcheck_GUI.m 
+warning('Need some love here'); 
 try
     
     % First, try to check the queue.
@@ -57,7 +56,7 @@ try
 catch 
     
     % If the queue has not been created or started, do so.
-    KbQueueCreate([], d.modcheck.map); 
+    KbQueueCreate([], d.player.modcheck.map); 
     
     % Now, start the queue to monitor for button presses
     KbQueueStart; 
@@ -79,7 +78,6 @@ lastPress=KbName(KbName(lastPress));
 if ~pressed
     % If no keys were pressed, toss back a mod_code of 0. No modificaiton
     % necessary. 
-    needmod=false; 
     mod_code=0;
   
 elseif numel(firstPress)>1 || firstPress ~= lastPress
@@ -87,19 +85,16 @@ elseif numel(firstPress)>1 || firstPress ~= lastPress
     % If the user presses multiple buttons, don't do anything
     %   Note: CWB might want to change this action in the future. 
     warning('Multiple buttons pressed. No action taken.');
-    needmod=false; 
     mod_code=0;
     
-elseif firstPress == d.modcheck.keys(1)
+elseif firstPress == d.player.modcheck.keys(1)
     
     % If the 'increase' button was pressed
-    needmod=true;
     mod_code=1; 
     
-elseif firstPress == d.modcheck.keys(2)
+elseif firstPress == d.player.modcheck.keys(2)
     
     % If the 'decrease' button was pressed, send a different code (-1). 
-    needmod=true;
     mod_code=-1;     
     
 end % if 

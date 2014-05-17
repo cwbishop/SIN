@@ -270,6 +270,10 @@ function results=portaudio_adaptiveplay(X, varargin)
 %
 %   18. change unmod_playbackmode names to something more informative. 
 %
+%   19. Need additional precautions when monitoring keypresses in
+%   'continuous' mode. If the user starts pressing keys before sounds play,
+%   we won't have any record of those button presses (at present). 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -466,10 +470,10 @@ for trial=1:length(stim)
     % By file modcheck and data modification. 
     %   We check at the beginning of each "trial" and scale the upcoming
     %   sound appropriately. 
-    if isequal(d.player.adaptive_mode, 'bytrial') && trial > 1
+    if isequal(d.player.adaptive_mode, 'bytrial')
                 
         % Call modcheck     
-%         [mod_code, d]=d.player.modcheck.fhandle(d);
+        %   Call modcheck at end of trial to keep referencing sensible. 
                 
         for modifier_num=1:length(d.player.modifier)
             [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d);
