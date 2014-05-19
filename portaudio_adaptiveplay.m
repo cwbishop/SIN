@@ -419,19 +419,17 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
     block_start=[1 block_nsamps+1];
     
     % Refill at at the 1/4 of the way through a buffer block
-    refillat=block_nsamps/4; 
+    refillat=block_nsamps/4;     
     
 end % if isequal
 
-% Create global trial variable. This information is often needed for
-% modification check and modifier functions. So, just make it available
-% globally and let them tap it if necessary. 
-global trial;
-
-% Create a global variable for tracking which modifier we are assessing.
-% This may be needed by modification functions to store data in the correct
-% fields. 
-global modifier_num;
+% Create additional fields in 'sandbox'
+%   Dummy values assigned as placeholders for intialization purposes. 
+d.sandbox.trial=-1; % trial number
+d.sandbox.nblock=-1; % nblock, the block number within the trial 
+d.sandbox.block_num=-1; % block number we are in. 
+d.sandbox.modifier_num=[];
+d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single modcheck/trial (for now)
 
 %% INITIALIZE MODCHECK and MODIFIER
 %   These functions often have substantial overhead on their first call, so
@@ -444,16 +442,26 @@ global modifier_num;
 % Initialized modifiers
 %   Multiple modifiers possible
 for modifier_num=1:length(d.player.modifier)
-    [~, d]=d.player.modifier{modifier_num}.fhandle([], mod_code, d); 
+    
+    % Update variable in sandbox
+    d.sandbox.modifier_num=modifier_num;
+    
+    % Initialize modifier
+    [~, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle([], mod_code, d); 
+    
 end % for modifier_num
 
 for trial=1:length(stim)
+    
+    %% UPDATE TRIAL IN SANDBOX
+    %   d.sandbox.trial is used by other functions
+    d.sandbox.trial = trial; 
     
     %% EMPTY RECORDING
     rec=[]; 
     
     %% SELECT APPROPRIATE STIMULUS
-    X=stim{trial}; 
+    X=stim{trial};     
     
     %% FILL X TO MATCH NUMBER OF CHANNELS
     %   Create a matrix of zeros, then copy X over into the appropriate
@@ -474,9 +482,14 @@ for trial=1:length(stim)
                 
         % Call modcheck     
         %   Call modcheck at end of trial to keep referencing sensible. 
-                
         for modifier_num=1:length(d.player.modifier)
-            [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d);
+    
+            % Update variable in sandbox
+            d.sandbox.modifier_num=modifier_num;
+    
+            % Initialize modifier
+            [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+    
         end % for modifier_num                
 
     end % isequal(d.player.adaptive_mode, 'bytrial')           
@@ -555,19 +568,28 @@ for trial=1:length(stim)
             %   Variable only used by 'continuous' plaback
             nblocks=ceil(size(X,1)./size(ramp_on,1)); 
             
+            % Store nblocks in sandbox. This is needed by some modcheck
+            % functions for termination purposes (e.g.,
+            % ANL_modcheck_keypress)
+            d.sandbox.nblocks=nblocks; 
+            
             % Loop through each section of the playback loop. 
-            for i=1:nblocks
-
+            for block_num=1:nblocks
+                
+                % Store block number in sandbox - necessary for some
+                % termination procedures
+                d.sandbox.block_num = block_num; 
+                
                 % Which buffer block are we filling?
                 %   Find start and end of the block
-                startofblock=block_start(1+mod(i-1,2));
+                startofblock=block_start(1+mod(block_num-1,2));
     
                 % Find data we want to load 
-                if i==nblocks
+                if block_num==nblocks
                     % Load with the remainder of X, then pad zeros.         
-                    data=[X(1+block_nsamps*(i-1):end, :); zeros(block_nsamps - size(X(1+block_nsamps*(i-1):end, :),1), size(X,2))];
+                    data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(Y,2))];
                 else
-                    data=X(1+block_nsamps*(i-1):(block_nsamps)*i,:);
+                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num,:);
                 end 
                 
                 % Save upcoming data
@@ -582,17 +604,23 @@ for trial=1:length(stim)
                     % Modify main data stream
                     %   Apply all modifiers. 
                     for modifier_num=1:length(d.player.modifier)
-                        [X, d]=d.player.modifier{modifier_num}.fhandle(X, mod_code, d); 
-                    end % for modifier_num ...
-                    
+    
+                        % Update variable in sandbox
+                        d.sandbox.modifier_num=modifier_num;
+    
+                        % Call modifier
+                        [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+    
+                    end % for modifier_num
+                                        
                 end % if isequal ...
         
                 % Grab data from modified signal
-                if i==nblocks
+                if block_num==nblocks
                     % Load with the remainder of X, then pad zeros.         
-                    data=[X(1+block_nsamps*(i-1):end, :); zeros(block_nsamps - size(X(1+block_nsamps*(i-1):end, :),1), size(X,2))];
+                    data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(X,2))];
                 else
-                    data=X(1+block_nsamps*(i-1):(block_nsamps)*i,:);
+                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num,:);
                 end % if 
         
                 % Ramp new stream up, mix with old stream. 
@@ -600,11 +628,11 @@ for trial=1:length(stim)
                 %   - We don't want to ramp the first block in, since the
                 %   ramp is only intended to fade on block into the next in
                 %   a clean way. 
-                if i==1
+                if block_num==1
                     data=data + x;
                 else
                     data=data.*ramp_on + x; 
-                end % if i==1
+                end % if block_num==1
     
                 % Basic clipping check
                 %   Kill any audio devices when this happens, then throw an
@@ -618,7 +646,7 @@ for trial=1:length(stim)
                 % First time through, we need to start playback
                 %   This has to be done ahead of time since this defines
                 %   the buffer size for the audio device. 
-                if i==1
+                if block_num==1
                    
                     % Start audio playback, but do not advance until the device has really
                     % started. Should help compensate for intialization time. 
@@ -642,7 +670,7 @@ for trial=1:length(stim)
                         pstatus=PsychPortAudio('GetStatus', phand); 
                     end % while
                     
-                end % if i==1               
+                end % if block_num==1               
     
                 % Load data into playback buffer
                 %   CWB tried specifying the start location (last parameter), but he
@@ -657,7 +685,7 @@ for trial=1:length(stim)
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ... 
-                        && i<nblocks % additional check here, we don't need to be as careful for the last block
+                        && block_num<nblocks % additional check here, we don't need to be as careful for the last block
                     pstatus=PsychPortAudio('GetStatus', phand); 
                 end % while
                 
@@ -672,10 +700,10 @@ for trial=1:length(stim)
                 %   If this is not done, whatever was left in the second
                 %   buffer block is played back again, which creates an
                 %   artifact. 
-                if i==nblocks && startofblock==block_start(1)
+                if block_num==nblocks && startofblock==block_start(1)
                     data=zeros(block_nsamps, size(X,2)); 
                     PsychPortAudio('FillBuffer', phand, data', 1, []);  
-                end % if i==nblocks
+                end % if block_num==nblocks
                 
                 % Empty recording buffer frequently
                 if d.player.record_mic
@@ -694,7 +722,7 @@ for trial=1:length(stim)
                     
                 end % d.player.record_mic
                 
-            end % for i=1:nblocks
+            end % for block_num=1:nblocks
             
             % Schedule stop of playback device.
             %   Should wait for scheduled sound to complete playback. 

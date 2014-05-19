@@ -38,21 +38,6 @@ function [Y, d]=modifier_dBscale(X, mod_code, varargin)
 %                   d.playback_channels (specified in SIN_defaults or call
 %                   to portaudio_adaptiveplay). 
 %
-%   'scale_mode':   string specifying the scale mode. The scale mode
-%                   determines if files are scaled by the sum of all
-%                   previous scaling decisions (typically the case with the
-%                   HINT or other 'byfile' adaptive_mode deliveries), or
-%                   scales the sound by the most recent modification
-%                   decision only. The latter is typically required to
-%                   administer tests like the Acceptable Noise Level (ANL).
-%
-%                       'cumulative':   time series is scaled by the sum of
-%                                       all previous adjustments (in
-%                                       decibels). 
-%
-%                       'immediate':    the time series are scaled by the
-%                                       most recent scaling parameter only.
-%                                       
 % OUTPUT:
 %
 %   Y:  scaled time series
@@ -63,18 +48,11 @@ function [Y, d]=modifier_dBscale(X, mod_code, varargin)
 %
 %   1. Complete additional scoring schemes (word_based, keyword_based). 
 %
-%   2. Test with multiple element dB step. 
-%
-%   3. Need a smarter way to handle whether or not to plot data (xdata,
-%   ydata). These are currently fields in the modcheck field ... might be
-%   worth moving it to the modifier field ... makes more intuitive sense to
-%   have it here. 
-%
-%   4. Need a smarter way to store xdata and ydata. Perhaps provide an
-%   optional axis handle where the data can be written and stored for
-%   plotting purposes. 
-%       - Working with the figure handle will allow us to simplify and
-%       isolate how data are passed between modifier and modcheck. 
+%   5. Change 'cumulative' mode so it just stores data in the 'history'
+%   field differently and applies changes to the immediately preceding
+%   sample. This will require addressing the issue mentioned in
+%   portaudio_adaptiveplay (that is, always applying operations to the
+%   original signal (X)) first. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -97,9 +75,9 @@ if ~isfield(d, 'player')
     d.player = d; 
 end % if
 
-%% GET GLOBAL VARIABLES
-global trial;   % trial number set in portaudio_adaptiveplay
-global modifier_num; % modification number. 
+%% GET IMPORTANT VARIABLES FROM SANDBOX
+trial = d.sandbox.trial; 
+modifier_num=d.sandbox.modifier_num; 
 
 %% SET DEFAULTS
 % Scale all channels by default
@@ -134,7 +112,10 @@ dBstep=d.player.modifier{modifier_num}.dBstep(find(d.player.modifier{modifier_nu
 if ~isempty(mod_code)
     switch mod_code
         case {0, 1, -1}
-            d.player.modifier{modifier_num}.history(end+1) = mod_code*dBstep;        
+            
+            % See how large of a step we need given user specifications
+            dBstep = mod_code*dBstep; 
+
         otherwise
             error('Unknown modification code');
     end % switch
@@ -152,36 +133,55 @@ Y=X;
 %   So changes will be remembered and applied over different stimuli. 
 
 % If there's any history at all.
+%
 %   Check necessary because if d.player.modifier is empty, sum(history) returns 0.
 %   Not a big deal here, but better not to open ourselves to (unintended)
 %   stimulus alterations. 
-switch d.player.modifier{modifier_num}.scale_mode
-    case {'cumulative'}
-        
-        % Scale by the sum of all dB steps
-        sc=db2amp(sum(d.player.modifier{modifier_num}.history));
-        
-        % For plotting purposes
-        y=sum(d.player.modifier{modifier_num}.history); 
-%         d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
-        
-    case {'immediate'}
-        
-        % Scale by the most recent dBstep
-        sc=db2amp(d.player.modifier{modifier_num}.history(end));
-        
-        % For plotting
-        y=d.player.modifier{modifier_num}.history(end);
-%         d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
-        
-    otherwise
-        error('Unknown scale_mode');
-end % switch
+if isempty(d.player.modifier{modifier_num}.history)
+%     sc = db2amp(dBstep);
+    d.player.modifier{modifier_num}.history(end+1) = dBstep;
+else
+%     sc = db2amp(d.player.modifier{modifier_num}.history(end) + dBstep);
+    d.player.modifier{modifier_num}.history(end+1) = d.player.modifier{modifier_num}.history(end) + dBstep;
+end % 
 
-% Scale y-data
+% Calculate scaling factor (amplitude)
+sc = db2amp(d.player.modifier{modifier_num}.history(end)); 
+
+% Apply scaling to signal
 Y(:, channels)=Y(:, channels).*sc; 
 
-% update plotting information in Sandbox
-%   This information is sometimes useful for plotting purposes. 
-d.sandbox.xdata=1:length(d.sandbox.xdata)+1;
-d.sandbox.ydata(end+1)=y; 
+% Update plotting information
+d.sandbox.xdata=1:length(d.sandbox.xdata)+1; % xdata (call #)
+d.sandbox.ydata(end+1)=sc;
+
+% switch d.player.modifier{modifier_num}.scale_mode
+%     case {'cumulative'}
+%         
+%         % Scale by the sum of all dB steps
+%         sc=db2amp(sum(d.player.modifier{modifier_num}.history));
+%         
+%         % For plotting purposes
+%         y=sum(d.player.modifier{modifier_num}.history); 
+% %         d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
+%         
+%     case {'immediate'}
+%         
+%         % Scale by the most recent dBstep
+%         sc=db2amp(d.player.modifier{modifier_num}.history(end));
+%         
+%         % For plotting
+%         y=d.player.modifier{modifier_num}.history(end);
+% %         d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
+%         
+%     otherwise
+%         error('Unknown scale_mode');
+% end % switch
+% 
+% Scale y-data
+% Y(:, channels)=Y(:, channels).*sc; 
+% 
+% % update plotting information in Sandbox
+% %   This information is sometimes useful for plotting purposes. 
+% d.sandbox.xdata=1:length(d.sandbox.xdata)+1;
+% d.sandbox.ydata(end+1)=y; 
