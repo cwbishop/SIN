@@ -153,7 +153,7 @@ Y(:, channels)=Y(:, channels).*sc;
 
 % Update plotting information
 d.sandbox.xdata=1:length(d.sandbox.xdata)+1; % xdata (call #)
-d.sandbox.ydata(end+1)=sc;
+d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
 
 % switch d.player.modifier{modifier_num}.scale_mode
 %     case {'cumulative'}
