@@ -30,6 +30,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 		(Player Configuration)
 		-> adaptive_mode:
 		-> append_files: 
+        -> match_playrec_latency:   used by portaudio_adaptiveplay. 
 		-> stop_if_error:
 		-> looped_playback (not implemented):
 		-> playback_channels:
@@ -57,8 +58,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 		-> modifier
 			-> dBstep: 
 			-> change_step: 
-			-> channels: 
-			-> scale_mode: 
+			-> channels: 			
             
     -> Sandbox: a dirty area where variables can be stored if necessary and accessed by different functions (e.g., figure or axis information for plotting, etc).
     
