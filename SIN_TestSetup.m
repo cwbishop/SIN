@@ -1,7 +1,5 @@
 function opts=SIN_TestSetup(testID)
 %
-% Should also spit back a testlist. This is needed for SIN_GUI
-opts=struct();
 
 switch testID
     
@@ -115,8 +113,7 @@ switch testID
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
             'change_step', [1 5], ...   % trial on which to change the step size
-            'channels', 2, ...  % apply modification to channel 2
-            'scale_mode',   'cumulative'); % use cumulative scale mode.             
+            'channels', 2);  % apply modification to channel 2            
             
     case 'ANL'
         
@@ -179,12 +176,11 @@ switch testID
         %   We use two modifiers, but CWB can't recall why. Need to check
         %   this. 
         % ============================
-        opts.player.modifier{1}=struct( ...
+        opts.player.modifier{1} = struct( ...
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
             'dBstep',   1, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB
-            'channels', 2, ...  % apply modification to channel 2
-            'scale_mode',   'immediate'); % use immediate (no history) scaling
+            'channels', 2);  % apply modification to channel 2            
             
     otherwise
         

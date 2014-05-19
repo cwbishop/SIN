@@ -274,6 +274,14 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   'continuous' mode. If the user starts pressing keys before sounds play,
 %   we won't have any record of those button presses (at present). 
 %
+%   20. Recorded responses are cut a little short. Most obvious in
+%   continuous mode (tested with ANL). At the time, the recording device
+%   had a delay of ~465 ms (MME)while playback had a delay of ~120 ms
+%   (Windows Direct Sound). Probably need to compensate for any latency
+%   differences to ensure high-fidelity (and complete) recordings. CWB
+%   tried using "Direct Sound" recordings, but they were very crackly and
+%   low quality. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -397,6 +405,10 @@ if d.player.record_mic
     % Allocate Recording Buffer
     PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
     
+    % Get rstatus - we might need this later to correct for differences in
+    % predicted latency
+    rstatus=PsychPortAudio('GetStatus', rhand);
+    
 end % if d.player.record_mic
 
 %% PLAYBACK BUFFER INFORMATION
@@ -474,7 +486,7 @@ for trial=1:length(stim)
 
     % Clear temporary variable x 
     clear x; 
-               
+       
     % By file modcheck and data modification. 
     %   We check at the beginning of each "trial" and scale the upcoming
     %   sound appropriately. 
@@ -492,6 +504,9 @@ for trial=1:length(stim)
     
         end % for modifier_num                
 
+    else
+        % Assign X (raw data) to second variable for playback 
+        Y=X; 
     end % isequal(d.player.adaptive_mode, 'bytrial')           
     
     % Switch to determine mode of adaptive playback. 
@@ -748,6 +763,11 @@ for trial=1:length(stim)
                 
                 % Empty recording buffer, if necessary. 
                 rec=[rec; PsychPortAudio('GetAudioData', rhand)'];  
+                
+            elseif isequal(d.player.adaptive_mode, 'continuous')
+                
+                % Go ahead and empty the buffer again. 
+                rec=[rec; PsychPortAudio('GetAudioData', rhand)'];                  
                 
             end % if isequal( ...
 
