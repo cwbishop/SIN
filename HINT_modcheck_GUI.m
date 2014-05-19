@@ -62,11 +62,6 @@ function [mod_code, d]=HINT_modcheck_GUI(varargin)
 
 %% INPUT CHECK AND DEFAULTS
 
-% Grab trial count from portaudio_adaptiveplay.m.
-%   Global variables are not CWB's favorite, but it's the least troublesome
-%   way of ensuring that we are on the correct trial. 
-global trial; 
-
 % initialize mod_code to zero (do nothing) 
 mod_code=0;
 
@@ -76,6 +71,14 @@ d=varargin2struct(varargin{:});
 if ~isfield(d, 'player')
     d.player=d; 
 end % opts
+
+% Grab important variables from sandbox
+%   Sandbox is a "scratch pad" of sorts that allows the user to share
+%   variables between the player, modchecks, and modifiers. CWB originally
+%   used globals to do this, but globals are scary and very difficult to
+%   control. Debugging can also be a pain since a variable can be changed
+%   in a totally unrelated function to the error being generated.
+trial = d.sandbox.trial;
 
 %% IMPORT SENTENCES FROM FILE
 %   This should only be run during initialization. 
