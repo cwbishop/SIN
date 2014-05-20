@@ -1,4 +1,4 @@
-function [list_dir, wavfiles]=SIN_stiminfo(testID, d, varargin)
+function [list_dir, wavfiles]=SIN_stiminfo(testID, opts, varargin)
 %% DESCRIPTION:
 %
 %   Function to return stimulus lists (directories, filenames) for the
@@ -8,18 +8,7 @@ function [list_dir, wavfiles]=SIN_stiminfo(testID, d, varargin)
 %
 %   testID: string, test ID as listed in SIN_defaults.testlist(:).name.
 %
-%   d:  SIN structure. Typically loaded from SIN_defaults. Will not
-%       automatically load. This to protect the user from doing something
-%       stupid. 
-%
-% Parameters:
-%
-%   Fields to overwrite in d. Proved useful when retrieving wav files from
-%   a specific directory from SIN_GUI. See SIN_defaults for a full field
-%   description. Here are some commonly replaced values important to this
-%   particular function
-%
-%       'list_filt':   regular expression, list filter.  
+%   opts:   test options structure returned from SIN_TestSetup.m 
 %
 % OUTPUT:
 %
@@ -50,32 +39,16 @@ function [list_dir, wavfiles]=SIN_stiminfo(testID, d, varargin)
 %   University of Washington
 %   5/14
 
-%% GET ADDITIONAL PARAMTERS
-%   o is a structure with additional options set by user
-o=varargin2struct(varargin{:}); 
-
-% Overwrite values in d
-flds=fieldnames(o);
-for i=1:length(flds)
-    d.(flds{i})=o.(flds{i});
-end % for i=1:length(flds)
-
 %% INITIALIZE RETURN VARIABLES
 list_dir={};
 wavfiles={}; 
 
-%% GET FILE INFORMATION
-%   File information grabbed for test matching testID
-
 switch testID
     
-    case {'HINT (SNR-50)'}
-        
-        % Get HINT options
-        opts=d.hint; 
+    case {'HINT (SNR-50)', 'PPT'}
         
         % Return directories based on defaults.hint.list_filt
-        list_dir = regexpdir(opts.root, opts.list_filt, false);
+        list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
         
         % Return file list for each directory
         %   - Create a shorthand name for directory (e.g., 'List01').
@@ -83,14 +56,14 @@ switch testID
         wavfiles={};
         list_name={};
         for i=1:length(list_dir)
-            list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.list_filt):end-1); 
+            list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.specific.list_regexp):end-1); 
             wavfiles{i}= regexpdir(list_dir{i}, '.wav$', false);
         end % for i=1:length(list_id)
 
     case {'ANL'}
-        warning('ANL SIN_stiminfo not well vetted');                 
-        opts=d.anl;
-        wavfiles=regexpdir(opts.root, '.wav$', false);
+
+        wavfiles=regexpdir(opts.specific.root, opts.specific.anl_regexp, false);
+        
     otherwise 
         error(['No stimulus information available for ' testID]);        
 end % switch testID

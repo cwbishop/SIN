@@ -1,10 +1,58 @@
 function opts=SIN_TestSetup(testID)
+%% DESCRIPTION:
 %
+%   Function to return test information. This will vary based on the test.
+%   Alternatively, this can also return a list of available tests
+%   (default).
+%
+% INPUT:
+%
+%   testID:     string, test identifer. Or, if the user wants to return a
+%               list of available tests, leave testID empty.
+%
+% OUTPUT:
+%
+%   opts:       a test setup structure. Or, if testID is empty, a cell
+%               array of available tests.
+%
+% Development:
+%
+%   XXX
+%
+% Christopher W. Bishop
+%   University of Washington
+%   5/14
 
-switch testID
+if ~exist('testID', 'var') || isempty(testID), testID='testlist'; end 
+
+switch testID;
     
-    case 'empty'
+    case 'testlist'
         
+        % Get cases within switch. Each case might be a test.
+        %   Some of the cases are callback specific (e.g., generating the
+        %   test list, an empty options structure, etc.). These are
+        %   excluded based on the exclusion list (exlist) below. 
+        opts = getCases(); 
+        
+        % Exclusion list
+        %   Remove callback helpers (like 'empty', 'Project AD', etc);
+        exlist={'Defaults' 'testlist'}; 
+        
+        % Assume we include everything by default
+        mask=true(size(opts)); 
+        
+        for c=1:length(opts)
+            if ~isempty(find(ismember(exlist, opts{c}), 1, 'first'))
+                mask(c)=false;
+            end
+        end % for c
+        
+        % Return test names        
+        opts={opts{mask}}; 
+        
+    case 'Defaults'
+                
         % Create an empty SIN testing structure
         opts = struct( ...
             'general', struct(), ... % general information
@@ -12,16 +60,16 @@ switch testID
             'player', struct(), ... % player configuration structure (e.g., for portaudio_adaptiveplay)
             'sandbox', struct());  % scratch pad for passing saved variables between different functions (e.g., data to plot, figure handles, etc.)
         
-    case 'Project AD'
-        
-        % Get an empty structure
-        opts=SIN_TestSetup('empty'); 
-        
-        % Set some default values, like device settings, that will be used
-        % by multiple tests. 
-        
         % Root SIN directory
-        opts.general.root='C:\Users\cwbishop\Documents\GitHub\SIN';
+        opts.general.root = fileparts(which('SIN_TestSetup.m'));  
+        
+        % Subject directory
+        opts.general.subjectDir = fullfile(opts.general.root, 'subject_data'); 
+        
+        % Calibration information
+        opts.general.calibrationDir = fullfile(opts.general.root, 'calibration');
+        opts.general.calibration_regexp = '.mat$'; % 
+        
         % subject ID motif. Described using regexp. Used in
         % SIN_register_subject.m
         opts.general.subjectID_regexp='^[1 2][0-9]{3}$';
@@ -29,7 +77,7 @@ switch testID
         % List of available tests
         %   This will vary by project. Field used to generate test list in
         %   SIN_GUI. CWB does not recall using it elsewhere. 
-        opts.general.testlist = {{'HINT (SNR-50)', 'PPT', 'ANL', 'Hagerman'}}; 
+        opts.general.testlist = SIN_TestSetup('testlist'); 
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
@@ -51,7 +99,7 @@ switch testID
         % ============================
         % Get default information
         % ============================
-        opts=SIN_TestSetup('Project AD');
+        opts=SIN_TestSetup('Defaults'); 
         
         % ============================
         % Test specific information. These arguments are used by
@@ -62,8 +110,14 @@ switch testID
         opts.specific.testID='HINT (SNR-50)';
         
         % root directory for HINT stimuli and lookup list
-        opts.specific.root=fullfile(opts.general.root, 'playback', 'HINT');
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'HINT');        
         
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp='List[0-9]{2}'; 
+                
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
@@ -116,12 +170,43 @@ switch testID
             'channels', 2);  % apply modification to channel 2            
             
     case 'ANL'
-        
+        % ANL is administered differently than HINT or PPT. Here's a
+        % very basic breakdown of the procedure.
+        %
+        %   Stage 1: Establishing the most comfortable level (MCL)
+        %
+        %       1. Start story at 30 dB HL. 
+        %       2. Subject adjusts speech until it is uncomfortable (5
+        %       dB steps)
+        %       3. Subject adjust speech until it is too quiet (5 dB
+        %       steps)
+        %       4. Turn story back up until it is at "[the subject's] most
+        %       comfortable listeneing level". (2 dB steps)
+        %           - Note: OK to decrease too, if necessary. 
+        %       5. Record the speech level. This is MCL 
+        %
+        %   Stage 2: Establishing the background noise level (BNL)
+        %
+        %       1. Add in background noise (30 dB HL). 
+        %       2. Listener raises noise level until he/she can no
+        %       longer hear the story (5 dB steps)
+        %       3. Listener lowers the noise level until he/she can
+        %       understand the story easily. (5 dB steps)
+        %       4. Listener adjusts background noise to the MOST noise
+        %       that he would be willing to tolerate and still follow
+        %       the story for a long period of time without becoming
+        %       tense or tired. 
+        %       5. Record noise level. This is BNL. 
+        %
+        %   Stage 3: Acceptable Noise Level (ANL) Calculation
+        %
+        %       1. MCL (stage 1) - BNL;
+         
         % Test setup for the Acceptable Noise Level (ANL) Test
         % ============================
         % Get default information
         % ============================
-        opts=SIN_TestSetup('Project AD');
+        opts=SIN_TestSetup('Defaults');
         
         % ============================
         % Test specific information. These arguments are used by
@@ -134,6 +219,15 @@ switch testID
         % root directory for HINT stimuli and lookup list
         opts.specific.root=fullfile(opts.general.root, 'playback', 'ANL');
               
+        % Regular expression used to grab available list of ANL files
+        %   Traditionally, there's only one file with a male talker in one
+        %   channel and a multi-talker stream in a second channel. These
+        %   are controlled independently, but often routed to the same
+        %   speaker. 
+        %   
+        %   This field is used in SIN_stiminfo.m. 
+        opts.specific.anl_regexp='ANL.wav'; 
+        
         % ============================
         % Player configuration
         %   The fields below are used by the designated player to configure
@@ -159,7 +253,15 @@ switch testID
             'unmod_leadtime',   [], ... % no unmodulated sound
             'unmod_lagtime',    [], ... % no unmodulated sound
             'unmod_playback',   {{}});  % no unmodulated sound
-            
+        
+        % ============================
+        % Player configuration
+        %   CWB is playing with player settings since he is encountering
+        %   buffer underruns with the large file used to estimate ANL. He
+        %   thinks this is due to his buffer being too short.
+        % ============================
+        opts.player.playback.block_dur = 0.5; % set a very long block duration to see if we fix our buffer underrun problems
+        
         % ============================
         % Modification check (modcheck) configuration        
         % ============================
@@ -178,7 +280,7 @@ switch testID
         % ============================
         opts.player.modifier{1} = struct( ...
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
-            'dBstep',   1, ...  % use constant 1 dB steps
+            'dBstep',   5, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB
             'channels', 2);  % apply modification to channel 2            
             

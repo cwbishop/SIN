@@ -21,9 +21,7 @@ function varargout = SIN_GUI(varargin)
 %
 % Parameters:
 %
-%   'defaults': structure, a SIN structure. This will allow the user to
-%               incorporate custom settings into the GUI. This, in theory,
-%               should then be inherited seamlessly throughout the funct
+%   XXX
 %
 % Development:
 %
@@ -33,6 +31,19 @@ function varargout = SIN_GUI(varargin)
 %   2) Once tests have started, lock subject ID.
 %
 %   3) Once tests have started, lock calibration file. 
+%
+%   4) Validation of selected options before launching SIN_runTest. Make
+%   sure it's a valid subject, test, stimulus list, the test hasn't already
+%   been run, etc. 
+%
+%   5) Wavfile selection and validation has a bit of a bug in it. It
+%   requires at least two files to be selected or the validation fails.
+%   There are certainly circumstances that require only a single file to be
+%   played (e.g., ANL). So this needs to be addressed, but not sure how to
+%   do it at present. 
+%
+%   6) Need to add a calibration validation step. Make sure the selected
+%   calibration file is up to snuff before we run anything. 
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
@@ -81,12 +92,15 @@ o=varargin2struct(varargin{:});
 %
 % Motivation for this approach from :
 %       http://www.matlabtips.com/handle-the-handles-in-guidata/
-if isfield(o, 'defaults')
-    handles.SIN_defaults=o.defaults;
-    clear o; 
-else
-    handles.SIN_defaults=SIN_defaults; 
-end % if isfield(o.defaults)
+% if isfield(o, 'defaults')
+%     handles.SIN_defaults=o.defaults;
+%     clear o; 
+% else
+%     handles.SIN_defaults=SIN_defaults; 
+% end % if isfield(o.defaults)
+
+% Get some basic information from TestSetup. 
+handles.SIN_defaults = SIN_TestSetup('Defaults'); 
 
 % Update handles structure
 guidata(hObject, handles);
@@ -151,6 +165,15 @@ wavfiles=handles.wavfiles;
 test_val = get(handles.test_popup, 'Value'); 
 testID = get(handles.test_popup, 'String');
 
+% Get subject selection
+subjectID = get(handles.subject_popup, 'String');
+sub_val = get(handles.subject_popup, 'Value'); 
+
+% Get list information
+list = get(handles.list_popup, 'String');
+list_val = get(handles.list_popup, 'Value'); 
+if ischar(list), list={list}; end % convert to cell. Makes list check easier. 
+
 % Validate list selection
 if test_val ==1
     post_feedback(hObject, eventdata, handles, 'Error: Invalid Test', false);
@@ -158,23 +181,57 @@ if test_val ==1
 else 
     post_feedback(hObject, eventdata, handles, 'Valid test selected', true);
 end 
-% Get list selection
-list_val = get(handles.list_popup, 'Value'); 
+
+% Subject validation
+if sub_val==1
+    post_feedback(hObject, eventdata, handles, 'Error: Invalid Subject', false);
+    return;
+else
+    post_feedback(hObject, eventdata, handles, 'Valid subject selected', true);
+end % if sub_val
+
+% Validate list selection
+if list_val==1 && numel(list)>1
+    % If lists are avaiable but we haven't selected one, then throw a shoe.
+    post_feedback(hObject, eventdata, handles, 'Error: Invalid List', false);
+    return;
+elseif numel(list)>1
+    post_feedback(hObject, eventdata, handles, 'Valid list selected', true);
+else
+    post_feedback(hObject, eventdata, handles, 'No list available', []); 
+end % if sub_val
+
+% XXX Calibration check XXX
+
+% XXX Play list check XXX
 
 % Launch the appropriate test
-if list_val ~= 1 && length(wavfiles)>1
+%   Only launch test if the following conditions are met
+%       1. A test is selected
+%       2. Some wav files are selected
+%       3. A subject is selected.
+if list_val ~= 1 && length(wavfiles)>1 
     
     % If there's a list selected, then present those sounds
-    SIN_runTest({testID{test_val}}, handles.SIN_defaults, 'play_list', {wavfiles{list_val-1}});
+    % Run the first cell array in wavfiles
+    SIN_runTest(testID{test_val}, ...
+        subjectID{sub_val}, ...
+        handles.testopts, ...
+        wavfiles{list_val-1});
     
 elseif list_val == 1 && length(wavfiles)==1
     
     % Run the first cell array in wavfiles
-    SIN_runTest({testID{test_val}}, handles.SIN_defaults, 'play_list', {wavfiles{1}});
+    SIN_runTest(testID{test_val}, ...
+        subjectID{sub_val}, ...
+        handles.testopts, ...
+        wavfiles);
     
 else 
+    
     post_feedback(hObject, eventdata, handles, 'Error: List Selection', false);    
     return;
+    
 end % if list_val ~= 1
 
 % Post completion status
@@ -239,17 +296,15 @@ function register_subject_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Grab defaults from handles structure
-d=handles.SIN_defaults; 
-
+d=handles.SIN_defaults;
 % Try registering subject
-[status, err]=SIN_register_subject(get(handles.subjectid, 'String'), 'register_tasks', {{'create'}}, 'subjectID_regexp', d.subjectID_regexp); 
+[status, str]=SIN_register_subject(get(handles.subjectid, 'String'), 'register_tasks', {{'create'}}, d); 
 
 % Clear subject ID field
 set(handles.subjectid, 'String', ''); 
 
 % Post error message if we encounter one. 
-post_feedback(hObject, eventdata, handles, err);
+post_feedback(hObject, eventdata, handles, str, status);
     
 % Repopulate popup menus
 refresh_popups(hObject, eventdata, handles);
@@ -263,34 +318,22 @@ function refresh_popups(hObject, eventdata, handles)
 %   University of Washington 
 %   5/14
 
-% POPULATE POP-UP MENUS
-%
-%   Assumes SIN_GUI is launched from the top-level directory. 
-%
 
-% Query existing subjects
-%   Query based on existing directories. If the directories don't exist,
-%   then we have to assume that no subject data has been collected. 
-%
-%   Code modified from:
-%       http://stackoverflow.com/questions/8748976/list-the-subfolders-in-a-folder-matlab-only-subfolders-not-files
-subject_id = dir(fullfile(pwd, 'subject_data')); 
-subject_id = {subject_id((vertcat(subject_id.isdir))).name};
-subject_id(ismember(subject_id,{'.','..'})) = [];
+% POPULATE POP-UP MENUS
+subject_id = SIN_getsubjects; 
 
 % Populate subject popup
 set(handles.subject_popup, 'String', [{'Select Subject'} subject_id])
 
 % Query calibration files
-cal_files = dir(fullfile(pwd, 'calibration', '*.mat')); 
-cal_files = {cal_files(:).name};
+cal_files = SIN_calfiles; 
 
 % Populate calibration popup
-set(handles.calibration_popup, 'String', [{'Select File'} cal_files]);
+set(handles.calibration_popup, 'String', [{'Select File' cal_files{:}}]);
 
 % Populate test list
-d=handles.SIN_defaults; 
-set(handles.test_popup, 'String', [{'Select Test'} {d.testlist.name}]); 
+testlist = SIN_TestSetup('testlist'); 
+set(handles.test_popup, 'String', [{'Select Test' testlist{:}}]); 
 
 % test list popup
 
@@ -302,8 +345,17 @@ testID=get(handles.test_popup, 'String');
 % anything for this 
 if val ~= 1
     
+    % Load test options
+    opts = SIN_TestSetup(testID{val}); 
+    
+    % Assign test options to handles structure
+    handles.testopts=opts;
+    
+    % Transfer data back to GUI
+    guidata(hObject, handles); 
+    
     % Wavfiles
-    [list_dir, wavfiles]=SIN_stiminfo(testID{val}, d);
+    [list_dir, wavfiles]=SIN_stiminfo(testID{val}, opts);
     
     % Put wav file information in the handle structure
     handles.wavfiles=wavfiles;
@@ -379,14 +431,18 @@ function post_feedback(hObject, eventdata, handles, str, status, varargin)
 %   University of Washington 
 %   5/14
 
+% Default status
+if ~exist('status', 'var') || isempty(status), status=-1; end % default to black text
 % Set feedback color
 switch status
     case {0}
         col='r';
     case {1}
         col='g';
-    otherwise
+    case {-1}
         col='k';
+    otherwise
+        error('Unknown color code'); 
 end % switch/otherwise
 set(handles.feedback_text, 'ForegroundColor', color2colormap({col}));
 

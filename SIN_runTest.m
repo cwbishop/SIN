@@ -1,4 +1,4 @@
-function SIN_runTest(testID, d, varargin)
+function SIN_runTest(testID, subjectID, opts, play_list)
 %% DESCRIPTION:
 %
 %   Master control function to run various tests associated with SIN. The
@@ -9,6 +9,8 @@ function SIN_runTest(testID, d, varargin)
 %
 % INPUT:
 %
+%   subjectID:  string, subject ID.
+%
 %   testID:     cell containing the test ID. CWB opted to used a cell here
 %               in case he later wants to use a test list (meaning, running
 %               a sequence of tests in a specific order - perhaps a
@@ -16,15 +18,16 @@ function SIN_runTest(testID, d, varargin)
 %               This will be automatically converted to a cell within the
 %               function.           
 %
-%   d:  SIN structure. See SIN_defaults. SIN_defaults will not be loaded if
-%       d is omitted. 
+%   subjectID:  string, subject identifier. There is absolutely no error
+%               checking in place here. If the user wants to validate a
+%               subject ID, see SIN_register_subject. 
 %
-% Parameters:
+%   opts:       SIN test options structure returned from SIN_TestSetup.m
 %
-%   'play_list':    cell array, stimulus play_list.  
-%
-%   'randomize':    bool, randomize play_list. (true | false ). Must be set
-%                   in SIN_defaults. 
+%   play_list:  cell array, each element is the path to a wav file that
+%               will be used in testing. In the context of SIN, this
+%               information can generally be grabbed from SIN_stiminfo.m in
+%               a fairly straightforward way. 
 %
 % OUTPUT:
 %
@@ -34,67 +37,74 @@ function SIN_runTest(testID, d, varargin)
 %
 %   1) Complete ANL test administration.   
 %
-%   2) Make randomization more modular (so we can use for multiple tests,
-%   not just HINT).
-%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
 
-%% GET ADDITIONAL PARAMTERS
-%   o is a structure with additional options set by user
-o=varargin2struct(varargin{:}); 
-
+%% TEST ID CHECK
+%   Convert testID to a cell. CWB has tentative plans to allow the user to
+%   run a host of tests in sequence. So testID is coded as a cell here to
+%   allow that possibility in the future. 
 % Convert char to cell
 if ischar(testID)
     testID={testID};
 end % if ischar
 
 % Input checks
+%   Currently we only allow for a single test to be run at a time.
+%
+%   Notice that CWB does not do a basic options check here. The user *must*
+%   supply the test option information. We don't want to accidentally run a
+%   test the user did not intend or with settings that differ from what the
+%   user wanted. So, force the user (or GUI) to provide this information 
 if numel(testID)~=1, error('Incorrect number of testIDs'); end 
-if ~isfield(o, 'play_list') || isempty(o.play_list), error('No play list specified'); end 
 
-% Grab variables we need to run our tests 
-play_list=o.play_list;
+%% SUBJECT ID ERROR CHECK
+%   Make sure subject ID conforms to generalized pattern
 
-clear o; % clear o to remove temptation 
+%% CALIBRATION ERROR CHECK
+%   Make sure the calibration file fits whatever validation criteria we lay
+%   out (probably date dependent, etc.).
+
+%% MAKE SURE DIRECTORIES ARE IN PLACE
+%   Should be handled by SIN_register_subject
 
 % Loop through all tests (eventually)
 for t=1:length(testID)
-    
+        
     % Switch
     %   Each TEST ID has a unique set of instructions. 
     switch testID{t}
-        case {'HINT (SNR-50)'}
+        
+        case {'HINT (SNR-50)', 'PPT'}
             
-            % Get the HINT options
-            opts = d.hint;
+            % Launch HINT (SNR-50)
+            results = portaudio_adaptiveplay(play_list, opts); 
             
-            if opts.randomize
-    
-                % Seed random number generator
-                rng('shuffle', 'twister');
-    
-                play_list={play_list{randperm(length(play_list))}}; 
-    
-            end % if o.randomize
-            
-            
-            
-            % Now, launch HINT (SNR-50)
-            r = portaudio_adaptiveplay(play_list, opts); 
+            % Save the subject ID to sandbox
+            results.RunTime.sandbox.subjectID=subjectID;
             
         case {'ANL'}
-        case {'PPT'}
+            
+            % Launch ANL (at least part of it) 
+            %   We'll need to run this essentially 4 or 5 times and save
+            %   the values in different files. 
+            results = portaudio_adaptiveplay(play_list, opts); 
+            
+            % Save the subject ID to sandbox
+            results.RunTime.sandbox.subjectID=subjectID;
+                        
         case {'MLST'}
+            
         case {'Hagerman'}
-        case {'ALL (Random)'}
-            % Run all tests in a random order
-            error('Not implemented'); 
             
         otherwise
             
             error(['Unknown test ID: ' testID{t}]); 
             
     end % switch/otherwise
+    
+    % Save results to file 
+    save(fullfile(opts.general.subjectDir, subjectID, testID{t}, [subjectID '-' testID{t}]), 'results'); 
+    
 end % for t=1:length(testID)

@@ -310,7 +310,13 @@ if d.player.randomize
     playback_list={playback_list{randperm(length(playback_list))}}; 
 end % if d.player.randomize
 
+%% INITIALIZE VOICE RECORDING VARIABLE
+%   Trial recordings are placed in this cell array. 
 d.sandbox.voice_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
+
+%% SAVE DATE AND TIME 
+%   Will help keep track of information later.
+d.sandbox.start_time=now; 
 
 % Get sampling rate for playback
 FS = d.player.playback.fs; 
@@ -625,7 +631,7 @@ for trial=1:length(stim)
     
                         % Call modifier
                         [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
-    
+                            
                     end % for modifier_num
                                         
                 end % if isequal ...
@@ -785,6 +791,9 @@ end % for trial=1:length(X)
 
 % Close all open audio devices
 PsychPortAudio('Close')
+
+% Attach end time
+d.sandbox.end_time=now; 
 
 % Attach (modified) structure to results
 %   This is returned to the user. 

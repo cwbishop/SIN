@@ -343,6 +343,12 @@ function varargout = getCases(varargin)
     
     cases = regexp(code(findValidKeywords('case\s')), 'case\s+', 'split');    
     cases = cellfun(@(x)(char(x{2:end})), cases, 'UniformOutput', false);
+    
+    % Remove extra single quote
+    for c=1:length(cases)
+        cases{c}=cases{c}(2:end-1); 
+    end % 
+    
     cases = cellstr(char(cases));
     cases = regexprep(cases, '\s*,*$', '');
     cases = regexprep(cases, '^\s+', '');

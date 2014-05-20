@@ -39,6 +39,8 @@ function [status, m]=SIN_register_subject(sid, varargin)
 %   determine if it's an error (status == 0) or something good (status==1).
 %   Can be coupled with SIN.m to create color coded feedback in terminal. 
 %
+%   3. Help file needs to be updated (badly). 
+%
 % Christopher W. Bishop
 %   University of Washington 
 %   5/14
@@ -59,7 +61,7 @@ for t=1:numel(d.register_tasks)
         case {'create'}
             
             % Sommersault to validate subject ID
-            if ~SIN_register_subject(sid, 'register_tasks', {{'validateID'}}, 'subjectID_regexp', d.subjectID_regexp)
+            if ~SIN_register_subject(sid, 'register_tasks', {{'validateID'}}, 'subjectID_regexp', d.general.subjectID_regexp)
                 m=msg('validateID');
                 status=false;
                 return;
@@ -69,30 +71,30 @@ for t=1:numel(d.register_tasks)
             % from SIN_defaults.
             %   
             % Also need the test list information.
-            try 
-                d.root;
-                testlist={d.testlist.name}; 
-            catch
-                d=SIN_defaults; 
-                testlist={d.testlist.name}; 
-            end % try/catch
+%             try 
+%                 d.root;
+%                 testlist={d.general.testlist}; 
+%             catch
+%                 d=SIN_TestSetup; 
+%                 testlist={d.general.testlist.name}; 
+%             end % try/catch
 
             %% CHECK TO SEE IF SUBJECT DIRECTORY EXISTS
-            if exist(fullfile(d.root, 'subject_data', sid), 'dir')
+            if exist(fullfile(d.general.subjectDir, sid), 'dir')
                 status=false;
                 m=msg([sid ' exists.']);
                 return;
             end % if exist
             
             %% MAKE SUBJECT DIRECTORY
-            status=mkdir(fullfile(d.root, 'subject_data', sid));
+            status=mkdir(fullfile(d.general.subjectDir, sid));
 
             %% MAKE TEST DIRECTORIES
             %   For now, just create directories 
-            for i=1:length(testlist)
+            for i=1:length(d.general.testlist)
                 
                 % Check for errors making test directories 
-                if ~mkdir(fullfile(d.root, 'subject_data', sid, testlist{i})); 
+                if ~mkdir(fullfile(d.general.subjectDir, sid, d.general.testlist{i})); 
                     status=false;
                 end % if ~mkdir(...
                 
