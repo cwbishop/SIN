@@ -436,8 +436,9 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
     % Find beginning of each "block" within the buffer
     block_start=[1 block_nsamps+1];
     
-    % Refill at at the 1/4 of the way through a buffer block
-    refillat=block_nsamps/4;     
+    % Start filling next block after first sample of this block has been
+    % played
+    refillat=ceil(1/block_nsamps);     
     
 end % if isequal
 
@@ -596,7 +597,7 @@ for trial=1:length(stim)
             
             % Loop through each section of the playback loop. 
             for block_num=1:nblocks
-                
+                tic
                 % Store block number in sandbox - necessary for some
                 % termination procedures
                 d.sandbox.block_num = block_num; 
@@ -606,15 +607,21 @@ for trial=1:length(stim)
                 startofblock=block_start(1+mod(block_num-1,2));
     
                 % Find data we want to load 
+                %   We load two blocks (the entire buffer length) for
+                %   processing. Both blocks are modified below (if
+                %   necessary) by the modifier(s). The first buffer block
+                %   is loaded for playback and the second buffer block is
+                %   saved for fading in/out on the next block_num
+                %   iteration.
                 if block_num==nblocks
                     % Load with the remainder of X, then pad zeros.         
                     data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(Y,2))];
                 else
-                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num,:);
+                    % Load a whole buffer worth of data. Used for fading
+                    % in/out data below, although only 1/2 of buffer loaded
+                    % at a time (block_nsamps).
+                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num + block_nsamps,:);                    
                 end 
-                
-                % Save upcoming data
-                x=data.*ramp_off;
                 
                 % Modcheck and modifier for continuous playback
                 if isequal(d.player.adaptive_mode, 'continuous')
@@ -630,38 +637,33 @@ for trial=1:length(stim)
                         d.sandbox.modifier_num=modifier_num;
     
                         % Call modifier
-                        [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+                        [data, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data, mod_code, d); 
                             
                     end % for modifier_num
                                         
                 end % if isequal ...
-        
-                % Grab data from modified signal
-                if block_num==nblocks
-                    % Load with the remainder of X, then pad zeros.         
-                    data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(X,2))];
-                else
-                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num,:);
-                end % if 
-        
+       
                 % Ramp new stream up, mix with old stream. 
                 %   - The mixed signal is what's played back. 
                 %   - We don't want to ramp the first block in, since the
                 %   ramp is only intended to fade on block into the next in
                 %   a clean way. 
                 if block_num==1
-                    data=data + x;
+                    data2play=data(1:block_nsamps, :);
                 else
-                    data=data.*ramp_on + x; 
+                    data2play=data(1:block_nsamps, :).*ramp_on + x.*ramp_off; 
                 end % if block_num==1
-    
+                
+                % Save second buffer block for fading on the next trial.
+                x=data(1+block_nsamps:end, :); 
+                
                 % Basic clipping check
                 %   Kill any audio devices when this happens, then throw an
                 %   error. 
                 if max(max(abs(data))) > 1 && d.player.stop_if_error, 
                     PsychPortAudio('Close'); 
                     warning('Signal clipped!'); 
-                    return % return what was complete. At some point, maybe CWB will write a way to continue an incomplete test. 
+                    return % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
                 % First time through, we need to start playback
@@ -699,9 +701,11 @@ for trial=1:length(stim)
                 %   location with [] forces the data to be "appended" to the end of the
                 %   buffer. For whatever reason, this is far more robust and CWB
                 %   encountered 0 buffer underrun errors.                 
-                PsychPortAudio('FillBuffer', phand, data', 1, []);  
+                PsychPortAudio('FillBuffer', phand, data2play', 1, []);  
                                 
                 pstatus=PsychPortAudio('GetStatus', phand);
+                
+                toc
                 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
