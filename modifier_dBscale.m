@@ -116,72 +116,48 @@ if ~isempty(mod_code)
             % See how large of a step we need given user specifications
             dBstep = mod_code*dBstep; 
 
+            %% SCALE TIME SERIES
+            channels=d.player.modifier{modifier_num}.channels; 
+
+            % Assign X to Y.
+            Y=X;
+
+            %% UPDATE MODIFIER HISTORY
+            % Applies a cumulative change
+            %   So changes will be remembered and applied over different stimuli. 
+
+            % If there's any history at all.
+            %
+            %   Check necessary because if d.player.modifier is empty, sum(history) returns 0.
+            %   Not a big deal here, but better not to open ourselves to (unintended)
+            %   stimulus alterations. 
+            if isempty(d.player.modifier{modifier_num}.history)
+            %     sc = db2amp(dBstep);
+                d.player.modifier{modifier_num}.history(end+1) = dBstep;
+            else
+            %     sc = db2amp(d.player.modifier{modifier_num}.history(end) + dBstep);
+                d.player.modifier{modifier_num}.history(end+1) = d.player.modifier{modifier_num}.history(end) + dBstep;
+            end % 
+
+            % Calculate scaling factor (amplitude)
+            sc = db2amp(d.player.modifier{modifier_num}.history(end)); 
+
+            % Apply scaling to signal
+            Y(:, channels)=Y(:, channels).*sc; 
+
+            % Update plotting information
+            d.sandbox.xdata=1:length(d.sandbox.xdata)+1; % xdata (call #)
+            d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
+            
         otherwise
-            error('Unknown modification code');
+            % We don't want to throw an error because sometimes other
+            % mod_codes will be passed around that other modifiers know
+            % what to do with. 
+            %
+            % Instead, just return the original data. There's nothing for
+            % us to do here. 
+            Y=X;
+%             error('Unknown modification code');
     end % switch
           
 end % if ~isempty(mod_code)
-
-%% SCALE TIME SERIES
-channels=d.player.modifier{modifier_num}.channels; 
-
-% Assign X to Y.
-Y=X;
-
-%% UPDATE MODIFIER HISTORY
-% Applies a cumulative change
-%   So changes will be remembered and applied over different stimuli. 
-
-% If there's any history at all.
-%
-%   Check necessary because if d.player.modifier is empty, sum(history) returns 0.
-%   Not a big deal here, but better not to open ourselves to (unintended)
-%   stimulus alterations. 
-if isempty(d.player.modifier{modifier_num}.history)
-%     sc = db2amp(dBstep);
-    d.player.modifier{modifier_num}.history(end+1) = dBstep;
-else
-%     sc = db2amp(d.player.modifier{modifier_num}.history(end) + dBstep);
-    d.player.modifier{modifier_num}.history(end+1) = d.player.modifier{modifier_num}.history(end) + dBstep;
-end % 
-
-% Calculate scaling factor (amplitude)
-sc = db2amp(d.player.modifier{modifier_num}.history(end)); 
-
-% Apply scaling to signal
-Y(:, channels)=Y(:, channels).*sc; 
-
-% Update plotting information
-d.sandbox.xdata=1:length(d.sandbox.xdata)+1; % xdata (call #)
-d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
-
-% switch d.player.modifier{modifier_num}.scale_mode
-%     case {'cumulative'}
-%         
-%         % Scale by the sum of all dB steps
-%         sc=db2amp(sum(d.player.modifier{modifier_num}.history));
-%         
-%         % For plotting purposes
-%         y=sum(d.player.modifier{modifier_num}.history); 
-% %         d.sandbox.ydata(end+1)=sum(d.player.modifier{modifier_num}.history); 
-%         
-%     case {'immediate'}
-%         
-%         % Scale by the most recent dBstep
-%         sc=db2amp(d.player.modifier{modifier_num}.history(end));
-%         
-%         % For plotting
-%         y=d.player.modifier{modifier_num}.history(end);
-% %         d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
-%         
-%     otherwise
-%         error('Unknown scale_mode');
-% end % switch
-% 
-% Scale y-data
-% Y(:, channels)=Y(:, channels).*sc; 
-% 
-% % update plotting information in Sandbox
-% %   This information is sometimes useful for plotting purposes. 
-% d.sandbox.xdata=1:length(d.sandbox.xdata)+1;
-% d.sandbox.ydata(end+1)=y; 

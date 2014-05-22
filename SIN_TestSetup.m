@@ -94,6 +94,11 @@ switch testID;
         % Stop playback if we encounter an error
         opts.player.stop_if_error = true; 
         
+        % Add player control modifiers
+        %   pausePlayback allows user to pause playback if he wants to. 
+        opts.player.modifier{1} = struct( ...
+            'fhandle', @modifier_pausePlayback); 
+            
     case 'HINT (SNR-50)'
         
         % ============================
@@ -144,6 +149,7 @@ switch testID;
             'playback_channels',[1 2], ...  % channels to present sounds to. 
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
             'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
             'unmod_channels',   [1 2], ...
             'unmod_leadtime',   1, ... % start unmodulated sound 1 sec before sentence onset
@@ -163,7 +169,7 @@ switch testID;
         %   We use two modifiers, but CWB can't recall why. Need to check
         %   this. 
         % ============================
-        opts.player.modifier{1}=struct( ...
+        opts.player.modifier{end+1}=struct( ...
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
             'change_step', [1 5], ...   % trial on which to change the step size
@@ -227,6 +233,14 @@ switch testID;
         %   
         %   This field is used in SIN_stiminfo.m. 
         opts.specific.anl_regexp='ANL.wav'; 
+        % ============================
+        % Playback configuration
+        %
+        %   CWB running into issues with playback buffer size. Needs to be
+        %   longer for longer files (due to indexing overhead)
+        %
+        % ============================
+        opts.player.playback.block_dur=0.3; 
         
         % ============================
         % Player configuration
@@ -248,6 +262,7 @@ switch testID;
             'playback_channels',[1 2], ...  % channels to present sounds to. 
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'unmod_playbackmode', [], ... % no unmodulated sound
             'unmod_channels',   [], ... % no unmodulated sound
             'unmod_leadtime',   [], ... % no unmodulated sound
@@ -255,19 +270,11 @@ switch testID;
             'unmod_playback',   {{}});  % no unmodulated sound
         
         % ============================
-        % Player configuration
-        %   CWB is playing with player settings since he is encountering
-        %   buffer underruns with the large file used to estimate ANL. He
-        %   thinks this is due to his buffer being too short.
-        % ============================
-        opts.player.playback.block_dur = 0.5; % set a very long block duration to see if we fix our buffer underrun problems
-        
-        % ============================
         % Modification check (modcheck) configuration        
         % ============================
         opts.player.modcheck=struct(...
             'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
-            'keys',     [KbName('left') KbName('right')], ...  % first key makes sounds louder, second makes sounds quieter
+            'keys',     [KbName('left') KbName('right') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run 
             'map',      zeros(256,1));
         
         % Assign keys in map
@@ -278,7 +285,7 @@ switch testID;
         %   We use two modifiers, but CWB can't recall why. Need to check
         %   this. 
         % ============================
-        opts.player.modifier{1} = struct( ...
+        opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
             'dBstep',   5, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB

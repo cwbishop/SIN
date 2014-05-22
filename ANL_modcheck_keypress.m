@@ -7,10 +7,18 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %
 % INPUT:
 %
-%   'keys':     a two element integer array. The key numbers assigned to
+%   'keys':     a four element integer array. Each element has a different
+%               functional outcome associated with it when paired with the
+%               appropriate modifier. For mod_code list, see below.
+%                   1) increase sound level
+%                   2) decrease dound level
+%                   3) pause playback
+%                   4) exit playback
+%
+%a two element integer array. The key numbers assigned to
 %               the "increase" and "Decrease" keys, respectively. To obtain
 %               the key number, use a command like : 
-%                   [KbName('left') KbName('right')]
+%                   [KbName('left') KbName('right') KbName('p') KbName('q')]
 %
 %               Note: CWB would discourage the use of the "up" and "down"
 %               keys since they can lead to beeping at the MATLAB command
@@ -23,7 +31,7 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %               the 'left' and 'right' key described above. 
 %                   opts.player.modcheck=struct(...
 %                       'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
-%                       'keys',     [KbName('left') KbName('right')], ...  % first key makes sounds louder, second makes sounds quieter
+%                       'keys',     [KbName('left') KbName('right') KbName('p') KbName('q')], ...  
 %                       'map',      zeros(256,1));
 %         
 %                   % Assign keys in map
@@ -32,20 +40,30 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 % OUTPUT:
 %
 %   mod_code: Different key press outcomes return different codes (mod_code).
+%
 %       0:  no action is necessary. This arises if no keys were pressed or
 %           if multiple keys were pressed, or some other bizarre
 %           combination of keys were pressed (like two keys since the last
 %           check). 
+%
 %       1:  The "increase" button was pressed. The sound should be made
 %           quieter by some set amount. Step size determined by the
 %           modifier settings.
-%       -1:  The "decrease" button was pressed.
 %
+%       -1: The "decrease" button was pressed.
+%
+%       99: pause code
+%
+%       86: kill code (from the restaurant biz)
+%
+%       100:    run code
 %
 % Development:
 %
-%   1. Need to release keyboard queue at end of test. Not sure how to do
-%   this cleanly since there is only one "trial" for the ANL. 
+%   1. incorporate codes for pausing, stopping, and recording values. 
+%
+%   2. Must only allow volume changing if the player is in the "run" state.
+%   If it's paused or stopped, don't change anything.    
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -138,6 +156,21 @@ elseif firstPress == d.player.modcheck.keys(2)
     
     % If the 'decrease' button was pressed, send a different code (-1). 
     mod_code=-1;     
+    
+elseif firstPress == d.player.modcheck.keys(3)
+    
+    % If 'pause' button pressed.
+    mod_code=99;
+    
+elseif firstPress == d.player.modcheck.keys(4)
+    
+    % If exit key pressed
+    mod_code = 86; 
+    
+elseif firstPress == d.player.modcheck.keys(5)
+    
+    % Start player again 
+    mod_code = 100; 
     
 end % if 
 

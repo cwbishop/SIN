@@ -49,6 +49,8 @@ end % if ~d.player.modifier{modifier_num}.initialized
 
 % Switch to change state of player
 switch mod_code
+    case {86}
+        d.player.state='exit';
     case {99}
 %         % pause code
 %         Y = zeros(size(X)); 
@@ -63,7 +65,7 @@ end % switch
 
 % State actions
 switch d.player.state
-    case 'pause'
+    case {'pause' 'exit'}
         Y=zeros(size(X)); 
     otherwise
         Y=X;

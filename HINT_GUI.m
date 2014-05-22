@@ -156,7 +156,7 @@ for d=1:max_words
 end % d=1:max_words
 
 % Set domain
-xlim([0 p.ntrials]); 
+xlim([1 p.ntrials]); 
 
 %% ADD WORDS AND SCORING PANELS
 %   Add words to figure and enable scoring panels

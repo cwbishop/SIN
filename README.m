@@ -29,12 +29,12 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 			
 		(Player Configuration)
 		-> adaptive_mode:
+        -> playback_mode: (looped | standard)
 		-> append_files: 
         -> match_playrec_latency:   used by portaudio_adaptiveplay. 
 		-> stop_if_error:
-		-> looped_playback (not implemented):
 		-> playback_channels:
-		-> randomize: (not implemented) randomize playback list. This is currently handled in SIN_runTest, but I think it would be smarter to move this centralize playback features like this to the "player" (e.g., portaudio_adaptiveplay)
+		-> randomize: randomize playback list. This is currently handled in SIN_runTest, but I think it would be smarter to move this centralize playback features like this to the "player" (e.g., portaudio_adaptiveplay)
 
 		(Buffer Windowing)
 		-> window_fhandle: windowing function handle

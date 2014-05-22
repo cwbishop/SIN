@@ -378,6 +378,7 @@ if ~isempty(list_dir)
     
 else
     set(handles.list_popup, 'Value', 1); % rest list value to the first position ('Select List')
+    set(handles.list_popup, 'String', {'Select List'}); % Remove any previous list information 
     set(handles.list_popup, 'Visible', 'off');
 end % ~isempty(list_names) ...
 

@@ -303,6 +303,12 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   well do a "bytrial" adjustment - in fact, that would probably be
 %   cleaner. 
 %
+%   24. There's an intensity mismatch after 'run' button is pressed. It
+%   sounds to CWB like the sound is being presented at the unaltered sound
+%   level. To illustrate this, decrease sound volume by some appreciable
+%   level using ANL setup. Then press 'r' repeatedly. The sound gets louder
+%   immediately after pressing 'r'.
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -648,7 +654,7 @@ for trial=1:length(stim)
             % Loop through each section of the playback loop. 
             while block_num <= nblocks
 %             for block_num=1:nblocks
-                tic
+%                 tic
                 % Store block number in sandbox - necessary for some
                 % termination procedures
                 d.sandbox.block_num = block_num; 
@@ -684,7 +690,7 @@ for trial=1:length(stim)
                 if any(dmask-1)
                     
                     % Find latter half of mask (end of sound)
-                    mask_end = mask & [1:numel(mask)]' >= sum(dmask(1:find(dmask~=1)));
+                    mask_end = mask & (1:numel(mask))' >= sum(dmask(1:find(dmask~=1)));
                     
                     % Find beginning of mask (beginning of sound)
                     mask_begin = mask & ~mask_end; 
@@ -719,8 +725,7 @@ for trial=1:length(stim)
                             
                     end % for modifier_num
                                         
-                end % if isequal ...
-       
+                end % if isequal ...       
                 
                 % Ramp new stream up, mix with old stream. 
                 %   - The mixed signal is what's played back. 
@@ -749,18 +754,6 @@ for trial=1:length(stim)
                     return % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
-                % Shift mask
-                %   Only shift if the player is in the 'run' state.
-                %   Otherwise, leave the mask as is. 
-                %
-                %   Note: This must be placed after the modcheck/modifier
-                %   above (in continuous mode) or we run into a
-                %   'stuttering' effect. This is due to the mask being
-                %   improperly moved. 
-                if isequal(d.player.state, 'run')
-                    mask=circshift(mask, block_nsamps); 
-                end % isequal(d.player.state, 'run'); 
-                
                 % First time through, we need to start playback
                 %   This has to be done ahead of time since this defines
                 %   the buffer size for the audio device. 
@@ -804,7 +797,25 @@ for trial=1:length(stim)
                                 
                 pstatus=PsychPortAudio('GetStatus', phand);
                 
-                toc
+                % Shift mask
+                %   Only shift if the player is in the 'run' state.
+                %   Otherwise, leave the mask as is. 
+                %
+                %   Note: This must be placed after the modcheck/modifier
+                %   above (in continuous mode) or we run into a
+                %   'stuttering' effect. This is due to the mask being
+                %   improperly moved. 
+                if isequal(d.player.state, 'run')
+                    tic
+                    % circshift is minimally 5x slower than a manual shift
+                    % written by CWB. Ran into significant overhead with
+                    % larger files (e.g., with ~7 min ANL data) 
+%                     mask=circshift(mask, block_nsamps); 
+                    mask = [mask(end-block_nsamps:end); mask(1:end-block_nsamps-1)]; 
+                    toc
+                end % isequal(d.player.state, 'run'); 
+                
+%                 toc
                 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
