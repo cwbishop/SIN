@@ -282,6 +282,20 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   tried using "Direct Sound" recordings, but they were very crackly and
 %   low quality. 
 %
+%   21. Add in a "Pause" and "Exit" feature. CWB thinks this can be done
+%   relatively cleanly by setting a flag in sandbox. This way, secondary
+%   functions (like modchecks or modifiers) can access and alter the state
+%   of the player as necessary. The trick is then starting playback again. 
+%
+%   22. The relative timing of unmodulated sound playback depends not just
+%   on the lead/lag settings, but *also* player.playback.block_dur. This
+%   needs to be addressed (or accounted for) with scheduling. 
+%
+%   23. Add in check for continuous adaptive mode. Need to make sure that
+%   the block_duration is shorter than our sound, otherwise we might as
+%   well do a "bytrial" adjustment - in fact, that would probably be
+%   cleaner. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -320,6 +334,19 @@ d.sandbox.start_time=now;
 
 % Get sampling rate for playback
 FS = d.player.playback.fs; 
+
+%% SET PLAYER STATE 
+%   Finite state - player can only have a single state at a time
+%
+%   The state is set either internally (by the player) or altered by
+%   secondary functions (like a modcheck or modifier). At least in theory.
+%   This was not implemented fully when CWB wrote this comment.
+%   
+%   PlayerState:
+%       0:  Pause playback
+%       1:  Play or resume playback
+%       2:  Stop all playback and exit as cleanly as possible
+d.sandbox.PlayerState = 1; 
 
 %% LOAD DATA
 %
@@ -471,7 +498,7 @@ for modifier_num=1:length(d.player.modifier)
 end % for modifier_num
 
 for trial=1:length(stim)
-    
+
     %% UPDATE TRIAL IN SANDBOX
     %   d.sandbox.trial is used by other functions
     d.sandbox.trial = trial; 
@@ -588,15 +615,31 @@ for trial=1:length(stim)
             
             % nblocks
             %   Variable only used by 'continuous' plaback
-            nblocks=ceil(size(X,1)./size(ramp_on,1)); 
+            if d.player.looped_playback
+                nblocks=inf;
+            else
+                nblocks=ceil(size(X,1)./size(ramp_on,1)); 
+            end % if
             
             % Store nblocks in sandbox. This is needed by some modcheck
             % functions for termination purposes (e.g.,
             % ANL_modcheck_keypress)
             d.sandbox.nblocks=nblocks; 
             
+            % Data mask
+            %   This is a circular mask used as a logical index of the
+            %   playback data (from stim{trial}, stored in X/Y). We load in
+            %   a full buffer worth of data (two "blocks"). This is
+            %   necessary for fading in/out upon subsequent iterations of
+            %   block_num
+            mask=[true(buffer_nsamps, 1); false(size(Y,1)-buffer_nsamps, 1)]; 
+            
+            % initiate block_num
+            block_num=1;
+            
             % Loop through each section of the playback loop. 
-            for block_num=1:nblocks
+            while block_num <= nblocks
+%             for block_num=1:nblocks
                 tic
                 % Store block number in sandbox - necessary for some
                 % termination procedures
@@ -606,22 +649,52 @@ for trial=1:length(stim)
                 %   Find start and end of the block
                 startofblock=block_start(1+mod(block_num-1,2));
     
-                % Find data we want to load 
-                %   We load two blocks (the entire buffer length) for
-                %   processing. Both blocks are modified below (if
-                %   necessary) by the modifier(s). The first buffer block
-                %   is loaded for playback and the second buffer block is
-                %   saved for fading in/out on the next block_num
-                %   iteration.
-                if block_num>=nblocks-1
-                    % Load with the remainder of X, then pad zeros.         
-                    data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(Y,2))];
+                % Load data using logical mask
+                %   There is a special case when the logical mask is split
+                %   - as in 110011. This occurs when the sound is not an
+                %   even multiple of the block_dur setting (block_nsamps in
+                %   main body of code). 
+                %
+                %   We want to do different things based on the playback
+                %   mode. 
+                %       looped_playback:    if this is true, then we want
+                %                           to load the samples at the end
+                %                           of the sound, then load the
+                %                           samples at the beginning of the
+                %                           sound (circular buffer type of
+                %                           a deal).
+                %
+                %       otherwise:  just load the samples at the end of the
+                %                   sound and zeropad the rest to fill the
+                %                   buffer. 
+                
+                % These lines tell us if the mask is split as described
+                % above.
+                dmask = diff(find(mask==1)); % find the number of samples between true values
+                
+                % if there are non-consecutive samples (split mask)
+                if any(dmask-1)
+                    
+                    % Find latter half of mask (end of sound)
+                    mask_end = mask & [1:numel(mask)]' >= sum(dmask(1:find(dmask~=1)));
+                    
+                    % Find beginning of mask (beginning of sound)
+                    mask_begin = mask & ~mask_end; 
+                    
+                    % Load data differently
+                    if d.player.looped_playback
+                        % If looped, then loop to load beginning of sound.
+                        data=[Y(mask_end, :); Y(mask_begin, :)]; 
+                    else
+                        data=[Y(mask_end, :); zeros(buffer_nsamps - numel(find(mask_end==1)), size(Y,2))];
+                    end % if d.player.looped_payback
+                    
                 else
-                    % Load a whole buffer worth of data. Used for fading
-                    % in/out data below, although only 1/2 of buffer loaded
-                    % at a time (block_nsamps).
-                    data=Y(1+block_nsamps*(block_num-1):(block_nsamps)*block_num + block_nsamps,:);                    
-                end 
+                    data=Y(mask, :); 
+                end % if any(dmask-1)
+                
+                % Shift mask
+                mask=circshift(mask, block_nsamps); 
                 
                 % Modcheck and modifier for continuous playback
                 if isequal(d.player.adaptive_mode, 'continuous')
@@ -687,7 +760,11 @@ for trial=1:length(stim)
                     % single playthrough the buffer. This could be handled
                     % better, but CWB isn't sure how to do that (robustly)
                     % at the moment.
-                    PsychPortAudio('Start', phand, ceil( (nblocks)/2)+1, [], 0);                    
+                    if nblocks==inf
+                        PsychPortAudio('Start', phand, 0, [], 0);                    
+                    else
+                        PsychPortAudio('Start', phand, ceil( (nblocks)/2)+1, [], 0);                    
+                    end % if nblocks
                     
                     % Wait until we are in the second block of the buffer,
                     % then start rewriting the first. Helps with smooth
@@ -729,6 +806,9 @@ for trial=1:length(stim)
                 %   If this is not done, whatever was left in the second
                 %   buffer block is played back again, which creates an
                 %   artifact. 
+                %
+                %   Note: This probably shouldn't be applied in "looped
+                %   playback" mode. 
                 if block_num==nblocks && startofblock==block_start(1)
                     data=zeros(block_nsamps, size(X,2)); 
                     PsychPortAudio('FillBuffer', phand, data', 1, []);  
@@ -750,8 +830,10 @@ for trial=1:length(stim)
                     rec_start_time=GetSecs; 
                     
                 end % d.player.record_mic
-                
-            end % for block_num=1:nblocks
+            
+                block_num=block_num+1; 
+            end % while
+%             end % for block_num=1:nblocks
             
             % Schedule stop of playback device.
             %   Should wait for scheduled sound to complete playback. 
@@ -785,6 +867,8 @@ for trial=1:length(stim)
                 
             end % if isequal( ...
 
+          
+            
             % Save recording to sandbox
             d.sandbox.voice_recording{trial} = rec; 
             clear rec; % just to be safe, clear the variable
