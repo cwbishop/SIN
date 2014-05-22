@@ -134,6 +134,15 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                                           intended to accomodate the 
 %                                           HINT.       
 %
+%   'playback_mode':    string, specifies one of various playback modes.
+%                           'looped':   a sound is looped infinitely or
+%                                       until the player receives a kill
+%                                       signal from somewhere. 
+%                           'standard': each sound presented once and only
+%                                       once in the order dictacted by
+%                                       X (although this may be randomized
+%                                       if 'randomize' flag set). 
+%
 %   'append_files':     bool, append data files into a single file. This
 %                       might be useful if the user wants to play an
 %                       uninterrupted stream of files and the timing
@@ -164,8 +173,6 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                           channels the corresponding column of the
 %                           playback file (elements of X) will be assigned
 %                           to. 
-%
-%   'looped_playback':  bool, if set then the playback_list (X) is 
 %
 % Windowing options (for 'continuous' playback only):
 %
@@ -342,11 +349,11 @@ FS = d.player.playback.fs;
 %   secondary functions (like a modcheck or modifier). At least in theory.
 %   This was not implemented fully when CWB wrote this comment.
 %   
-%   PlayerState:
-%       0:  Pause playback
-%       1:  Play or resume playback
-%       2:  Stop all playback and exit as cleanly as possible
-d.sandbox.PlayerState = 1; 
+%   state:
+%       'pause':    Pause playback
+%       'run':      Play or resume playback
+%       'exit':     Stop all playback and exit as cleanly as possible
+d.player.state = 'run'; 
 
 %% LOAD DATA
 %
@@ -613,12 +620,13 @@ for trial=1:length(stim)
             ramp_on=win(1:ceil(length(win)/2),:); ramp_on=[ramp_on; ones(block_nsamps - size(ramp_on,1), size(ramp_on,2))];
             ramp_off=win(ceil(length(win)/2):end,:); ramp_off=[ramp_off; zeros(block_nsamps - size(ramp_off,1), size(ramp_off,2))];    
             
-            % nblocks
-            %   Variable only used by 'continuous' plaback
-            if d.player.looped_playback
+            % nblocks            
+            if isequal(d.player.playback_mode, 'looped')
                 nblocks=inf;
-            else
+            elseif isequal(d.player.playback_mode, 'standard')
                 nblocks=ceil(size(X,1)./size(ramp_on,1)); 
+            else
+                error(['Unknown playback_mode: ' d.player.playback_mode]); 
             end % if
             
             % Store nblocks in sandbox. This is needed by some modcheck
@@ -657,14 +665,14 @@ for trial=1:length(stim)
                 %
                 %   We want to do different things based on the playback
                 %   mode. 
-                %       looped_playback:    if this is true, then we want
+                %       'looped':           if this is true, then we want
                 %                           to load the samples at the end
                 %                           of the sound, then load the
                 %                           samples at the beginning of the
                 %                           sound (circular buffer type of
                 %                           a deal).
                 %
-                %       otherwise:  just load the samples at the end of the
+                %       'standard': just load the samples at the end of the
                 %                   sound and zeropad the rest to fill the
                 %                   buffer. 
                 
@@ -682,7 +690,7 @@ for trial=1:length(stim)
                     mask_begin = mask & ~mask_end; 
                     
                     % Load data differently
-                    if d.player.looped_playback
+                    if isequal(d.player.playback_mode, 'looped')
                         % If looped, then loop to load beginning of sound.
                         data=[Y(mask_end, :); Y(mask_begin, :)]; 
                     else
@@ -692,9 +700,6 @@ for trial=1:length(stim)
                 else
                     data=Y(mask, :); 
                 end % if any(dmask-1)
-                
-                % Shift mask
-                mask=circshift(mask, block_nsamps); 
                 
                 % Modcheck and modifier for continuous playback
                 if isequal(d.player.adaptive_mode, 'continuous')
@@ -716,6 +721,7 @@ for trial=1:length(stim)
                                         
                 end % if isequal ...
        
+                
                 % Ramp new stream up, mix with old stream. 
                 %   - The mixed signal is what's played back. 
                 %   - We don't want to ramp the first block in, since the
@@ -743,6 +749,18 @@ for trial=1:length(stim)
                     return % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
+                % Shift mask
+                %   Only shift if the player is in the 'run' state.
+                %   Otherwise, leave the mask as is. 
+                %
+                %   Note: This must be placed after the modcheck/modifier
+                %   above (in continuous mode) or we run into a
+                %   'stuttering' effect. This is due to the mask being
+                %   improperly moved. 
+                if isequal(d.player.state, 'run')
+                    mask=circshift(mask, block_nsamps); 
+                end % isequal(d.player.state, 'run'); 
+                
                 % First time through, we need to start playback
                 %   This has to be done ahead of time since this defines
                 %   the buffer size for the audio device. 
@@ -831,7 +849,13 @@ for trial=1:length(stim)
                     
                 end % d.player.record_mic
             
+                % Increment block count
                 block_num=block_num+1; 
+                
+                % Clear mod_code
+                %   Important if playback is paused for any reason. Do not
+                %   want the mod_code applying to the same sound twice. 
+                clear mod_code;
             end % while
 %             end % for block_num=1:nblocks
             
@@ -865,9 +889,7 @@ for trial=1:length(stim)
                 % Go ahead and empty the buffer again. 
                 rec=[rec; PsychPortAudio('GetAudioData', rhand)'];                  
                 
-            end % if isequal( ...
-
-          
+            end % if isequal( ...          
             
             % Save recording to sandbox
             d.sandbox.voice_recording{trial} = rec; 
