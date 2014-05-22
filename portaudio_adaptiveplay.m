@@ -512,6 +512,9 @@ end % for modifier_num
 
 for trial=1:length(stim)
 
+    %% BUFFER POSITION
+    buffer_pos = 1; % start at the beginning of the sound 
+    
     %% UPDATE TRIAL IN SANDBOX
     %   d.sandbox.trial is used by other functions
     d.sandbox.trial = trial; 
@@ -646,7 +649,12 @@ for trial=1:length(stim)
             %   a full buffer worth of data (two "blocks"). This is
             %   necessary for fading in/out upon subsequent iterations of
             %   block_num
-            mask=[true(buffer_nsamps, 1); false(size(Y,1)-buffer_nsamps, 1)]; 
+            %
+            %   CWB tried to use a circularly shifted mask, but it ended up
+            %   being slower for longer sounds (not surprising in
+            %   hindsight). CWB wants indexing that works equally well for
+            %   sounds of all sizes. 
+%             mask=[true(buffer_nsamps, 1); false(size(Y,1)-buffer_nsamps, 1)]; 
             
             % initiate block_num
             block_num=1;
@@ -654,7 +662,7 @@ for trial=1:length(stim)
             % Loop through each section of the playback loop. 
             while block_num <= nblocks
 %             for block_num=1:nblocks
-%                 tic
+                tic
                 % Store block number in sandbox - necessary for some
                 % termination procedures
                 d.sandbox.block_num = block_num; 
@@ -684,27 +692,38 @@ for trial=1:length(stim)
                 
                 % These lines tell us if the mask is split as described
                 % above.
-                dmask = diff(find(mask==1)); % find the number of samples between true values
+%                 dmask = diff(find(mask==1)); % find the number of samples between true values
                 
-                % if there are non-consecutive samples (split mask)
-                if any(dmask-1)
+
+                % If we don't have enough consecutive samples left to load
+                % into buffer, then we need to do one of two things
+                %
+                %   1. Beginning loading sound from the beginning of the
+                %   file again.
+                %
+                %   2. Load what we have and add zeros to make up the
+                %   difference. 
+                if buffer_pos + buffer_nsamps > size(Y,1)
+%                 if any(dmask-1)
                     
                     % Find latter half of mask (end of sound)
-                    mask_end = mask & (1:numel(mask))' >= sum(dmask(1:find(dmask~=1)));
+%                     mask_end = mask & (1:numel(mask))' >= sum(dmask(1:find(dmask~=1)));
                     
                     % Find beginning of mask (beginning of sound)
-                    mask_begin = mask & ~mask_end; 
+%                     mask_begin = mask & ~mask_end; 
                     
                     % Load data differently
                     if isequal(d.player.playback_mode, 'looped')
                         % If looped, then loop to load beginning of sound.
-                        data=[Y(mask_end, :); Y(mask_begin, :)]; 
+%                         data=[Y(mask_end, :); Y(mask_begin, :)];
+                        data=[Y(buffer_pos:end,:); Y(1:buffer_nsamps-(size(Y,1)-buffer_pos)-1,:)];
                     else
-                        data=[Y(mask_end, :); zeros(buffer_nsamps - numel(find(mask_end==1)), size(Y,2))];
+%                         data=[Y(mask_end, :); zeros(buffer_nsamps - numel(find(mask_end==1)), size(Y,2))];
+                        data=[Y(buffer_pos:end,:); zeros(buffer_nsamps-(size(Y,1)-buffer_pos)-1, size(Y,2))]; 
                     end % if d.player.looped_payback
                     
                 else
-                    data=Y(mask, :); 
+                    data=Y(buffer_pos:buffer_pos+buffer_nsamps-1, :); 
                 end % if any(dmask-1)
                 
                 % Modcheck and modifier for continuous playback
@@ -806,16 +825,17 @@ for trial=1:length(stim)
                 %   'stuttering' effect. This is due to the mask being
                 %   improperly moved. 
                 if isequal(d.player.state, 'run')
-                    tic
-                    % circshift is minimally 5x slower than a manual shift
-                    % written by CWB. Ran into significant overhead with
-                    % larger files (e.g., with ~7 min ANL data) 
-%                     mask=circshift(mask, block_nsamps); 
-                    mask = [mask(end-block_nsamps:end); mask(1:end-block_nsamps-1)]; 
-                    toc
+                    
+                    % There are definitely "cooler" ways to do move the
+                    % window of samples to load (CWB loves the idea of
+                    % using a circularly shifted logical mask), but they
+                    % were prohibitively slow. So, CWB had to go with a
+                    % straightforward (and not so pretty) solution. 
+                    buffer_pos=mod(buffer_pos+block_nsamps, size(Y,1)); 
+
                 end % isequal(d.player.state, 'run'); 
                 
-%                 toc
+                toc
                 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
