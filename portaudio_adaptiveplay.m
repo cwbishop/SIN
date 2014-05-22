@@ -613,7 +613,7 @@ for trial=1:length(stim)
                 %   is loaded for playback and the second buffer block is
                 %   saved for fading in/out on the next block_num
                 %   iteration.
-                if block_num==nblocks
+                if block_num>=nblocks-1
                     % Load with the remainder of X, then pad zeros.         
                     data=[Y(1+block_nsamps*(block_num-1):end, :); zeros(block_nsamps - size(Y(1+block_nsamps*(block_num-1):end, :),1), size(Y,2))];
                 else
@@ -651,11 +651,15 @@ for trial=1:length(stim)
                 if block_num==1
                     data2play=data(1:block_nsamps, :);
                 else
+                    % Fade out previous setting (x) and fade in the new
+                    % data (data). 
                     data2play=data(1:block_nsamps, :).*ramp_on + x.*ramp_off; 
                 end % if block_num==1
                 
                 % Save second buffer block for fading on the next trial.
-                x=data(1+block_nsamps:end, :); 
+                %   Zero padding to make x play nicely when we're at the
+                %   end of a sound                 
+                x=[data(1+block_nsamps:end, :); zeros(block_nsamps-size(data(1+block_nsamps:end, :),1), size(data,2))]; 
                 
                 % Basic clipping check
                 %   Kill any audio devices when this happens, then throw an
