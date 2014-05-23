@@ -95,9 +95,10 @@ switch testID;
         opts.player.stop_if_error = true; 
         
         % Add player control modifiers
-        %   pausePlayback allows user to pause playback if he wants to. 
+        %   Include a basic playback controller to handle "pauses",
+        %   "resume", and "quit" requests.
         opts.player.modifier{1} = struct( ...
-            'fhandle', @modifier_pausePlayback); 
+            'fhandle', @modifier_PlaybackControl); 
             
     case 'HINT (SNR-50)'
         
@@ -240,7 +241,7 @@ switch testID;
         %   longer for longer files (due to indexing overhead)
         %
         % ============================
-        opts.player.playback.block_dur=0.3; 
+%         opts.player.playback.block_dur=0.3; 
         
         % ============================
         % Player configuration
@@ -289,7 +290,7 @@ switch testID;
             'fhandle',  @modifier_dBscale, ... % use a decibel scale
             'dBstep',   5, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB
-            'channels', 2);  % apply modification to channel 2            
+            'channels', 1);  % apply modification to channel 2            
             
     otherwise
         

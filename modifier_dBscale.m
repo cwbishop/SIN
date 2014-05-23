@@ -54,6 +54,9 @@ function [Y, d]=modifier_dBscale(X, mod_code, varargin)
 %   portaudio_adaptiveplay (that is, always applying operations to the
 %   original signal (X)) first. 
 %
+%   6. Should change flow so sounds are always scaled to the most recent
+%   scaling factor, not matter the code. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -107,6 +110,8 @@ end % if ~d.player.modifier{modifier_num}.initialized
 %% GET APPROPRIATE STEP SIZE
 dBstep=d.player.modifier{modifier_num}.dBstep(find(d.player.modifier{modifier_num}.change_step <= trial, 1, 'last'));
 
+channels=d.player.modifier{modifier_num}.channels; 
+
 %% WHAT TO DO?
 %   What do we do if no mod_code is provided?
 if ~isempty(mod_code)
@@ -117,8 +122,6 @@ if ~isempty(mod_code)
             dBstep = mod_code*dBstep; 
 
             %% SCALE TIME SERIES
-            channels=d.player.modifier{modifier_num}.channels; 
-
             % Assign X to Y.
             Y=X;
 
@@ -148,6 +151,22 @@ if ~isempty(mod_code)
             % Update plotting information
             d.sandbox.xdata=1:length(d.sandbox.xdata)+1; % xdata (call #)
             d.sandbox.ydata(end+1)=d.player.modifier{modifier_num}.history(end);
+            
+        case {100}
+            % This is the modification code (mod_code) sent by
+            % ANL_modcheck_keypress when playback is "resumed" after a
+            % pause. CWB noticed that the sounds are not scaled
+            % appropriately when playback is resumed. This is meant to fix
+            % that.
+            
+            % Copy over input data
+            Y=X;
+            
+            % Grab the most recent scaling factor applied.
+            sc = db2amp(d.player.modifier{modifier_num}.history(end)); 
+            
+            % Apply scaling factor to the appropriate channels.
+            Y(:, channels)=Y(:, channels).*sc; 
             
         otherwise
             % We don't want to throw an error because sometimes other

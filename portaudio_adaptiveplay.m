@@ -643,19 +643,6 @@ for trial=1:length(stim)
             % ANL_modcheck_keypress)
             d.sandbox.nblocks=nblocks; 
             
-            % Data mask
-            %   This is a circular mask used as a logical index of the
-            %   playback data (from stim{trial}, stored in X/Y). We load in
-            %   a full buffer worth of data (two "blocks"). This is
-            %   necessary for fading in/out upon subsequent iterations of
-            %   block_num
-            %
-            %   CWB tried to use a circularly shifted mask, but it ended up
-            %   being slower for longer sounds (not surprising in
-            %   hindsight). CWB wants indexing that works equally well for
-            %   sounds of all sizes. 
-%             mask=[true(buffer_nsamps, 1); false(size(Y,1)-buffer_nsamps, 1)]; 
-            
             % initiate block_num
             block_num=1;
             
@@ -880,19 +867,36 @@ for trial=1:length(stim)
                     
                 end % d.player.record_mic
             
-                % Increment block count
-                block_num=block_num+1; 
+                % Only increment block information if the sound is still
+                % being played. 
+                if isequal(d.player.state, 'run')
+                    
+                    % Increment block count
+                    block_num=block_num+1; 
+                    
+                end % if isequal ...
                 
                 % Clear mod_code
                 %   Important if playback is paused for any reason. Do not
                 %   want the mod_code applying to the same sound twice. 
                 clear mod_code;
+                
+                % If player state is in 'exit', then stop all playback and
+                % return variables
+                if isequal(d.player.state, 'exit')
+                    break; 
+                end % 
             end % while
 %             end % for block_num=1:nblocks
             
             % Schedule stop of playback device.
             %   Should wait for scheduled sound to complete playback. 
-            PsychPortAudio('Stop', phand, 1); 
+            if isequal(d.player.state, 'run')
+                PsychPortAudio('Stop', phand, 1); 
+            elseif isequal(d.player.state, 'exit')
+                PsychPortAudio('Stop', phand, 0);                 
+                break; 
+            end % if isequal ...
             
             % Stop unmodulated noise
             if isequal(d.player.unmod_playbackmode, 'stopafter')

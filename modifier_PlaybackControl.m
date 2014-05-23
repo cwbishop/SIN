@@ -1,15 +1,15 @@
-function [Y, d]=modifier_pausePlayback(X, mod_code, varargin)
+function [Y, d]=modifier_PlaybackControl(X, mod_code, varargin)
 %% DESCRIPTION:
 %
-%   Function designed to "pause" playback. Playback is paused by fading
-%   zeroing out sound and setting the player state to 'pause'. 
+%   Function designed to handle basic playback control requests. At time of
+%   writing, this includes "pause", "run/resume", and "exit/quit". 
 %
 % INPUT:
 %
 %   X:  time series
 %
-%   mod_code:   modification code. Currently the code only responds if a
-%               mod_code of 99 is received. All other codes have no effect.
+%   mod_code:   modification code. Will respond to codes 99 (pause), 100
+%               (resume), and 86 (quit). All other codes have no effect. 
 %
 % OUTPUT:
 %
