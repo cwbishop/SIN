@@ -151,6 +151,7 @@ switch testID;
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
+            'startplaybackat',    0, ...  % start playback at beginning of files
             'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
             'unmod_channels',   [1 2], ...
             'unmod_leadtime',   1, ... % start unmodulated sound 1 sec before sentence onset
@@ -260,10 +261,11 @@ switch testID;
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
-            'playback_channels',[1 2], ...  % channels to present sounds to. 
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
+            'startplaybackat',    0, ...  % start playback at beginning of sound 
+            'channel_mixer',    {{[0.5; 0.5] [0; 0]}}, ... % Play both channels to left ear only. 
             'unmod_playbackmode', [], ... % no unmodulated sound
             'unmod_channels',   [], ... % no unmodulated sound
             'unmod_leadtime',   [], ... % no unmodulated sound

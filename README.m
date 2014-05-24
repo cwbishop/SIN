@@ -26,16 +26,20 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 			-> device: recording device
 			-> fs: sampling rate
 			-> buffer_dur: recording buffer duration (in sec)
-			
+		
+        -> Mixer (how to mix playback channels after modification)
+            -> 
+            
 		(Player Configuration)
 		-> adaptive_mode:
         -> playback_mode: (looped | standard)
 		-> append_files: 
-        -> match_playrec_latency:   used by portaudio_adaptiveplay. 
-		-> stop_if_error:
-		-> playback_channels:
+        -> stop_if_error:
+		-> playback_channels: XXX Removed and replaced with channel_mixer
 		-> randomize: randomize playback list. This is currently handled in SIN_runTest, but I think it would be smarter to move this centralize playback features like this to the "player" (e.g., portaudio_adaptiveplay)
-
+        -> startplaybackat: when to start playback within a sound. This parameter is useful when the user wants to start playback at an arbitrary point within a file. To start at the beginning of the file, set to 0. (no default)
+        -> channel_mixer: 
+        
 		(Buffer Windowing)
 		-> window_fhandle: windowing function handle
 		-> window_dur: duration of windowing function in seconds
@@ -62,9 +66,22 @@ Test Setup -> What the user has to provide to get the player functions to work. 
             
     -> Sandbox: a dirty area where variables can be stored if necessary and accessed by different functions (e.g., figure or axis information for plotting, etc).
     
+    -> Calibration info (calibration): calibration information is provided here. This will mirror the "calibration" structure below exactly, whatever that ends up being. 
+    
+    
+                
 =======================================================================================================
 Results Structure: Player return structure. This contains three basic fields
 	-> User Options (UserOptions) (options provided by user, see Options structure above). This field can be used to relaunch the same test with the same settings (although playback order might change). 
 	-> RunTime: modified (and appended) options structure. This may contain additional fields not present in User Options. The fields will vary by player type. Example below for portaudio_adaptiveplay. Only additional top-level fields are desribed below.
 		-> playback_list: cell array of playback files
 		-> voice_recording: cell array of recorded responses if the player is configured to record subject responses through the recording device (see Record field above). (should be added at end of playback, I think, to keep structure size down)
+
+=======================================================================================================
+Calibration info (calibration): this is the output from calibration routines. 
+    -> playback: playback device information during calibration
+    -> record: recording device information during calibration
+    -> data: Information about the calibration recording
+        -> rec: calibration recording
+        -> absdB: absolute level of recorded sound        
+        XXX Need more information about user specified output level XXX
