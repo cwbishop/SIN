@@ -261,19 +261,8 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   1. Add timing checks to make sure we have enough time to do everything
 %   we need before the buffer runs out
 %
-%   4. Add continuously looped playback (priority 1). 
-%
-%   12. Always modify originally provided data. This will prevent, in
-%   extreme cases, digital quantization error that could lead to bizaree
-%   playback situations.
-%
 %   13. Improve d.unmod_leadtime so the relative start times are reasonably
 %   close. 
-%
-%   14. Add option to record playback from a recording device. Write data
-%   to file or data structure (not sure which is more helpful yet). 
-%
-%   15. How do we terminate playback at an arbitrary time?
 %
 %   18. change unmod_playbackmode names to something more informative. 
 %
@@ -289,11 +278,6 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   tried using "Direct Sound" recordings, but they were very crackly and
 %   low quality. 
 %
-%   21. Add in a "Pause" and "Exit" feature. CWB thinks this can be done
-%   relatively cleanly by setting a flag in sandbox. This way, secondary
-%   functions (like modchecks or modifiers) can access and alter the state
-%   of the player as necessary. The trick is then starting playback again. 
-%
 %   22. The relative timing of unmodulated sound playback depends not just
 %   on the lead/lag settings, but *also* player.playback.block_dur. This
 %   needs to be addressed (or accounted for) with scheduling. 
@@ -303,11 +287,28 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   well do a "bytrial" adjustment - in fact, that would probably be
 %   cleaner. 
 %
-%   24. There's an intensity mismatch after 'run' button is pressed. It
-%   sounds to CWB like the sound is being presented at the unaltered sound
-%   level. To illustrate this, decrease sound volume by some appreciable
-%   level using ANL setup. Then press 'r' repeatedly. The sound gets louder
-%   immediately after pressing 'r'.
+%   25. Add start_position argument to allow users to start playback at an
+%   arbitrary point within a sound. This will be useful for the ANL.
+%       - This will require an optional check for ramping. We don't want to
+%       "fade in" if we are starting at the beginning of a sound file, but
+%       we *do* want to fade in if we're starting at something that isn't
+%       the beginning of the sound. 
+%
+%   26. Need a way to mix channels in various ways. For instance, the user
+%   might have a two channel file - one with a target speaker and a second
+%   with multitalker babble. The user may wish to adjust one (or both) of
+%   these channels independently of the other, but present the mixed output
+%   to the same speaker. This is the case with ANL as it is traditionally
+%   administered. 
+%
+%   27. Need to handle the "unmodualted" noise in a smarter way. At
+%   present, the unmodulated noise is handled independently of the
+%   modulated output. Provided the "mixer" is available, it may be wise to
+%   add the unmodulated sound as an additional channel to the modulated
+%   data, then mix everything together. Not sure, though. Tough call. THis
+%   approach will make it difficult to control relative timing as the test
+%   is currently administered. But we might be able to setup a "scheduler"
+%   for the playback device and add start/stop times. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -485,7 +486,7 @@ end % if isequal
 % Create additional fields in 'sandbox'
 %   Dummy values assigned as placeholders for intialization purposes. 
 d.sandbox.trial=-1; % trial number
-d.sandbox.nblock=-1; % nblock, the block number within the trial 
+d.sandbox.nblocks=-1; % nblocks, the block number within the trial 
 d.sandbox.block_num=-1; % block number we are in. 
 d.sandbox.modifier_num=[];
 d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single modcheck/trial (for now)
@@ -513,8 +514,8 @@ end % for modifier_num
 for trial=1:length(stim)
 
     %% BUFFER POSITION
-    buffer_pos = 1; % start at the beginning of the sound 
-    
+    buffer_pos = 1; % start at the beginning of the sound    
+        
     %% UPDATE TRIAL IN SANDBOX
     %   d.sandbox.trial is used by other functions
     d.sandbox.trial = trial; 
@@ -738,11 +739,18 @@ for trial=1:length(stim)
                 %   - We don't want to ramp the first block in, since the
                 %   ramp is only intended to fade on block into the next in
                 %   a clean way. 
-                if block_num==1
+                %   - 140523 CWB adds in an additional check. We want to
+                %   fade sound in, even if it's the first block_num, if the
+                %   buffer_position has been set to some other starting
+                %   point. This way, if we start in the middle of a sound,
+                %   we're less likely to encounter transients.
+                if block_num==1 && buffer_pos==1
                     data2play=data(1:block_nsamps, :);
+                elseif block_num==1 && buffer_pos~=1
+                    data2play=data(1:block_nsamps, :).*ramp_on;
                 else
                     % Fade out previous setting (x) and fade in the new
-                    % data (data). 
+                    % data (first half of data). 
                     data2play=data(1:block_nsamps, :).*ramp_on + x.*ramp_off; 
                 end % if block_num==1
                 
@@ -755,9 +763,10 @@ for trial=1:length(stim)
                 %   Kill any audio devices when this happens, then throw an
                 %   error. 
                 if max(max(abs(data))) > 1 && d.player.stop_if_error, 
-                    PsychPortAudio('Close'); 
+%                     PsychPortAudio('Close'); 
                     warning('Signal clipped!'); 
-                    return % exit and return variables to the user. 
+                    d.player.state='exit'; 
+                    break % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
                 % First time through, we need to start playback
@@ -833,8 +842,9 @@ for trial=1:length(stim)
                 
                 % Error checking after each loop
                 if d.player.stop_if_error && (pstatus.XRuns >0 || pstatus.TimeFailed >0)
-                    PsychPortAudio('Stop', phand); 
-                    error('Error during sound playback. Check buffer_dur.'); 
+                    warning('Error during sound playback. Check buffer_dur.'); 
+                    d.player.state='exit';
+                    break 
                 end % if d.player.stop ....
                 
                 % Zero out the second buffer block if we happen to end in
