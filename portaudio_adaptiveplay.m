@@ -169,10 +169,24 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                       number of underruns. E-mailed support group on
 %                       5/7/2014. We'll see what they say.
 %
-%   'playback_channels':    integer array. Each element determines which
-%                           channels the corresponding column of the
-%                           playback file (elements of X) will be assigned
-%                           to. 
+%   'startplaybackat':  double, when to start playback relative to start of
+%                       sound file (sec). To start at beginning of file, st
+%                       to 0. (no default)
+%
+%   'channel_mixer':   cell array, specifies how to mix channels in playback_list
+%               (X) into each playback_channel. Each cell corresponds to
+%               the same element in playback_channel. Each cell must
+%               contain double arrays with C elements, where C is the
+%               number of columns in data found in playback_list. 
+%
+%                   Example: Two channel file, present both columns to
+%                   first output channel only
+%                       {[1, 0] [1, 0]}
+%                       
+%                   Example: Two channel file, present one channel to
+%                   channel one at full volume, and the second column to
+%                   channel 2 attenuated by 12 dB.
+%                       {[1, 0] [0, db2amp(-12)]}
 %
 % Windowing options (for 'continuous' playback only):
 %
@@ -287,20 +301,6 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   well do a "bytrial" adjustment - in fact, that would probably be
 %   cleaner. 
 %
-%   25. Add start_position argument to allow users to start playback at an
-%   arbitrary point within a sound. This will be useful for the ANL.
-%       - This will require an optional check for ramping. We don't want to
-%       "fade in" if we are starting at the beginning of a sound file, but
-%       we *do* want to fade in if we're starting at something that isn't
-%       the beginning of the sound. 
-%
-%   26. Need a way to mix channels in various ways. For instance, the user
-%   might have a two channel file - one with a target speaker and a second
-%   with multitalker babble. The user may wish to adjust one (or both) of
-%   these channels independently of the other, but present the mixed output
-%   to the same speaker. This is the case with ANL as it is traditionally
-%   administered. 
-%
 %   27. Need to handle the "unmodualted" noise in a smarter way. At
 %   present, the unmodulated noise is handled independently of the
 %   modulated output. Provided the "mixer" is available, it may be wise to
@@ -362,6 +362,15 @@ FS = d.player.playback.fs;
 %       'exit':     Stop all playback and exit as cleanly as possible
 d.player.state = 'run'; 
 
+%% MIXER CHECK
+%   Need to make sure the mixer is internally consistent (meaning all cells
+%   have the same # of elements)
+for m=1:length(d.player.channel_mixer)
+    if numel(d.player.channel_mixer{m})~=numel(d.player.channel_mixer{1})
+        error('Each cell of the mixer must have the same number of elements')
+    end % if numel
+end % for m=1:length(...
+
 %% LOAD DATA
 %
 %   1. Support only wav files. 
@@ -379,15 +388,16 @@ t.datatype=2;
 % Store time series in cell array (stim)
 stim=cell(length(playback_list),1); % preallocate for speed.
 for i=1:length(playback_list)
+    
     [tstim, fsx]=SIN_loaddata(playback_list{i}, t);
     stim{i}=resample(tstim, FS, fsx); 
     
-    % Playback channel check
-    %   Confirm that the number of playback channels corresponds to the
-    %   number of columns in stim{i}
-    if numel(d.player.playback_channels) ~= size(stim{i},2)
-        error(['Incorrect number of playback channels specified for file ' playback_list{i}]); 
-    end % if numel(p.playback_channels) ...
+    % Check against mixer
+    %   Only need to check against first cell of mixer because we completed
+    %   an internal check on the mixer above.
+    if numel(d.player.channel_mixer{m}) ~= size(stim{i},2)
+        error([playback_list{i} ' contains an incorrect number of channels']); 
+    end % if numel
     
 end % for i=1:length(file_list)
 
@@ -422,7 +432,7 @@ catch
     InitializePsychSound; 
     [pstruct]=portaudio_GetDevice(d.player.playback.device);
     [rstruct]=portaudio_GetDevice(d.player.record.device); 
-end % 
+end % try/catch
 
 % Open the playback device 
 %   Only open audio device if 'continuous' selected. Otherwise, device
@@ -511,10 +521,15 @@ for modifier_num=1:length(d.player.modifier)
     
 end % for modifier_num
 
+%% INITIALIZE BUFFER POSITION
+%   User must provide the buffer start position (in sec). This converts to
+%   samples
+buffer_pos = round(d.player.startplaybackat.*FS); 
+
 for trial=1:length(stim)
 
     %% BUFFER POSITION
-    buffer_pos = 1; % start at the beginning of the sound    
+    buffer_pos = buffer_pos + 1; % This starts at the first sample. 
         
     %% UPDATE TRIAL IN SANDBOX
     %   d.sandbox.trial is used by other functions
@@ -526,18 +541,6 @@ for trial=1:length(stim)
     %% SELECT APPROPRIATE STIMULUS
     X=stim{trial};     
     
-    %% FILL X TO MATCH NUMBER OF CHANNELS
-    %   Create a matrix of zeros, then copy X over into the appropriate
-    %   channels. CWB prefers this to leaving it up to psychportaudio to
-    %   select the correct playback channels. 
-    x=zeros(size(X,1), pstruct.NrOutputChannels);
-    
-    x(:, d.player.playback_channels)=X; % copy data over into playback channels
-    X=x; % reassign X
-
-    % Clear temporary variable x 
-    clear x; 
-       
     % By file modcheck and data modification. 
     %   We check at the beginning of each "trial" and scale the upcoming
     %   sound appropriately. 
@@ -623,8 +626,8 @@ for trial=1:length(stim)
             %   by MATLAB's window function.    
             win=window(d.player.window_fhandle, round(d.player.window_dur*2*FS)); % Create onset/offset ramp
 
-            % Match number of channels
-            win=win*ones(1, size(X,2)); 
+            % Match number of output channels
+            win=win*ones(1, pstruct.NrOutputChannels); 
     
             % Create ramp_on (for fading in) and ramp_off (for fading out)
             ramp_on=win(1:ceil(length(win)/2),:); ramp_on=[ramp_on; ones(block_nsamps - size(ramp_on,1), size(ramp_on,2))];
@@ -655,6 +658,9 @@ for trial=1:length(stim)
                 % termination procedures
                 d.sandbox.block_num = block_num; 
                 
+                % Store buffer position
+                d.sandbox.buffer_pos = buffer_pos; 
+                
                 % Which buffer block are we filling?
                 %   Find start and end of the block
                 startofblock=block_start(1+mod(block_num-1,2));
@@ -678,11 +684,6 @@ for trial=1:length(stim)
                 %                   sound and zeropad the rest to fill the
                 %                   buffer. 
                 
-                % These lines tell us if the mask is split as described
-                % above.
-%                 dmask = diff(find(mask==1)); % find the number of samples between true values
-                
-
                 % If we don't have enough consecutive samples left to load
                 % into buffer, then we need to do one of two things
                 %
@@ -692,21 +693,12 @@ for trial=1:length(stim)
                 %   2. Load what we have and add zeros to make up the
                 %   difference. 
                 if buffer_pos + buffer_nsamps > size(Y,1)
-%                 if any(dmask-1)
-                    
-                    % Find latter half of mask (end of sound)
-%                     mask_end = mask & (1:numel(mask))' >= sum(dmask(1:find(dmask~=1)));
-                    
-                    % Find beginning of mask (beginning of sound)
-%                     mask_begin = mask & ~mask_end; 
                     
                     % Load data differently
                     if isequal(d.player.playback_mode, 'looped')
                         % If looped, then loop to load beginning of sound.
-%                         data=[Y(mask_end, :); Y(mask_begin, :)];
                         data=[Y(buffer_pos:end,:); Y(1:buffer_nsamps-(size(Y,1)-buffer_pos)-1,:)];
                     else
-%                         data=[Y(mask_end, :); zeros(buffer_nsamps - numel(find(mask_end==1)), size(Y,2))];
                         data=[Y(buffer_pos:end,:); zeros(buffer_nsamps-(size(Y,1)-buffer_pos)-1, size(Y,2))]; 
                     end % if d.player.looped_payback
                     
@@ -754,6 +746,15 @@ for trial=1:length(stim)
                     data2play=data(1:block_nsamps, :).*ramp_on + x.*ramp_off; 
                 end % if block_num==1
                 
+                % Mix data into corresponding channels
+                %   Each cell corresponds to a physical output channel.
+                %   Each element with each cell corresponds to a column of
+                %   data2play.
+                data2play_mixed = nan(size(data2play)); 
+                for m=1:pstruct.NrOutputChannels
+                    data2play_mixed(:, m)=data2play*d.player.channel_mixer{m}; 
+                end % 
+                
                 % Save second buffer block for fading on the next trial.
                 %   Zero padding to make x play nicely when we're at the
                 %   end of a sound                 
@@ -763,7 +764,6 @@ for trial=1:length(stim)
                 %   Kill any audio devices when this happens, then throw an
                 %   error. 
                 if max(max(abs(data))) > 1 && d.player.stop_if_error, 
-%                     PsychPortAudio('Close'); 
                     warning('Signal clipped!'); 
                     d.player.state='exit'; 
                     break % exit and return variables to the user. 
@@ -808,7 +808,7 @@ for trial=1:length(stim)
                 %   location with [] forces the data to be "appended" to the end of the
                 %   buffer. For whatever reason, this is far more robust and CWB
                 %   encountered 0 buffer underrun errors.                 
-                PsychPortAudio('FillBuffer', phand, data2play', 1, []);  
+                PsychPortAudio('FillBuffer', phand, data2play_mixed', 1, []);  
                                 
                 pstatus=PsychPortAudio('GetStatus', phand);
                 
@@ -897,7 +897,6 @@ for trial=1:length(stim)
                     break; 
                 end % 
             end % while
-%             end % for block_num=1:nblocks
             
             % Schedule stop of playback device.
             %   Should wait for scheduled sound to complete playback. 
@@ -949,7 +948,7 @@ for trial=1:length(stim)
 end % for trial=1:length(X)
 
 % Close all open audio devices
-PsychPortAudio('Close')
+PsychPortAudio('Close');
 
 % Attach end time
 d.sandbox.end_time=now; 
