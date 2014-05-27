@@ -107,10 +107,25 @@ if ~d.player.modcheck.initialized
     
     % Assign null return for mod_code
     mod_code=[]; 
+
+    % Start ANL_GUI
+    %   Pass it the data structure so the key presses can be configured
+    %   properly. 
+    [~, handles]=ANL_GUI(d); 
+    
+    % Save handles to modcheck function
+    d.sandbox.ANLhandles=handles;
+    
+    % Set instructions
+    set(handles.text_instructions, 'String', d.player.modcheck.instructions);
     
     % Return control
     return
 end % if ~d.player.modcheck.initialized 
+
+% Redraw ANL_GUI (and others)
+%   Without this line, the button presses will never be recognized. 
+drawnow; 
 
 % On subsequent calls, the queue has already been initialized. So we check
 % the queue and determine if any action is necessary.
@@ -185,3 +200,10 @@ if isfield(d, 'sandbox') && d.sandbox.trial == numel(d.sandbox.playback_list) &&
     KbQueueStop;
     KbQueueRelease;
 end % 
+
+% Reset toggle buttons in ANL_GUI
+set(d.sandbox.ANLhandles.button_begin, 'Val', 0);
+set(d.sandbox.ANLhandles.button_pause, 'Val', 0); 
+set(d.sandbox.ANLhandles.button_complete, 'Val', 0); 
+set(d.sandbox.ANLhandles.button_increase, 'Val', 0); 
+set(d.sandbox.ANLhandles.button_decrease, 'Val', 0); 
