@@ -127,7 +127,7 @@ switch testID;
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
-            'filename', 'C:\Users\cwbishop\Documents\GitHub\SIN\playback\HINT\HINT.xlsx', ...
+            'filename', fullfile(opts.specific.root, 'HINT.xlsx'), ...
             'sheetnum', 2); 
         
         % ============================
@@ -152,6 +152,7 @@ switch testID;
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'startplaybackat',    0, ...  % start playback at beginning of files
+            'state',    'run', ... % start in run state
             'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
             'unmod_channels',   [1 2], ...
             'unmod_leadtime',   1, ... % start unmodulated sound 1 sec before sentence onset
@@ -176,8 +177,66 @@ switch testID;
             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
             'change_step', [1 5], ...   % trial on which to change the step size
             'channels', 2);  % apply modification to channel 2            
-            
     case 'ANL'
+        % ANL is actually a sequence of tests. The list includes the
+        % following:
+        %
+        %   1. ANL (MCL-Too Loud)
+        %   2. ANL (MCL-Too Quiet)
+        %   3. ANL (MCL-Estimate)
+        %   4. ANL (BNL-Too Loud)
+        %   5. ANL (BNL-Too Quiet)
+        %   6. ANL (BNL-Estimate)
+        %
+        % These parameters serve as the base settings and tests to run, but
+        % additional steps must be taken to copy parameters over from one
+        % test sequence to the next (e.g., the buffer position and overall
+        % sound levels, according to modifier_dBscale). Also need to copy
+        % over calibration information from one test to the next.        
+        opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)'); 
+        opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)'); 
+        opts(3)=SIN_TestSetup('ANL (MCL-Estimate)'); 
+        
+    case 'ANL (MCL-Too Loud)'
+        % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
+        % listener is instructed to adjust the speech track until it is too
+        % loud. 
+        
+        % Get base
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (MCL-Too Loud)';
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'};
+        
+    case 'ANL (MCL-Too Quiet)'
+        
+        % This is just like the ANL (base), but with different
+        % instructions and a different starting buffer position.
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (MCL-Too Quiet)'; 
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'Good. Using the down button, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you push the down button, I will turn the story down (use 5 dB steps)'};
+        
+    case 'ANL (MCL-Estimate)' 
+        
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (MCL-Estimate)'; 
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level) (use 2 dB steps).'};           
+        
+    case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a
         % very basic breakdown of the procedure.
         %
@@ -255,6 +314,8 @@ switch testID;
         % Function handle for designated player
         opts.player.player_handle = @portaudio_adaptiveplay; 
         
+        warning('Mixing weights are set to 0.5. Need to make sure this is what CWB wants'); 
+        
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
@@ -266,6 +327,7 @@ switch testID;
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'channel_mixer',    {{[0.5; 0.5] [0; 0]}}, ... % Play both channels to left ear only. 
+            'state',    'pause', ... % start in paused state
             'unmod_playbackmode', [], ... % no unmodulated sound
             'unmod_channels',   [], ... % no unmodulated sound
             'unmod_leadtime',   [], ... % no unmodulated sound
@@ -277,9 +339,11 @@ switch testID;
         % ============================
         opts.player.modcheck=struct(...
             'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
-            'keys',     [KbName('left') KbName('right') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run 
+            'instructions', {{'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'}}, ...
+            'keys',     [KbName('i') KbName('j') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run             
             'map',      zeros(256,1));
-        
+%             'fhandle', @modcheck_ANLGUI, ...
+            
         % Assign keys in map
         opts.player.modcheck.map(opts.player.modcheck.keys)=1; 
         

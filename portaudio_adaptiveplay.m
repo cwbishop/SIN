@@ -188,6 +188,12 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                   channel 2 attenuated by 12 dB.
 %                       {[1, 0] [0, db2amp(-12)]}
 %
+%   'state':    player state when first launched. States may change, but
+%               currently include :
+%                   'run':  run the test/playback
+%                   'pause': pause playback
+%                   'exit':     player exit
+%
 % Windowing options (for 'continuous' playback only):
 %
 %   In 'continuous' mode, data are frequently ramped off or on (that is, fade
@@ -310,6 +316,10 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   is currently administered. But we might be able to setup a "scheduler"
 %   for the playback device and add start/stop times. 
 %
+%   28. Add post-mixing modifiers. This will be useful when applying
+%   channel-specific filtering to compensate for differences in device
+%   playback channels (e.g., with different speakers).
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -360,7 +370,7 @@ FS = d.player.playback.fs;
 %       'pause':    Pause playback
 %       'run':      Play or resume playback
 %       'exit':     Stop all playback and exit as cleanly as possible
-d.player.state = 'run'; 
+% d.player.state = 'run'; 
 
 %% MIXER CHECK
 %   Need to make sure the mixer is internally consistent (meaning all cells
@@ -653,7 +663,7 @@ for trial=1:length(stim)
             % Loop through each section of the playback loop. 
             while block_num <= nblocks
 %             for block_num=1:nblocks
-                tic
+%                 tic
                 % Store block number in sandbox - necessary for some
                 % termination procedures
                 d.sandbox.block_num = block_num; 
@@ -769,10 +779,16 @@ for trial=1:length(stim)
                     break % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
+                % Get playback device status
+                pstatus=PsychPortAudio('GetStatus', phand);
+                
                 % First time through, we need to start playback
                 %   This has to be done ahead of time since this defines
-                %   the buffer size for the audio device. 
-                if block_num==1
+                %   the buffer size for the audio device.                 
+                %
+                %   Added additonal check so we only initialize the sound
+                %   card ONCE. 
+                if block_num==1 && ~pstatus.Active
                    
                     % Start audio playback, but do not advance until the device has really
                     % started. Should help compensate for intialization time. 
@@ -831,7 +847,7 @@ for trial=1:length(stim)
 
                 end % isequal(d.player.state, 'run'); 
                 
-                toc
+%                 toc
                 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.

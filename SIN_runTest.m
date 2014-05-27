@@ -57,7 +57,8 @@ end % if ischar
 %   supply the test option information. We don't want to accidentally run a
 %   test the user did not intend or with settings that differ from what the
 %   user wanted. So, force the user (or GUI) to provide this information 
-if numel(testID)~=1, error('Incorrect number of testIDs'); end 
+% if numel(testID)~=1, error('Incorrect number of testIDs'); end 
+if numel(opts) ~= numel(testID), error('Not enough options structures for tests'); end
 
 %% SUBJECT ID ERROR CHECK
 %   Make sure subject ID conforms to generalized pattern
@@ -84,15 +85,23 @@ for t=1:length(testID)
             % Save the subject ID to sandbox
             results.RunTime.sandbox.subjectID=subjectID;
             
-        case {'ANL'}
+        case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)'}
+            
+            % Copy over relevant sections from previous tests.
+            
+            % Buffer Position
+            
+            % Channel attenuation values
+            
+            % Calibration information 
             
             % Launch ANL (at least part of it) 
             %   We'll need to run this essentially 4 or 5 times and save
             %   the values in different files. 
-            results = portaudio_adaptiveplay(play_list, opts); 
+            results(t) = portaudio_adaptiveplay(play_list, opts); 
             
             % Save the subject ID to sandbox
-            results.RunTime.sandbox.subjectID=subjectID;
+            results(t).RunTime.sandbox.subjectID=subjectID;
                         
         case {'MLST'}
             
@@ -105,6 +114,6 @@ for t=1:length(testID)
     end % switch/otherwise
     
     % Save results to file 
-    save(fullfile(opts.general.subjectDir, subjectID, testID{t}, [subjectID '-' testID{t}]), 'results'); 
+    save(fullfile(opts(t).general.subjectDir, subjectID, testID{t}, [subjectID '-' testID{t}]), 'results'); 
     
 end % for t=1:length(testID)

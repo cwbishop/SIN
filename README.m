@@ -39,6 +39,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 		-> randomize: randomize playback list. This is currently handled in SIN_runTest, but I think it would be smarter to move this centralize playback features like this to the "player" (e.g., portaudio_adaptiveplay)
         -> startplaybackat: when to start playback within a sound. This parameter is useful when the user wants to start playback at an arbitrary point within a file. To start at the beginning of the file, set to 0. (no default)
         -> channel_mixer: 
+        -> state: state of the player upon startup
         
 		(Buffer Windowing)
 		-> window_fhandle: windowing function handle
@@ -66,8 +67,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
             
     -> Sandbox: a dirty area where variables can be stored if necessary and accessed by different functions (e.g., figure or axis information for plotting, etc).
     
-    -> Calibration info (calibration): calibration information is provided here. This will mirror the "calibration" structure below exactly, whatever that ends up being. 
-    
+    -> Calibration info (calibration): calibration information is provided here. This will mirror the "calibration" structure below exactly, whatever that ends up being.    
     
                 
 =======================================================================================================
@@ -78,10 +78,12 @@ Results Structure: Player return structure. This contains three basic fields
 		-> voice_recording: cell array of recorded responses if the player is configured to record subject responses through the recording device (see Record field above). (should be added at end of playback, I think, to keep structure size down)
 
 =======================================================================================================
-Calibration info (calibration): this is the output from calibration routines. 
+Calibration info (calibration): this is the output from the currently non-existent calibration routine that CWB needs to write. 
     -> playback: playback device information during calibration
     -> record: recording device information during calibration
-    -> data: Information about the calibration recording
-        -> rec: calibration recording
-        -> absdB: absolute level of recorded sound        
-        XXX Need more information about user specified output level XXX
+    -> reference: contains information regarding the reference signal (e.g., calibrated tone)
+        -> rec: reference recording
+        -> absolute_SPL: the absolute level of the calibration signal (typically written on the side of the calibrator) 
+    -> data: contains channel specific information necessary to calibrate the channel. 
+        -> channels: integer array of channels that have a recording. These are the channels that are calibrated with the current calibration file
+        -> timeseris: cell array (?), each element has a recording from corresponding channel listed in 'channels' above.         
