@@ -1,4 +1,4 @@
-function results=portaudio_adaptiveplay(X, varargin)
+function [results, status]=portaudio_adaptiveplay(X, varargin)
 %% DESCRIPTION:
 %
 %   This function is designed to allow adaptive audio playback. The
@@ -346,6 +346,9 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   29. Copy over presented data to a sandbox variable. This will serve as
 %   a sanity check later since we will know *precisely* the data that were
 %   sent to the sound card after the fact.
+%
+%   30. Add status return variable. Helpful if we encounter an error and
+%   the invoking function needs to know about it. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -1005,7 +1008,7 @@ PsychPortAudio('Close');
 d.sandbox.end_time=now; 
 
 % Attache stim variable
-d.sandbox.stim = stim; 
+% d.sandbox.stim = stim; 
 
 % Attach (modified) structure to results
 %   This is returned to the user. 

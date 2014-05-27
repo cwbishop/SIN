@@ -352,7 +352,7 @@ if val ~= 1
     handles.testopts=opts;
     
     % Assign options to base
-    assignin('base', 'opts'); 
+    assignin('base', 'opts', opts); 
     
     % Transfer data back to GUI
     guidata(hObject, handles); 

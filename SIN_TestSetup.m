@@ -212,6 +212,9 @@ switch testID;
         opts.player.modcheck.instructions={...
             'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'};
         
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        
     case 'ANL (MCL-Too Quiet)'
         
         % This is just like the ANL (base), but with different
@@ -225,6 +228,9 @@ switch testID;
         opts.player.modcheck.instructions={...
             'Good. Using the down button, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you push the down button, I will turn the story down (use 5 dB steps)'};
         
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        
     case 'ANL (MCL-Estimate)' 
         
         opts=SIN_TestSetup('ANL (base)'); 
@@ -235,6 +241,8 @@ switch testID;
         % Change instructions
         opts.player.modcheck.instructions={...
             'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level) (use 2 dB steps).'};           
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
         
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a

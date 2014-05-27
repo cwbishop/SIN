@@ -37,6 +37,11 @@ function SIN_runTest(testID, subjectID, opts, play_list)
 %
 %   1) Complete ANL test administration.   
 %
+%   2. Handle individual stage crashes better for ANL. Currently, if one
+%   stage fails, the program just moves on. Need to have option to repeat
+%   if we have an unusual exit status. This can also be said of all other
+%   tests - runTest will need to be smarter in handling errors. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -92,8 +97,8 @@ for t=1:length(testID)
                 if i > 1
                 
                     % Buffer Position
-                    opts(t).player.startplaybackat = ...
-                        results.RunTime.sandbox.buffer_pos; 
+                    opts(i).player.startplaybackat = ...
+                        results.RunTime.sandbox.buffer_pos./results.RunTime.player.playback.fs; 
 %                         opts(i-1).sandbox.buffer_pos;
                 
                     % mod_mixer
