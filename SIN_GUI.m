@@ -351,11 +351,15 @@ if val ~= 1
     % Assign test options to handles structure
     handles.testopts=opts;
     
+    % Assign options to base
+    assignin('base', 'opts'); 
+    
     % Transfer data back to GUI
     guidata(hObject, handles); 
     
     % Wavfiles
-    [list_dir, wavfiles]=SIN_stiminfo(testID{val}, opts);
+    %   Added opts(1) for multi part tests, like ANL
+    [list_dir, wavfiles]=SIN_stiminfo(testID{val}, opts(1));
     
     % Put wav file information in the handle structure
     handles.wavfiles=wavfiles;
