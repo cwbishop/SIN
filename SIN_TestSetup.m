@@ -326,7 +326,7 @@ switch testID;
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'startplaybackat',    0, ...  % start playback at beginning of sound 
-            'channel_mixer',    {{[0.5; 0.5] [0; 0]}}, ... % Play both channels to left ear only. 
+            'mod_mixer',    [ [0.5; 0.5] [0; 0] ], ... % Play both channels to left ear only. 
             'state',    'pause', ... % start in paused state
             'unmod_playbackmode', [], ... % no unmodulated sound
             'unmod_channels',   [], ... % no unmodulated sound
@@ -348,19 +348,26 @@ switch testID;
         opts.player.modcheck.map(opts.player.modcheck.keys)=1; 
         
         % ============================
-        % Modifier configuration        
-        %   We use two modifiers, but CWB can't recall why. Need to check
-        %   this. 
+        % Modifier configuration                
         % ============================
+        
+        % Modifier to scale mixing information
         opts.player.modifier{end+1} = struct( ...
-            'fhandle',  @modifier_dBscale, ... % use a decibel scale
+            'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
             'dBstep',   5, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB
-            'channels', 1);  % apply modification to channel 2            
+            'data_channels', 1, ...
+            'physical_channels', 1);  % apply decibel step to discourse stream in first output channel 
+        
+        % Modifier to track mod_mixer settings. Used by other functions for
+        % plotting purposes. Note that modifier_trackMixer should always be
+        % at the END of the modifier list, since other modifiers might also
+        % modify the mixing matrix. 
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle',  @modifier_trackMixer);   % track mod_mixer            
             
     otherwise
         
         error('unknown testID')
         
 end % switch 
-
