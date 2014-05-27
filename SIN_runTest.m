@@ -58,7 +58,7 @@ end % if ischar
 %   test the user did not intend or with settings that differ from what the
 %   user wanted. So, force the user (or GUI) to provide this information 
 % if numel(testID)~=1, error('Incorrect number of testIDs'); end 
-if numel(opts) ~= numel(testID), error('Not enough options structures for tests'); end
+% if numel(opts) ~= numel(testID), error('Not enough options structures for tests'); end
 
 %% SUBJECT ID ERROR CHECK
 %   Make sure subject ID conforms to generalized pattern
@@ -85,23 +85,37 @@ for t=1:length(testID)
             % Save the subject ID to sandbox
             results.RunTime.sandbox.subjectID=subjectID;
             
-        case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)'}
+        case {'ANL'}
             
-            % Copy over relevant sections from previous tests.
+            for i=1:length(opts)
+                % Copy over relevant sections from previous tests.
+                if i > 1
+                
+                    % Buffer Position
+                    opts(t).player.startplaybackat = ...
+                        results.RunTime.sandbox.buffer_pos; 
+%                         opts(i-1).sandbox.buffer_pos;
+                
+                    % mod_mixer
+                    opts(i).player.mod_mixer = ...
+                        results.RunTime.player.mod_mixer; 
+                
+                    % Calibration information 
+                
+                end % if i > 1
             
-            % Buffer Position
+                % Launch ANL (at least part of it) 
+                %   We'll need to run this essentially 4 or 5 times and save
+                %   the values in different files. 
+                results = portaudio_adaptiveplay(play_list, opts(i)); 
             
-            % Channel attenuation values
-            
-            % Calibration information 
-            
-            % Launch ANL (at least part of it) 
-            %   We'll need to run this essentially 4 or 5 times and save
-            %   the values in different files. 
-            results(t) = portaudio_adaptiveplay(play_list, opts); 
-            
-            % Save the subject ID to sandbox
-            results(t).RunTime.sandbox.subjectID=subjectID;
+                % Save the subject ID to sandbox
+                results.RunTime.sandbox.subjectID=subjectID;
+                
+                % Save results to file 
+                save(fullfile(opts(i).general.subjectDir, subjectID, testID{t}, [subjectID '-' opts(i).specific.testID]), 'results'); 
+                
+            end % for i=1:length(opts)
                         
         case {'MLST'}
             
