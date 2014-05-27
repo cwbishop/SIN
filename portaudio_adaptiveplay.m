@@ -173,20 +173,43 @@ function results=portaudio_adaptiveplay(X, varargin)
 %                       sound file (sec). To start at beginning of file, st
 %                       to 0. (no default)
 %
-%   'channel_mixer':   cell array, specifies how to mix channels in playback_list
-%               (X) into each playback_channel. Each cell corresponds to
-%               the same element in playback_channel. Each cell must
-%               contain double arrays with C elements, where C is the
-%               number of columns in data found in playback_list. 
+%   'mod_mixer':        D x P double matrix, where D is the number of
+%                       data channels (that is, the number of channels
+%                       in the wav files) and P is the number of
+%                       physical channels (that is, the number of
+%                       output channels on the playback device). This mixer
+%                       is only applied to the (potentially) modulated 
 %
-%                   Example: Two channel file, present both columns to
-%                   first output channel only
-%                       {[1, 0] [1, 0]}
-%                       
-%                   Example: Two channel file, present one channel to
-%                   channel one at full volume, and the second column to
-%                   channel 2 attenuated by 12 dB.
-%                       {[1, 0] [0, db2amp(-12)]}
+%                       Here are a few examples
+% 
+%                       Example 1: Present only the first (of two)
+%                       channels from a wav file to the first (of
+%                       four) output channels on the sound card
+%                           [ [1; 0] [0; 0] [0; 0] [0; 0] ]
+% 
+%                       Example 2: Present the first (of two) channels
+%                       from a wav file to the first two (of four)
+%                       physical channels in equal proportions. Note
+%                       that CWB chose to scale down the sounds. This
+%                       is to prevent clipping. The user should use
+%                       whatever fits his or her needs. 
+%                           [ [0.5; 0.5] [0.5; 0.5] [0; 0] [0; 0] ]
+%
+%                       The mod_mixer was added relatively late in
+%                       development when CWB realized it was difficult if
+%                       not impossible to determine the level at which a
+%                       given sound was presented. This was because
+%                       different modifiers altered the data serially and
+%                       each tracked its changes independently of the
+%                       others. Thus, it was tough to take all of this into
+%                       account post-hoc. By adding in the mixer, CWB
+%                       thought it would be possible to write modifiers
+%                       that change the intensity of sound playback (e.g.,
+%                       modifier_dBscale) to modify a single matrix that
+%                       can then be easily tracked, plotted, etc. Also,
+%                       calibration factors (like RMS normalization) can
+%                       also be applied directly to the mixing matrix with
+%                       seamless tracking over trials/stimuli/loops. 
 %
 %   'state':    player state when first launched. States may change, but
 %               currently include :
@@ -320,6 +343,10 @@ function results=portaudio_adaptiveplay(X, varargin)
 %   channel-specific filtering to compensate for differences in device
 %   playback channels (e.g., with different speakers).
 %
+%   29. Copy over presented data to a sandbox variable. This will serve as
+%   a sanity check later since we will know *precisely* the data that were
+%   sent to the sound card after the fact.
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -375,11 +402,11 @@ FS = d.player.playback.fs;
 %% MIXER CHECK
 %   Need to make sure the mixer is internally consistent (meaning all cells
 %   have the same # of elements)
-for m=1:length(d.player.channel_mixer)
-    if numel(d.player.channel_mixer{m})~=numel(d.player.channel_mixer{1})
-        error('Each cell of the mixer must have the same number of elements')
-    end % if numel
-end % for m=1:length(...
+% for m=1:length(d.player.mod_mixer)
+%     if numel(d.player.mod_mixer{m})~=numel(d.player.mod_mixer{1})
+%         error('Each cell of the mixer must have the same number of elements')
+%     end % if numel
+% end % for m=1:length(...
 
 %% LOAD DATA
 %
@@ -405,8 +432,8 @@ for i=1:length(playback_list)
     % Check against mixer
     %   Only need to check against first cell of mixer because we completed
     %   an internal check on the mixer above.
-    if numel(d.player.channel_mixer{m}) ~= size(stim{i},2)
-        error([playback_list{i} ' contains an incorrect number of channels']); 
+    if size(d.player.mod_mixer, 1) ~= size(stim{i},2)
+        error([playback_list{i} ' contains an incorrect number of data channels']); 
     end % if numel
     
 end % for i=1:length(file_list)
@@ -443,6 +470,11 @@ catch
     [pstruct]=portaudio_GetDevice(d.player.playback.device);
     [rstruct]=portaudio_GetDevice(d.player.record.device); 
 end % try/catch
+
+% mod_mixer check
+%   Need to make sure the number of columns in mod_mixer matches the number
+%   of output channels
+if size(d.player.mod_mixer, 2) ~= pstruct.NrOutputChannels, error('columns in mod_mixer does not match the number of output channels.'); end 
 
 % Open the playback device 
 %   Only open audio device if 'continuous' selected. Otherwise, device
@@ -760,10 +792,7 @@ for trial=1:length(stim)
                 %   Each cell corresponds to a physical output channel.
                 %   Each element with each cell corresponds to a column of
                 %   data2play.
-                data2play_mixed = nan(size(data2play)); 
-                for m=1:pstruct.NrOutputChannels
-                    data2play_mixed(:, m)=data2play*d.player.channel_mixer{m}; 
-                end % 
+                data2play_mixed = data2play*d.player.mod_mixer;
                 
                 % Save second buffer block for fading on the next trial.
                 %   Zero padding to make x play nicely when we're at the
@@ -773,7 +802,7 @@ for trial=1:length(stim)
                 % Basic clipping check
                 %   Kill any audio devices when this happens, then throw an
                 %   error. 
-                if max(max(abs(data))) > 1 && d.player.stop_if_error, 
+                if max(max(abs(data2play_mixed))) > 1 && d.player.stop_if_error, 
                     warning('Signal clipped!'); 
                     d.player.state='exit'; 
                     break % exit and return variables to the user. 
@@ -919,8 +948,7 @@ for trial=1:length(stim)
             if isequal(d.player.state, 'run')
                 PsychPortAudio('Stop', phand, 1); 
             elseif isequal(d.player.state, 'exit')
-                PsychPortAudio('Stop', phand, 0);                 
-                break; 
+                PsychPortAudio('Stop', phand, 0);                                
             end % if isequal ...
             
             % Stop unmodulated noise
@@ -955,6 +983,13 @@ for trial=1:length(stim)
             d.sandbox.voice_recording{trial} = rec; 
             clear rec; % just to be safe, clear the variable
             
+            % Exit playback loop if the player is in exit state
+            %   This break must be AFTER rec transfer to
+            %   d.sandbox.voice_recording or the recordings do not
+            %   transfer. 
+            if isequal(d.player.state, 'exit');
+                break
+            end % isequal(d.player.state, 'exit'); 
         otherwise
             
             error(['Unknown adaptive mode (' d.player.adaptive_mode '). See ''''adaptive_mode''''.']); 
@@ -968,6 +1003,9 @@ PsychPortAudio('Close');
 
 % Attach end time
 d.sandbox.end_time=now; 
+
+% Attache stim variable
+d.sandbox.stim = stim; 
 
 % Attach (modified) structure to results
 %   This is returned to the user. 
