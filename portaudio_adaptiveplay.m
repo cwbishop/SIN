@@ -350,6 +350,10 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %   30. Add status return variable. Helpful if we encounter an error and
 %   the invoking function needs to know about it. 
 %
+%   31. Modify so we can just record without playing sounds. A super dirty
+%   way to do this would be to load a wavfile containing only zeros for the
+%   requested duration of the recording. Might be the quickest fix. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -380,7 +384,7 @@ end % if d.player.randomize
 
 %% INITIALIZE VOICE RECORDING VARIABLE
 %   Trial recordings are placed in this cell array. 
-d.sandbox.voice_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
+d.sandbox.mic_recording = {}; % empty cell array for voice recordings (if specified) XXX not implemented XXX
 
 %% SAVE DATE AND TIME 
 %   Will help keep track of information later.
@@ -401,15 +405,6 @@ FS = d.player.playback.fs;
 %       'run':      Play or resume playback
 %       'exit':     Stop all playback and exit as cleanly as possible
 % d.player.state = 'run'; 
-
-%% MIXER CHECK
-%   Need to make sure the mixer is internally consistent (meaning all cells
-%   have the same # of elements)
-% for m=1:length(d.player.mod_mixer)
-%     if numel(d.player.mod_mixer{m})~=numel(d.player.mod_mixer{1})
-%         error('Each cell of the mixer must have the same number of elements')
-%     end % if numel
-% end % for m=1:length(...
 
 %% LOAD DATA
 %
@@ -574,7 +569,14 @@ buffer_pos = round(d.player.startplaybackat.*FS);
 for trial=1:length(stim)
 
     %% BUFFER POSITION
-    buffer_pos = buffer_pos + 1; % This starts at the first sample. 
+    if trial == 1
+        buffer_pos = buffer_pos + 1; % This starts at the first sample specified by the user. 
+    else
+        % Note: this might not be appropriate for 'looped' playback mode,
+        % but CWB has not encountered this specific situation yet and thus
+        % has not dedicated much thought to it. 
+        buffer_pos = 1; % start the buffer at beginning of the next stimulus
+    end % if trial == 1 ...
         
     %% UPDATE TRIAL IN SANDBOX
     %   d.sandbox.trial is used by other functions
@@ -983,12 +985,12 @@ for trial=1:length(stim)
             end % if isequal( ...          
             
             % Save recording to sandbox
-            d.sandbox.voice_recording{trial} = rec; 
+            d.sandbox.mic_recording{trial} = rec; 
             clear rec; % just to be safe, clear the variable
             
             % Exit playback loop if the player is in exit state
             %   This break must be AFTER rec transfer to
-            %   d.sandbox.voice_recording or the recordings do not
+            %   d.sandbox.mic_recording or the recordings do not
             %   transfer. 
             if isequal(d.player.state, 'exit');
                 break
@@ -1007,7 +1009,11 @@ PsychPortAudio('Close');
 % Attach end time
 d.sandbox.end_time=now; 
 
-% Attache stim variable
+% Attach stim variable
+%   Decided not to do this since we already have the play list. But it
+%   might be useful to kick back the data that are actually presented - so
+%   we have a record of what was actually fed to the sound card after all
+%   filtering, etc. is done. 
 % d.sandbox.stim = stim; 
 
 % Attach (modified) structure to results
