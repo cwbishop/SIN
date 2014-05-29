@@ -27,10 +27,7 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 			-> fs: sampling rate
 			-> buffer_dur: recording buffer duration (in sec)
 		
-        -> Mixer (how to mix playback channels after modification)
-            -> 
-            
-		(Player Configuration)
+        (Player Configuration)
 		-> adaptive_mode:
         -> playback_mode: (looped | standard)
 		-> append_files: 
@@ -78,12 +75,31 @@ Results Structure: Player return structure. This contains three basic fields
 		-> voice_recording: cell array of recorded responses if the player is configured to record subject responses through the recording device (see Record field above). (should be added at end of playback, I think, to keep structure size down)
 
 =======================================================================================================
-Calibration info (calibration): this is the output from the currently non-existent calibration routine that CWB needs to write. 
-    -> playback: playback device information during calibration
-    -> record: recording device information during calibration
+Calibration info (specific): this is the output from the currently non-existent calibration routine that CWB needs to write. 
+    -> root: root file for calibration. This is the directory that calibration files are located. SIN_HOME/calibration/YOUR_CALIBRATION/thecalfile
+    -> output_root: where the next executed calibration will be stored, including the root file name. The filename will be appended with other information regarding physical_channel information and the like
+    -> physical_channels: integer array, physical channels to calibrate
+    -> calstimDir: the directory in which the calibration stimulus is located
+    -> calstim_regexp: regular expression for selecting calibration stimulus from calstimDir
+    -> reference:
+        -> absoluteSPL: decibel level of calibration tone (e.g., 114 dB)
+        -> rectime: (approximate) recording time for reference sound.     
+    -> filter: settings needed to generate the frequency filter. The filter will (I think) be created by SIN_matchspectra
+        -> resolution: the resolution of the filter (in Hz)
+        -> XXX see SIN_matchspectra for other parameters that we'll need XXX
+    -> instructions: a field with instruction information for various stages of the calibration process
+        -> noise_estimation:   instructions during noise estimation. This is a recording with no (externally generated) sound input. No calibrator, no speakers being explicitly driven. This will serve as a baseline to which SNR can be estimated
+        -> reference: instructions during reference recording
+        -> playback: instructions to display during driver (e.g., speaker/earphone) calibration
+        
+    
+    
+
     -> reference: contains information regarding the reference signal (e.g., calibrated tone)
-        -> rec: reference recording
-        -> absolute_SPL: the absolute level of the calibration signal (typically written on the side of the calibrator) 
-    -> data: contains channel specific information necessary to calibrate the channel. 
-        -> channels: integer array of channels that have a recording. These are the channels that are calibrated with the current calibration file
-        -> timeseris: cell array (?), each element has a recording from corresponding channel listed in 'channels' above.         
+        -> signal: reference recording (e.g., 1 kHz tone, 114 dB from 0.5 inch calibrator)
+        -> absolute_SPL: the absolute level of the calibration signal (typically written on the side of the calibrator) (e.g., 114 dB)
+    -> timeseries: contains information necessary to calibrate each physical_channel (soundcard output channel and/or speaker).
+        -> physical_channels: integer array of channels that have a recording. These are the channels that are calibrated with the current calibration file.
+        -> raw: cell array (?), each element has a recording from corresponding channel listed in 'physical_channels' above.
+        -> processed: cell array of processed (XXX stupid name and too general to be helpful XXX)
+    -> 
