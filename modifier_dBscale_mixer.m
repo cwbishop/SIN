@@ -48,6 +48,8 @@ function [Y, d]=modifier_dBscale_mixer(X, mod_code, varargin)
 %   change information. This is more flexible than the current
 %   instantiation, but not currently needed, so it's low on CWB's
 %   to-do-list. 
+%       - This will be important if we decide to use a NAL like algorithm
+%       (see Keidser 2013 Journal of Audiology) 
 % 
 % Christopher W. Bishop
 %   University of Washington

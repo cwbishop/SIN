@@ -100,6 +100,99 @@ switch testID;
         opts.player.modifier{1} = struct( ...
             'fhandle', @modifier_PlaybackControl); 
             
+    case 'Calibrate'
+        
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults'); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions. Most of this information is
+        % used by SIN_calibrate. 
+        % ============================
+        opts.specific=struct( ...
+            'testID',   'Calibrate', ... % testID
+            'root',     opts.general.calibrationDir, ...
+            'output_root',  fullfile(opts.general.calibrationDir, date), ... % create a directory for today's calibration
+            'cal_regexp',   [], ...
+            'reference', struct(...
+                'absoluteSPL', 114), ...
+            'filter', struct(), ... % will need to populate once I know what I need)
+            'instructions', struct(...
+                'noise_estimation', 'Get down. Shut up', ...
+                'reference', 'attach the device', ...
+                'playback',     'unattach the device and sit down'), ...
+            'physical_channels',    [1 2], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
+            'data_channels',    1, ... % just one channel for white noise stimulus. 
+            'calstimDir',   fullfile(opts.general.root, 'playback', 'calibration'), ... % we'll use the ANL babble masker as the calibration stimulus
+            'calstim_regexp', 'whitenoise_10sec.wav');   % ANL stimulus
+            
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'player_handle', @portaudio_adaptiveplay, ...
+            'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        false, ...   % randomize trial order before playback
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
+            'startplaybackat',    0, ...  % start playback at beginning of sound 
+            'mod_mixer',    [], ... % leave empty, this will be generated in SIN_calibrate.m. See specific.physical_channels and specific.data_channels
+            'state',    'pause', ... % start in paused state
+            'unmod_playbackmode', [], ... % no unmodulated sound
+            'unmod_channels',   [], ... % no unmodulated sound
+            'unmod_leadtime',   [], ... % no unmodulated sound
+            'unmod_lagtime',    [], ... % no unmodulated sound
+            'unmod_playback',   {{}});  % no unmodulated sound        
+        
+        % ============================
+        % Modification check (modcheck) configuration  
+        %   - Use the ANLGUI for test administration. It's basically what
+        %   we need anyway, but we'll need to hide the volume adjustment
+        %   keys. 
+        % ============================
+        opts.player.modcheck=struct(...
+            'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
+            'instructions', {{'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'}}, ...
+            'keys',     [KbName('i') KbName('j') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run             
+            'map',      zeros(256,1));
+            
+        % Assign keys in map
+        %   Only listen for the last three keys since we don't care about
+        %   volume adjustments. 
+        opts.player.modcheck.map(opts.player.modcheck.keys(3:end))=1; 
+        
+        % ============================
+        % Modifier configuration                
+        % ============================
+        
+        % Modifier to apply inline filtering
+        %   Leave this empty for now until the calibration code is
+        %   well-vetted. 
+        
+        
+        % Modifier to track mod_mixer settings. 
+        %   This isn't strickly necessary, but CWB wants it here as an
+        %   additional sanity check to make sure the mixer is not changing
+        %   over the course of the experiment. Using the ANLGUI is
+        %   convenient, but can be scary if something unexpected happens
+        %   (like the experimenter or listener accidentally presses keys
+        %   that adjust playback volume). This possibility should be very
+        %   small since the map above is modified to ignore the increase
+        %   and decrease volume key presses, but CWB is still paranoid. 
+        opts.player.modifier{1} = struct( ...
+            'fhandle',  @modifier_trackMixer);   % track mod_mixer        
+        
     case 'HINT (SNR-50)'
         
         % ============================
@@ -147,11 +240,11 @@ switch testID;
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        true, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
-            'playback_channels',[1 2], ...  % channels to present sounds to. 
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'startplaybackat',    0, ...  % start playback at beginning of files
+            'mod_mixer',    [ [0; 1] [0; 0 ] ], ... % play HINT target speech to first channel only
             'state',    'run', ... % start in run state
             'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
             'unmod_channels',   [1 2], ...
@@ -163,20 +256,33 @@ switch testID;
         % Modification check (modcheck) configuration        
         % ============================
         opts.player.modcheck=struct(...
-            'fhandle',         @HINT_modcheck_GUI, ...
+            'fhandle',         @modcheck_HINT_GUI, ...
+            'data_channels',    2, ...
+            'physical_channels', 1, ...
             'scoring_method',  'sentence_based', ... % score whole sentence (as traditionally done)
             'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         
         % ============================
         % Modifier configuration        
-        %   We use two modifiers, but CWB can't recall why. Need to check
-        %   this. 
         % ============================
-        opts.player.modifier{end+1}=struct( ...
-            'fhandle',  @modifier_dBscale, ... % use a decibel scale
-            'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
-            'change_step', [1 5], ...   % trial on which to change the step size
-            'channels', 2);  % apply modification to channel 2            
+        
+        % Modifier to scale mixing information
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
+            'dBstep',   [4 2], ...  % use variable step size. This matches HINT as normally administered
+            'change_step', [1 5], ...   % This matches HINT as normally administered. 
+            'data_channels', 2, ...
+            'physical_channels', 1);  % apply decibel step to discourse stream in first output channel 
+        
+        % Modifier to track mod_mixer settings
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle',  @modifier_trackMixer);   % track mod_mixer        
+%         opts.player.modifier{end+1}=struct( ...            
+%         opts.player.modifier{end+1}=struct( ...
+%             'fhandle',  @modifier_dBscale, ... % use a decibel scale
+%             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
+%             'change_step', [1 5], ...   % trial on which to change the step size
+%             'channels', 2);  % apply modification to channel 2            
     case 'ANL'
         % ANL is actually a sequence of tests. The list includes the
         % following:
@@ -196,6 +302,9 @@ switch testID;
         opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)'); 
         opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)'); 
         opts(3)=SIN_TestSetup('ANL (MCL-Estimate)'); 
+        opts(4)=SIN_TestSetup('ANL (BNL-Too Loud)'); 
+        opts(5)=SIN_TestSetup('ANL (BNL-Too Quiet)'); 
+        opts(6)=SIN_TestSetup('ANL (BNL-Estimate)'); 
         
     case 'ANL (MCL-Too Loud)'
         % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
@@ -210,7 +319,8 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'};
+            'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment. ' ...
+            'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
         opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
@@ -241,8 +351,66 @@ switch testID;
         % Change instructions
         opts.player.modcheck.instructions={...
             'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level) (use 2 dB steps).'};           
+        
+        % Change step size to 2 dB
+        warning('Hard coded modifier number');
+        if ~isfield(opts.player.modifier{2}, 'dBstep'), error('Something wrong here'); end        
+        opts.player.modifier{2}.dBstep = 2; 
+        
         % Set mixer
         opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        
+    case 'ANL (BNL-Too Loud)'
+        
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (BNL-Too Loud)'; 
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'Now Iím going to leave the level of the story at this level (i.e., MCL) and turn on some background noise. Your up/down buttons will adjust the level of the background noise. Using the up button, turn the level of background noise up until you canít hear the story. Each time you push the up button, I will turn the background noise up (use 5 dB steps).'};           
+        
+        opts.player.modifier{2}.data_channels=2; 
+        
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
+        
+    case 'ANL (BNL-Too Quiet)' 
+        
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (BNL-Too Quiet)'; 
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'Good. Using the down button, turn the level of the background noise down until the story is very clear (i.e., you can follow the story easily). Each time you push the down button, I will turn the level of the background noise down (use 5 dB steps).'};           
+        
+        opts.player.modifier{2}.data_channels=2; 
+        
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
+        
+    case 'ANL (BNL-Estimate)'
+        
+        opts=SIN_TestSetup('ANL (base)'); 
+        
+        % Change testID
+        opts.specific.testID='ANL (BNL-Too Quiet)'; 
+        
+        % Change instructions
+        opts.player.modcheck.instructions={...
+            'Good. Now turn the level of the background noise back up to the MOST noise that you would be willing to put-up-with and still follow the story for a long period of time without becoming tense or tired.'};           
+        
+        % Change step size to 2 dB and other information
+        warning('Hard coded modifier number');
+        if ~isfield(opts.player.modifier{2}, 'dBstep'), error('Something wrong here'); end        
+        opts.player.modifier{2}.dBstep = 2; 
+        opts.player.modifier{2}.data_channels=2; 
+        
+        % Set mixer
+        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
         
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a

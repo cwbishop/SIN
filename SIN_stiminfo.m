@@ -63,7 +63,13 @@ switch testID
     case {'ANL'}
 
         wavfiles=regexpdir(opts.specific.root, opts.specific.anl_regexp, false);
+    
+    case {'Calibrate'}
+        
+        wavfiles=regexpdir(opts.specific.calstimDir, opts.specific.calstim_regexp, false); 
         
     otherwise 
+        
         error(['No stimulus information available for ' testID]);        
+        
 end % switch testID
