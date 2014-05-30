@@ -83,22 +83,12 @@ function [Pxx, Pyy, Pyyo, Y, Yo, FS, dPyy]=SIN_matchspectra(X, Y, varargin)
 %                   spectral estimates. (default=[]; so whatever the
 %                   spectral estimator uses).
 %   
-%       'nfft':     integer value, the number of frequency bins to use in
-%                   spectral estimation. For our *specific* purposes, this
-%                   must be at *least* the length of the longest, resampled
-%                   time signal. Otherwise the spectral estimation and
-%                   matching won't work properly.
+%       'nfft':     integer, number of frequency bins in FFT. Must be at
+%                   least as large as the number of samples in the longest
+%                   signal in the series (X or Y). 
 %       
 %       'write':    bool, write data to file. Data are written to WAV
 %                   files. (true | false | default=false) 
-%
-%       'yminmax':  two-element double array, describes range of y-values.
-%                   (E.g. [-1 1]). Default = [-1 1]. If these values are
-%                   exceeded in any series in Y, all data are scaled to
-%                   0.98 of the maximum (or minimum) range. 
-%
-%       'taper':    XXX something to taper beginning and end of sounds XXX
-%                       - Not implemented (no need at time of testing).                    
 %
 % OUTPUT:
 %   
@@ -127,30 +117,25 @@ function [Pxx, Pyy, Pyyo, Y, Yo, FS, dPyy]=SIN_matchspectra(X, Y, varargin)
 %   University of Washington
 %   3/14
 
-%% MASSAGE INPUT ARGS
-% Convert inputs to structure
-%   Users may also pass a parameter structure directly, which makes CWB's
-%   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GATHER PARAMETERS
+p=varargin2struct(varargin{:});
 
 %% LOAD DATA
 %   Load data using SIN_loaddata. AD_matchspectrum currently only tested
 %   with WAV files, but should be easily expandable to support EEG/ERP
 %   structures or other time series data.
-p.datatype=[2]; % currently only allow user to use a WAV file.
-[X, FSx]=SIN_loaddata(X, p); 
-[Y, FSy, LABELS]=SIN_loaddata(Y, p); 
+t.datatype=[1 2]; % load wavfiles
+
+if isfield(p, 'fsx'), t.fs=p.fsx; end
+[X, FSx]=SIN_loaddata(X, t); 
+
+if isfield(p, 'fsy'), t.fs=p.fsy; end
+[Y, FSy, LABELS]=SIN_loaddata(Y, t); 
 
 %% USER DEFINED SAMPLING RATE
 %   In the event that SIN_loaddata can't determine the sampling rate, we'll
 %   need to assign what the user provides us. 
-%       XXX undeveloped XXX
+
 
 %% MATCH SAMPLING RATE
 %   Sampling rates must be matched between time series for frequency domain
@@ -168,15 +153,18 @@ mxl = max([length(X) length(Y)]);
 
 %% INPUT CHECK AND DEFAULTS
 %   Set some default values.
-if ~isfield(p, 'mtype') || isempty(p.mtype), p.mtype='power'; end 
+% if ~isfield(p, 'mtype') || isempty(p.mtype), p.mtype='power'; end 
 if ~isfield(p, 'nfft') || isempty(p.nfft); p.nfft=mxl; end 
 if p.nfft<mxl, error(['nfft must be at least at least as long as your longest signal (' num2str(mxl) ' samples)']); end 
-try p.plev; catch p.plev=true; end % plot output by default
-try p.frange; catch p.frange=[-Inf Inf]; end % adjust whole frequency range by default
-try p.window; catch p.window=[]; end % use default windowing option
-try p.noverlap; catch p.noverlap=[]; end % use default noverlap
-try p.write; catch p.write=false; end % write data to wav file
-try p.yminmax; catch p.yminmax=[-1 1]; end % p.yminmax
+% try p.plev; catch p.plev=true; end % plot output by default
+% try p.frange; catch p.frange=[-Inf Inf]; end % adjust whole frequency range by default
+% try p.window; catch p.window=[]; end % use default windowing option
+% try p.noverlap; catch p.noverlap=[]; end % use default noverlap
+% try p.write; catch p.write=false; end % write data to wav file
+% try p.yminmax; catch p.yminmax=[-1 1]; end % p.yminmax
+
+% Convert frequency resolution to nfftx and nffty
+% p.nfft = FS/p.resolution; 
 
 % Convert p.window from seconds to samples
 if ~isempty(p.window) && numel(p.window)==1

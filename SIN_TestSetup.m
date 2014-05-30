@@ -115,11 +115,18 @@ switch testID;
         opts.specific=struct( ...
             'testID',   'Calibrate', ... % testID
             'root',     opts.general.calibrationDir, ...
-            'output_root',  fullfile(opts.general.calibrationDir, date), ... % create a directory for today's calibration
+            'output_root',  fullfile(opts.general.calibrationDir, date, date), ... % create a directory for today's calibration
             'cal_regexp',   [], ...
             'reference', struct(...
                 'absoluteSPL', 114), ...
-            'filter', struct(), ... % will need to populate once I know what I need)
+            'matchspectra', struct(...                
+                'fhandle',  @SIN_matchspectra, ... % use SIN_matchspectra to do computations
+                'mtype',    'power', ...
+                'plev',     true, ...
+                'frange',   [-Inf Inf], ... % use all frequencies in matching
+                'window',   1, ... % 1 sec window
+                'noverlap', [], ... % MATLAB's default overlap for pwelch (50%)                
+                'write',    false), ... % no need to write data to file                
             'instructions', struct(...
                 'noise_estimation', 'Get down. Shut up', ...
                 'reference', 'attach the device', ...
@@ -127,7 +134,9 @@ switch testID;
             'physical_channels',    [1 2], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
             'data_channels',    1, ... % just one channel for white noise stimulus. 
             'calstimDir',   fullfile(opts.general.root, 'playback', 'calibration'), ... % we'll use the ANL babble masker as the calibration stimulus
-            'calstim_regexp', 'whitenoise_10sec.wav');   % ANL stimulus
+            'calstim_regexp', 'whitenoise_10sec.wav', ... % 10 sec white noise stimulus
+            'record_channels',  1, ... % just use channel 1 from stereo recording on my device.       
+            'match2channel',    1);   % match to first playback channel 
             
         % ============================
         % Player configuration
@@ -145,7 +154,7 @@ switch testID;
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
-            'playback_mode',    'standard', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
+            'playback_mode',    'standard', ... % just play sound once
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    [], ... % leave empty, this will be generated in SIN_calibrate.m. See specific.physical_channels and specific.data_channels
             'state',    'pause', ... % start in paused state
@@ -165,12 +174,13 @@ switch testID;
             'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
             'instructions', {{'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'}}, ...
             'keys',     [KbName('i') KbName('j') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run             
-            'map',      zeros(256,1));
+            'map',      zeros(256,1), ...
+            'title',    'Calibration: ');
             
         % Assign keys in map
-        %   Only listen for the last three keys since we don't care about
-        %   volume adjustments. 
-        opts.player.modcheck.map(opts.player.modcheck.keys(3:end))=1; 
+        %   Only listen for the quit/begin keys (no pausing or intensity
+        %   adjustments allowed) 
+        opts.player.modcheck.map(opts.player.modcheck.keys(4:end))=1; 
         
         % ============================
         % Modifier configuration                
@@ -190,7 +200,7 @@ switch testID;
         %   that adjust playback volume). This possibility should be very
         %   small since the map above is modified to ignore the increase
         %   and decrease volume key presses, but CWB is still paranoid. 
-        opts.player.modifier{1} = struct( ...
+        opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_trackMixer);   % track mod_mixer        
         
     case 'HINT (SNR-50)'
@@ -517,7 +527,8 @@ switch testID;
             'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
             'instructions', {{'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment.'}}, ...
             'keys',     [KbName('i') KbName('j') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run             
-            'map',      zeros(256,1));
+            'map',      zeros(256,1), ...
+            'title', 'Acceptable Noise Level (ANL)');
 %             'fhandle', @modcheck_ANLGUI, ...
             
         % Assign keys in map

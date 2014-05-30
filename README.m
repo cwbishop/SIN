@@ -75,7 +75,7 @@ Results Structure: Player return structure. This contains three basic fields
 		-> voice_recording: cell array of recorded responses if the player is configured to record subject responses through the recording device (see Record field above). (should be added at end of playback, I think, to keep structure size down)
 
 =======================================================================================================
-Calibration info (specific): this is the output from the currently non-existent calibration routine that CWB needs to write. 
+Calibration info (specific): specific field for calibration routine 
     -> root: root file for calibration. This is the directory that calibration files are located. SIN_HOME/calibration/YOUR_CALIBRATION/thecalfile
     -> output_root: where the next executed calibration will be stored, including the root file name. The filename will be appended with other information regarding physical_channel information and the like
     -> physical_channels: integer array, physical channels to calibrate
@@ -84,22 +84,19 @@ Calibration info (specific): this is the output from the currently non-existent 
     -> reference:
         -> absoluteSPL: decibel level of calibration tone (e.g., 114 dB)
         -> rectime: (approximate) recording time for reference sound.     
-    -> filter: settings needed to generate the frequency filter. The filter will (I think) be created by SIN_matchspectra
-        -> resolution: the resolution of the filter (in Hz)
-        -> XXX see SIN_matchspectra for other parameters that we'll need XXX
+    -> matchspectra: settings needed to match spectra between channels
+        -> mtype: match type. (use 'power' and only 'power')
+        -> plev: true, creates plots for visualization
+        -> frange: frequency range over which we want to match the spectra (and levels)
+        -> window: window duration for spectral estimation (sec)
+        -> noverlap: just use [];        
+        -> write: set to false. We don't want these files written anywhere        
+        
+        Note: nfft is determined in SIN_calibrate - this is not something the user can specify at this point since it's easy to screw things up. 
+        
     -> instructions: a field with instruction information for various stages of the calibration process
         -> noise_estimation:   instructions during noise estimation. This is a recording with no (externally generated) sound input. No calibrator, no speakers being explicitly driven. This will serve as a baseline to which SNR can be estimated
         -> reference: instructions during reference recording
         -> playback: instructions to display during driver (e.g., speaker/earphone) calibration
-        
-    
-    
-
-    -> reference: contains information regarding the reference signal (e.g., calibrated tone)
-        -> signal: reference recording (e.g., 1 kHz tone, 114 dB from 0.5 inch calibrator)
-        -> absolute_SPL: the absolute level of the calibration signal (typically written on the side of the calibrator) (e.g., 114 dB)
-    -> timeseries: contains information necessary to calibrate each physical_channel (soundcard output channel and/or speaker).
-        -> physical_channels: integer array of channels that have a recording. These are the channels that are calibrated with the current calibration file.
-        -> raw: cell array (?), each element has a recording from corresponding channel listed in 'physical_channels' above.
-        -> processed: cell array of processed (XXX stupid name and too general to be helpful XXX)
-    -> 
+    -> record_channels: integer, the recording channel to use in calibration. This is often necessary if a device has multiple record_channels (e.g., stereo recording)     
+    -> match2channel: channel to which all other physical channels are matched. 

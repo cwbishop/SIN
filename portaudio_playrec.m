@@ -113,6 +113,9 @@ function [Y, FS]=portaudio_playrec(IN, OUT, X, FS, varargin)
 %
 %   4. Add option to keep port audio device open (rather than closing). 
 %
+%   5. Recordings are cut short when playback and recording device have
+%   different latencies (as reported during PsychPortAudio('Open') ...
+%
 % Christopher W. Bishop
 %   University of Washington
 %   4/14

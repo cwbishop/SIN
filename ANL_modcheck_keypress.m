@@ -14,11 +14,7 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %                   2) decrease dound level
 %                   3) pause playback
 %                   4) exit playback
-%
-%a two element integer array. The key numbers assigned to
-%               the "increase" and "Decrease" keys, respectively. To obtain
-%               the key number, use a command like : 
-%                   [KbName('left') KbName('right') KbName('p') KbName('q')]
+%                   5) begin/resume playback
 %
 %               Note: CWB would discourage the use of the "up" and "down"
 %               keys since they can lead to beeping at the MATLAB command
@@ -36,6 +32,13 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %         
 %                   % Assign keys in map
 %                   opts.player.modcheck.map(opts.player.modcheck.keys)=1;
+%
+%               The map field has one additional function: to set the
+%               "visibility" of each key's corresponding button on the GUI.
+%               If the key is not monitored (i.e., map==0 for that
+%               key), then the button is set to invisible. 
+%
+%   'title':    cell, figure title. 
 %
 % OUTPUT:
 %
@@ -118,6 +121,24 @@ if ~d.player.modcheck.initialized
     
     % Set instructions
     set(handles.text_instructions, 'String', d.player.modcheck.instructions);
+    
+    % Set visibility
+    map = d.player.modcheck.map(d.player.modcheck.keys);     
+    if map(1), set(d.sandbox.ANLhandles.button_increase, 'Visible', 'on'); else set(d.sandbox.ANLhandles.button_increase, 'Visible', 'off'); end
+    if map(2), set(d.sandbox.ANLhandles.button_decrease, 'Visible', 'on'); else set(d.sandbox.ANLhandles.button_decrease, 'Visible', 'off'); end
+    if map(3), set(d.sandbox.ANLhandles.button_pause, 'Visible', 'on'); else set(d.sandbox.ANLhandles.button_pause, 'Visible', 'off'); end
+    if map(4), set(d.sandbox.ANLhandles.button_complete, 'Visible', 'on'); else set(d.sandbox.ANLhandles.button_complete, 'Visible', 'off'); end
+    if map(5), set(d.sandbox.ANLhandles.button_begin, 'Visible', 'on'); else set(d.sandbox.ANLhandles.button_begin, 'Visible', 'off'); end
+    
+    % Set button state
+    set(d.sandbox.ANLhandles.button_begin, 'Val', 0);
+    set(d.sandbox.ANLhandles.button_pause, 'Val', 0); 
+    set(d.sandbox.ANLhandles.button_complete, 'Val', 0); 
+    set(d.sandbox.ANLhandles.button_increase, 'Val', 0); 
+    set(d.sandbox.ANLhandles.button_decrease, 'Val', 0); 
+    
+    % Set figure Name (upper left corner)
+    set(d.sandbox.ANLhandles.figure1, 'Name', d.player.modcheck.title); 
     
     % Return control
     return
