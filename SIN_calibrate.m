@@ -36,7 +36,6 @@ FS=d.player.playback.fs;
 [PATHSTR,NAME,EXT] = fileparts(d.specific.output_root);
 mkdir(PATHSTR); 
 
-
 %% RECORD REFERENCE
 %   - For testing purposes, just play a 1 kHz tone from the speakers. 
 %   - This will *not* be super accurate, but should at least give us a
@@ -56,13 +55,38 @@ Xdim=size(stim);
 %   same data across functions. 
 stim=resample(stim, d.player.playback.fs, fs); 
 
+figtitle = d.player.modcheck.title; 
+
+%% RECORD NOISE FLOOR
+%   This section is used to estimate the noise levels of the recording
+%   loop/environment. It will (eventually) be used below to estimate SNR of
+%   the calibration and playback stimulus. If the SNR is too low, we'll
+%   throw a warning and make the user redo the test. What "too low" is will
+%   be open to debate. 
+
+% % Create mod_mixer for portaudio_adaptiveplay
+% %   Assume we aren't putting any data into any output channels
+% d.player.mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels); 
+% 
+% % Set instructions in ANL_modcheck_keypress
+% d.player.modcheck.instructions=d.specific.instructions.noise_estimation; 
+% 
+% % Set title
+% d.player.modcheck.title = [figtitle 'Noise Estimation']; 
+% 
+% % Run portaudio_adaptiveplay
+% %   No sound will play here since the mod_mixer is set to zeros. But the
+% %   code otherwise works exactly the same way. 
+% results = portaudio_adaptiveplay(X, d); 
+% 
+% % Save results to file
+% save(fullfile(PATHSTR, [NAME '-Noise_Estimation']), 'results'); 
+    
 %% RECORD RESPONSE FROM REQUESTED PHYSICAL CHANNELS
 %   - Get recording
 %   - Save results structure to output_root + physical_channel information
 %   - Loop through each channel and all that jazz. 
 %   - Copy over necessary information 
-
-figtitle = d.player.modcheck.title; 
 
 % maximum length
 %   Initialize as length of playback stimulus. 
@@ -118,7 +142,8 @@ end % for p=1: ...
 %   this. Needs to do some soul searching.
 
 % Copy maximum length over to nfft field.
-d.specific.matchspectra.nfft=ml; 
+%   Need to zero pad for linear convolution 
+d.specific.matchspectra.nfft=ml + Xdim(1); 
 
 % Filter estimation is a two step process:
 %
@@ -133,20 +158,20 @@ d.specific.matchspectra.nfft=ml;
 %   want to correct phase anyway. 
 for p=1:length(d.specific.physical_channels)
     
-    % Extract the arguments we need for matchspectra
-    %   dPyy is the filter applied to Y (rec{p}) to match X (match2channel)
-    %   Units are dB (for dPyy at least). See SIN_matchspectra for other
-    %   details. 
-    [Pxx, Pyy, Pyyo, Y, Yo, FS, tdPyy]=SIN_matchspectra(...
-        rec{d.specific.physical_channels==d.specific.match2channel}, ... % recording from reference speaker
-        rec{p}, ... % recording from a speaker
-        d.specific.matchspectra, ... % pass necessary inputs to SIN_matchspectra
-        'fsx',  d.player.record.fs, ... % sampling rate of X
-        'fsy',  d.player.record.fs);  % sampling rate of Y 
+%     % Extract the arguments we need for matchspectra
+%     %   dPyy is the filter applied to Y (rec{p}) to match X (match2channel)
+%     %   Units are dB (for dPyy at least). See SIN_matchspectra for other
+%     %   details. 
+%     [Pxx, Pyy, Pyyo, Y, Yo, FS, tdPyy]=SIN_matchspectra(...
+%         rec{d.specific.physical_channels==d.specific.match2channel}, ... % recording from reference speaker
+%         rec{p}, ... % recording from a speaker
+%         d.specific.matchspectra, ... % pass necessary inputs to SIN_matchspectra
+%         'fsx',  d.player.record.fs, ... % sampling rate of X
+%         'fsy',  d.player.record.fs);  % sampling rate of Y 
     
-    % Save filter information
-    dPyy(:, p)=tdPyy; % filter in dB
-    clear tdPyy;     
+%     % Save filter information
+%     dPyy(:, p)=tdPyy; % filter in dB
+%     clear tdPyy;     
     
     % Extract the arguments we need for matchspectra
     %   dPyy is the filter applied to Y (rec{p}) to match X (match2channel)
@@ -159,15 +184,98 @@ for p=1:length(d.specific.physical_channels)
         'fsx',  d.player.record.fs, ... % sampling rate of X
         'fsy',  d.player.record.fs);  % sampling rate of Y 
     
-    % Add filter information
-    dPyy(:, p)=dPyy(:, p)+tdPyy; % in dB, so add (not multiply).
+    % Filter information
+    dPyy(:, p)=tdPyy; % in dB
     
 end % for p=d ...
+
+%% SAVE INFORMATION IN CALIBRATION FILE
+%   Save the relevant information in a calibration file
+calibration=struct(...    
+    'reference',    struct(), ...   % will need recording or at least RMS value of recording. 
+    'filter',   struct(...
+        'FS',   FS, ... % sampling rate of filter. This might not always equal the playback rate, so we need to have a way to deal with this.
+        'physical_channels',    [d.specific.physical_channels], ...
+        'impulse_response',   (ifft(db2amp(dPyy)))));
+
+% Save to file
+save(fullfile(PATHSTR, [NAME '-Calibration']), 'calibration'); 
 
 %% VALIDATE FREQUENCY FILTERS
 %   - Repeat the recordings above, but this time with the filtered sound
 %   output file. 
 %   - Compute spectra and levels as we would normally and compare
+%   
+%   - Add modifier (modifier_applyCal)
+
+% For now, just do the following; we'll write a function to do this soon.
+% For now, just check first channel
+
+% Filter original sound (X) by corrective filter for channel 1
+% orig=SIN_loaddata(X); 
+
+fftstim=fft(stim);
+ampstim=db(abs(fftstim)); 
+angstim=angle(fftstim); 
+
+
+stim_filt = frequency_linconv(stim, calibration.filter.impulse_response(:,1), 'fsx', FS, 'fsy', FS, 'filterType', 'power'); 
+
+% scale (for now) since my levels are all messed up
+stim_filt=stim_filt./max(abs(stim_filt)); 
+
+% Write filtered sound to file
+wavwrite(stim_filt, FS, 32, fullfile(PATHSTR, [NAME 'Channel_1.wav']));
+
+% Change filename for sound playback
+X={fullfile(PATHSTR, [NAME 'Channel_1.wav'])};
+
+% Repeat playback with filtered sound
+
+for p=1:1
+        
+    % Create mod_mixer for portaudio_adaptiveplay
+    %   Assume we aren't putting any data into any output channels
+    d.player.mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels); 
+    
+    % Play sound from one speaker at full volume
+    d.player.mod_mixer(d.specific.data_channels, d.specific.physical_channels(p))=1; 
+    
+    % Set instructions in ANL_modcheck_keypress
+    d.player.modcheck.instructions=d.specific.instructions.playback; 
+    
+    % Set title
+    d.player.modcheck.title = [figtitle 'Channel ' num2str(d.specific.physical_channels(p))]; 
+    
+    % Run portaudio_adaptiveplay
+    results = portaudio_adaptiveplay(X, d); 
+    
+    % Save results to file
+%     save(fullfile(PATHSTR, [NAME '-Channel_' num2str(d.specific.physical_channels(p))]), 'results'); 
+    
+    % Grab data necessary frequency/level matching below.
+    
+    % save to larger structure
+%     allresults(p)=results; 
+    
+    % Copy recorded information to a cell array
+    %   Easier to do spectrum matching below.
+    rec_filt{p} = results.RunTime.sandbox.mic_recording{1}(:, d.specific.record_channels); 
+    
+    % Update maximum length if we encounter a longer recording
+    if size(rec_filt{p},1) > ml
+        ml=size(rec{p},1); 
+    end % if size(rec ...
+    
+    % clear results
+    %   Less likely to get in trouble this way. 
+    clear results 
+    
+end % for p=1: ...
+
+% Compare spectra
+%   Perform "match spectra" computation to see if we're close or not
+
 
 %% DIAGNOSTICS
 %   - Determine how well our filters are working. 

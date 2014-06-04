@@ -963,9 +963,18 @@ for trial=1:length(stim)
                         error('Recording buffer too short'); 
                     end 
                     
-                    % Empty recording buffer, if necessary. 
-                    rec=[rec; PsychPortAudio('GetAudioData', rhand)']; 
+                    % empty buffer
+                    trec=PsychPortAudio('GetAudioData', rhand)';
                     
+                    % Empty recording buffer, if necessary. 
+                    rec=[rec; trec]; 
+                    
+                    % Error check for clipping
+                    if any(any(abs(trec)>=1)) && d.player.stop_if_error
+                        warning('Recording clipped!');
+                        d.player.state='exit';                        
+                    end % 
+                        
                     % Reset recording time
                     rec_block_start=GetSecs; 
                     
@@ -1036,7 +1045,17 @@ for trial=1:length(stim)
                 end % if GetSecs ...
             
                 % Empty recording buffer, if necessary. 
-                rec=[rec; PsychPortAudio('GetAudioData', rhand)'];  
+                % empty buffer
+                trec=PsychPortAudio('GetAudioData', rhand)';
+
+                % Empty recording buffer, if necessary. 
+                rec=[rec; trec]; 
+
+                % Error check for clipping
+                if any(any(abs(trec)>=1)) && d.player.stop_if_error
+                    warning('Recording clipped!');
+                    d.player.state='exit';                        
+                end %                 
 
                 % Save recording to sandbox
                 d.sandbox.mic_recording{trial} = rec; 

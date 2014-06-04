@@ -120,6 +120,8 @@ function [Pxx, Pyy, Pyyo, Y, Yo, FS, dPyy]=SIN_matchspectra(X, Y, varargin)
 %% GATHER PARAMETERS
 p=varargin2struct(varargin{:});
 
+warning('CWB thinks we should be zero-padding X and Y. Oof'); 
+
 %% LOAD DATA
 %   Load data using SIN_loaddata. AD_matchspectrum currently only tested
 %   with WAV files, but should be easily expandable to support EEG/ERP
@@ -149,7 +151,10 @@ X=resample(X, FS, FSx); % resample X
 Y=resample(Y, FS, FSy); % resample Y
 
 % What is our longest data series?
-mxl = max([length(X) length(Y)]);
+%   Need to zero-pad out to N+L-1 (at least) for linear convolution. 
+
+% mxl = max([length(X) length(Y)]);
+mxl = length(X) + length(Y); 
 
 %% INPUT CHECK AND DEFAULTS
 %   Set some default values.

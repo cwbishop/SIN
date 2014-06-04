@@ -100,3 +100,9 @@ Calibration info (specific): specific field for calibration routine
         -> playback: instructions to display during driver (e.g., speaker/earphone) calibration
     -> record_channels: integer, the recording channel to use in calibration. This is often necessary if a device has multiple record_channels (e.g., stereo recording)     
     -> match2channel: channel to which all other physical channels are matched. 
+
+=======================================================================================================
+Calibration Filters(CalFilters): This structure describes the calibration filters, as estimated using SIN_calibrate
+    -> fs
+    -> 
+    

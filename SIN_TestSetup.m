@@ -124,17 +124,17 @@ switch testID;
                 'mtype',    'power', ...
                 'plev',     true, ...
                 'frange',   [-Inf Inf], ... % use all frequencies in matching
-                'window',   1, ... % 1 sec window
+                'window',   opts.player.playback.block_dur, ... % set window length to block_dur. Easier interpolation later. 
                 'noverlap', [], ... % MATLAB's default overlap for pwelch (50%)                
                 'write',    false), ... % no need to write data to file                
             'instructions', struct(...
                 'noise_estimation', 'Get down. Shut up', ...
                 'reference', 'attach the device', ...
                 'playback',     'unattach the device and sit down'), ...
-            'physical_channels',    [1 2], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
+            'physical_channels',    [1], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
             'data_channels',    1, ... % just one channel for white noise stimulus. 
             'calstimDir',   fullfile(opts.general.root, 'playback', 'calibration'), ... % we'll use the ANL babble masker as the calibration stimulus
-            'calstim_regexp', 'whitenoise_10sec.wav', ... % 10 sec white noise stimulus
+            'calstim_regexp', 'whitenoise_10sec_sc.wav', ... % 10 sec white noise stimulus
             'record_channels',  1, ... % just use channel 1 from stereo recording on my device.       
             'match2channel',    1);   % match to first playback channel 
             
