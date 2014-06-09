@@ -1,4 +1,4 @@
-function [Pxx, Pyy, Pyyo, Y, Yo, FS, dPyy]=SIN_matchspectra(X, Y, varargin)
+function [Pxx, Pyy, dPyy, FS, F]=SIN_matchspectra(X, Y, varargin)
 %% DESCRIPTION:
 %
 %   This function is designed to create a frequency domain filter to match
@@ -154,13 +154,13 @@ Y=resample(Y, FS, FSy); % resample Y
 %   Need to zero-pad out to N+L-1 (at least) for linear convolution. 
 
 % mxl = max([length(X) length(Y)]);
-mxl = length(X) + length(Y); 
+% mxl = length(X) + length(Y); 
+
 
 %% INPUT CHECK AND DEFAULTS
 %   Set some default values.
 % if ~isfield(p, 'mtype') || isempty(p.mtype), p.mtype='power'; end 
-if ~isfield(p, 'nfft') || isempty(p.nfft); p.nfft=mxl; end 
-if p.nfft<mxl, error(['nfft must be at least at least as long as your longest signal (' num2str(mxl) ' samples)']); end 
+
 % try p.plev; catch p.plev=true; end % plot output by default
 % try p.frange; catch p.frange=[-Inf Inf]; end % adjust whole frequency range by default
 % try p.window; catch p.window=[]; end % use default windowing option
@@ -175,6 +175,12 @@ if p.nfft<mxl, error(['nfft must be at least at least as long as your longest si
 if ~isempty(p.window) && numel(p.window)==1
     p.window=p.window*FS;
 end % if ~isempty(p.window) && numel(p.window)==1
+
+mxl = ceil(p.window*2); % for filter estimation (division), we need to zero pad the FFT to at least the length of the two signals - 1. 
+
+% Set nfft defaults
+if ~isfield(p, 'nfft') || isempty(p.nfft); p.nfft=mxl; end 
+if p.nfft<mxl, error(['nfft must be at least at least double the window length (' num2str(mxl) ' samples)']); end 
 
 %% COMPUTE PSD
 %   Power spectral densities (PSDs) are estimated for the reference time
@@ -225,8 +231,8 @@ Pyy=db(Pyy, 'power');
 %   making any effor to match overall levels.
 %       Should mean centering happen over the user-specified frequency
 %       range? CWB thinks so ...
-% Pxx(fmask)=Pxx(fmask)-mean(Pxx(fmask));
-% Pyy(fmask,:)=Pyy(fmask,:)-ones(length(fmask),1)*mean(Pyy,1); 
+Pxx(fmask)=Pxx(fmask)-mean(Pxx(fmask));
+Pyy(fmask,:)=Pyy(fmask,:)-ones(length(fmask),1)*mean(Pyy,1); 
 
 %% COMPUTE DIFFERENCES IN PSDs
 %   Compute differences in PSDs between reference time series (X) and other
@@ -252,30 +258,30 @@ dPyy=Pxx*ones(1,size(Y,2))-Pyy; % compute difference (in dB)
 %
 %       For further discussion see 
 %           https://www.evernote.com/shard/s353/nl/57578676/14146ec7-588f-495c-953b-cf45abeae451
-ffty=fft(Y, p.nfft); % column wise FFT
-pow=db(abs(ffty).^2, 'power'); % power (in dB); equivalently db(abs(fftx)), I think
-ang=angle(ffty); % phase angle
+% ffty=fft(Y, p.nfft); % column wise FFT
+% pow=db(abs(ffty).^2, 'power'); % power (in dB); equivalently db(abs(fftx)), I think
+% ang=angle(ffty); % phase angle
 
 %% APPLY POWER ADJUSTMENTS
 % Apply adjustments over specified frequency range
-pow(fmask)=pow(fmask)+dPyy(fmask); 
+% pow(fmask)=pow(fmask)+dPyy(fmask); 
 
 %% CONVERT TO MAGNITUDE
 %   Convert back to magnitude
-pow=db2amp(pow); % XXX CWB SHOULD CHECK XXX
+% pow=db2amp(pow); % XXX CWB SHOULD CHECK XXX
 
 %% RECONSTRUCT FFT
 %   Put together (unchanged) phase and (potentially changed) magnitudes
-ffto=pow.*cos(ang) + pow.*sin(ang).*1i; % multiple y by imaginary number
+% ffto=pow.*cos(ang) + pow.*sin(ang).*1i; % multiple y by imaginary number
 
 %% GO BACK TO TIME
 %   Inverse FFT (ifft) to get back to the time domain
-Yo=real(ifft(ffto)); % Sometimes Yo is returning total nonsense (complex values). Not sure why ... maybe just grab the "real" part of it??
-clear ffto; 
+% Yo=real(ifft(ffto)); % Sometimes Yo is returning total nonsense (complex values). Not sure why ... maybe just grab the "real" part of it??
+% clear ffto; 
 
 %% CLIP TIME SERIES
 %   Reduce time series to original length (before any zero-padding).
-Yo=Yo(1:size(Y,1),:); 
+% Yo=Yo(1:size(Y,1),:); 
 
 %% APPLY RAMP
 %   Potentially apply windowing function at beginning/end of sounds to
@@ -294,28 +300,28 @@ Yo=Yo(1:size(Y,1),:);
 
 % Initialize Pyy with NaN
 %   Easier to spot screw ups this way 
-Pyy=nan(length(F), size(Y,2)); 
-for t=1:size(Y,2)
-    pyy=pwelch(Y(:,t), p.window, p.noverlap, p.nfft, FS, 'twosided'); 
-    Pyy(:,t)=pyy;
-    clear pyy; 
-end % for t=1:size(Y,2)
+% Pyy=nan(length(F), size(Y,2)); 
+% for t=1:size(Y,2)
+%     pyy=pwelch(Y(:,t), p.window, p.noverlap, p.nfft, FS, 'twosided'); 
+%     Pyy(:,t)=pyy;
+%     clear pyy; 
+% end % for t=1:size(Y,2)
 
 %% PSD OF OUTPUTS
-Pyyo=nan(length(F), size(Yo,2)); 
-for t=1:size(Yo,2)
-    pyyo=pwelch(Yo(:,t), p.window, p.noverlap, p.nfft, FS, 'twosided'); 
-    Pyyo(:,t)=pyyo;
-    clear pyyo; 
-end % for t=1:size(Y,2)
+% Pyyo=nan(length(F), size(Yo,2)); 
+% for t=1:size(Yo,2)
+%     pyyo=pwelch(Yo(:,t), p.window, p.noverlap, p.nfft, FS, 'twosided'); 
+%     Pyyo(:,t)=pyyo;
+%     clear pyyo; 
+% end % for t=1:size(Y,2)
 
 %% REESTIMATE REFERENCE SERIES
-[Pxx, F]=pwelch(X, p.window, p.noverlap, p.nfft, FS, 'twosided'); 
+% [Pxx, F]=pwelch(X, p.window, p.noverlap, p.nfft, FS, 'twosided'); 
 
 %% Convert to DECIBELS (dB)
-Pxx=db(Pxx, 'power'); 
-Pyy=db(Pyy, 'power'); 
-Pyyo=db(Pyyo, 'power'); 
+% Pxx=db(Pxx, 'power'); 
+% Pyy=db(Pyy, 'power'); 
+% Pyyo=db(Pyyo, 'power'); 
 
 %% MEAN CENTER
 %   Mean center to ease comparisons
@@ -333,17 +339,19 @@ if p.plev
     % Plot time waveforms
     %   Plot waveforms of time series before (Y) and after (Yo) spectrum
     %   matching.
-    T=0:1/FS:(size(Y,1)-1)/FS; 
-    T=SIN_loaddata(T, 'fs', FS);  % set correct dimensions
-    lineplot2d(T, [Y Yo], 'legend', {{[LABELS{:} repmat(' (in)', size(Y,2),1)] [LABELS{:} repmat(' (out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Amplitude (V)', 'title', 'Time Waveforms'); % opens a new figure
+%     T=0:1/FS:(size(Y,1)-1)/FS; 
+%     lineplot2d(F, dPyy, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'PSD (dB/Hz)', 'title', 'Corrective Filter'); 
     
-    % Plot PSDs (before)
-    lineplot2d(F, [Pxx Pyy Pyyo], 'legend',{{'Reference' [LABELS{:} repmat(' (in)', size(Y,2),1)] [LABELS{:} repmat(' (out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'PSD (dB/Hz)', 'title', 'Power Spectral Densities');
-    
-    % Plot PSD differences
-    %   Note that a mean difference isn't informative since we do not match
-    %   levels here. 
-    lineplot2d(F, [Pyyo - Pxx*ones(1, size(Pyyo,2))], 'legend', {{[LABELS{:} repmat(' (diff)', size(Y,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'dB/Hz', 'title', 'PSD Difference (Pxx - Pyyo)');
+%     T=SIN_loaddata(T, 'fs', FS);  % set correct dimensions
+%     lineplot2d(T, [Y Yo], 'legend', {{[LABELS{:} repmat(' (in)', size(Y,2),1)] [LABELS{:} repmat(' (out)', size(Yo,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Amplitude (V)', 'title', 'Time Waveforms'); % opens a new figure
+%     
+%     % Plot PSDs (before)
+    lineplot2d(F, [Pxx Pyy dPyy], 'legend',{{'Reference' [LABELS{:} repmat(' (orig)', size(Y,2),1)] [LABELS{:} repmat(' (filter)', size(dPyy,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'PSD (dB/Hz)', 'title', 'Power Spectral Densities');
+%     
+%     % Plot PSD differences
+%     %   Note that a mean difference isn't informative since we do not match
+%     %   levels here. 
+%     lineplot2d(F, [Pyyo - Pxx*ones(1, size(Pyyo,2))], 'legend', {{[LABELS{:} repmat(' (diff)', size(Y,2),1)] }}, 'linewidth', 1.5, 'xlabel', 'Frequency (Hz)', 'ylabel', 'dB/Hz', 'title', 'PSD Difference (Pxx - Pyyo)');
     
 end % p.plev
 

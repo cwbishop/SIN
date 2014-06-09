@@ -365,6 +365,10 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %           size(Y,1) < size(X,1) + (playback_start_time - rec_start_time)*FS - ( rstatus.PredictedLatency + pstatus.PredictedLatency))
 %           Y is the recording, X is the playback data. 
 %
+%   34. Code and allow for post-mixing modifiers. These will be useful for
+%   filtering purposes or any other speaker-specific modifications that
+%   must be applied to the (mixed) data sent to a single speaker. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -416,6 +420,10 @@ FS = d.player.playback.fs;
 %       'run':      Play or resume playback
 %       'exit':     Stop all playback and exit as cleanly as possible
 % d.player.state = 'run'; 
+
+%% SET ADDITIONAL VARIABLES
+d.sandbox.prev_data2play_mixed=[]; 
+d.sandbox.data2play_mixed=[]; 
 
 %% LOAD DATA
 %
@@ -784,7 +792,10 @@ for trial=1:length(stim)
                         d.sandbox.modifier_num=modifier_num;
     
                         % Call modifier
-                        [data, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data, mod_code, d); 
+                        %   Only run premix modifiers
+                        if isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'premix')
+                            [data, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data, mod_code, d); 
+                        end % if isequal
                             
                     end % for modifier_num
                                         
@@ -830,6 +841,46 @@ for trial=1:length(stim)
                     break % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
+                % Save data2play_mixed to sandbox
+                %   This is helpful for inline filtering applications that
+                %   require recent data playback. Some high-order filtering
+                %   applications might find the number of available "taps"
+                %   too sparse, so this might need to be changed to be
+                %   "smarter" use in the future. CWB just needs a
+                %   block_nsamps number of samples for filtering
+                %   (convolution) at the moment, so this is what he went
+                %   with. 
+                if isequal(d.player.state, 'run')
+                    warning('CWB might want to think about this'); 
+                    d.sandbox.prev_data2play_mixed = data2play_mixed; 
+                end % only get previous data if player is running. 
+                
+                % Post-mixing modifiers
+                %   Some modifiers need to be run AFTER mixing. For
+                %   instance, an inline digital filter to correct the
+                %   frequency response and levels of audio drivers (e.g.,
+                %   speakers) would need to be applied AFTER mixing.
+                for modifier_num=1:length(d.player.modifier)
+
+                    % Update variable in sandbox
+                    d.sandbox.modifier_num=modifier_num;
+
+                    % Call modifier
+                    %   Only run premix modifiers
+                    if isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'postmix')
+                        [data2play_mixed, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data2play_mixed, mod_code, d); 
+                    end % if isequal
+
+                end % for modifier_num
+                
+                % Save playback data
+                %   Data piped to the speakers are saved. This makes it
+                %   easier for users to playback what was presented to each
+                %   speaker at the commandline (using audioplayer or
+                %   wavplay or some other variant). 
+                d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
+                
+                
                 % Get playback device status
                 pstatus=PsychPortAudio('GetStatus', phand);
                 
@@ -898,7 +949,7 @@ for trial=1:length(stim)
                     PsychPortAudio('FillBuffer', phand, data2play_mixed', 1, []);  
 %                 elseif isequal(d.player.state, 'pause') || isequal(d.player.state, 'exit')
 %                     PsychPortAudio('FillBuffer', phand, zeros(size(data2play_mixed))', 1, []);                      
-                end % if isequal ...
+                end % if isequal ...                
                 
                 % Shift mask
                 %   Only shift if the player is in the 'run' state.

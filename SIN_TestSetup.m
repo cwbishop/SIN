@@ -82,7 +82,7 @@ switch testID;
         % Set sound output paramters. 
         opts.player.playback = struct( ...
             'device', portaudio_GetDevice(8), ... % device structure
-            'block_dur', 0.08, ... % 80 ms block duration.
+            'block_dur', 0.4, ... % 80 ms block duration.
             'fs', 44100); % sampling rate            
         
         % Recording device
@@ -98,9 +98,28 @@ switch testID;
         %   Include a basic playback controller to handle "pauses",
         %   "resume", and "quit" requests.
         opts.player.modifier{1} = struct( ...
-            'fhandle', @modifier_PlaybackControl); 
+            'fhandle', @modifier_PlaybackControl, ...
+            'mod_stage',    'premix'); 
             
     case 'Calibrate'
+        
+        opts(1)=SIN_TestSetup('Calibrate (Acquire)'); 
+        opts(2)=SIN_TestSetup('Calibrate (Validate)'); 
+        
+    case 'Calibrate (Validate)'
+        
+        opts=SIN_TestSetup('Calibrate (Acquire)'); 
+        
+        % Add the additional modifier to do inline filtering
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle',  @modifier_applyCal, ...
+            'mod_stage',    'postmix', ... % track after mixing has occurred
+            'calfile',  [opts.specific.output_root '-Calibration.mat']);   % use calibration file by default
+        
+        % Now, change output root
+        opts.specific.output_root = fullfile(opts.general.calibrationDir, date, [date '(validation)']);
+        
+    case 'Calibrate (Acquire)'
         
         % ============================
         % Get default information
@@ -124,19 +143,20 @@ switch testID;
                 'mtype',    'power', ...
                 'plev',     true, ...
                 'frange',   [-Inf Inf], ... % use all frequencies in matching
-                'window',   opts.player.playback.block_dur, ... % set window length to block_dur. Easier interpolation later. 
+                'window',   opts.player.playback.block_dur, ... % set window length to block_dur*2. Easier interpolation later.                 
+                'nfft',     opts.player.playback.block_dur*4*opts.player.playback.fs, ... % set nfft to quadruple the block duration. We'll need that much for filtering (without doing circular convolution)
                 'noverlap', [], ... % MATLAB's default overlap for pwelch (50%)                
                 'write',    false), ... % no need to write data to file                
             'instructions', struct(...
                 'noise_estimation', 'Get down. Shut up', ...
                 'reference', 'attach the device', ...
                 'playback',     'unattach the device and sit down'), ...
-            'physical_channels',    [1], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
+            'physical_channels',    [1 2], ... % physical channels to calibrate. These are the channels you'll be playing sounds back from during your experiment.
             'data_channels',    1, ... % just one channel for white noise stimulus. 
             'calstimDir',   fullfile(opts.general.root, 'playback', 'calibration'), ... % we'll use the ANL babble masker as the calibration stimulus
             'calstim_regexp', 'whitenoise_10sec_sc.wav', ... % 10 sec white noise stimulus
-            'record_channels',  1, ... % just use channel 1 from stereo recording on my device.       
-            'match2channel',    1);   % match to first playback channel 
+            'record_channels',  1); % just use channel 1 from stereo recording on my device.       
+            
             
         % ============================
         % Player configuration
@@ -201,7 +221,8 @@ switch testID;
         %   small since the map above is modified to ignore the increase
         %   and decrease volume key presses, but CWB is still paranoid. 
         opts.player.modifier{end+1} = struct( ...
-            'fhandle',  @modifier_trackMixer);   % track mod_mixer        
+            'fhandle',  @modifier_trackMixer, ...
+            'mod_stage',    'premix');   % track prior to mixing
         
     case 'HINT (SNR-50)'
         
@@ -279,6 +300,7 @@ switch testID;
         % Modifier to scale mixing information
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
+            'mod_stage',    'premix',  ...  % apply modifications prior to mixing
             'dBstep',   [4 2], ...  % use variable step size. This matches HINT as normally administered
             'change_step', [1 5], ...   % This matches HINT as normally administered. 
             'data_channels', 2, ...
@@ -286,7 +308,8 @@ switch testID;
         
         % Modifier to track mod_mixer settings
         opts.player.modifier{end+1} = struct( ...
-            'fhandle',  @modifier_trackMixer);   % track mod_mixer        
+            'fhandle',  @modifier_trackMixer, ...
+            'mod_stage',    'premix');   % track mod_mixer        
 %         opts.player.modifier{end+1}=struct( ...            
 %         opts.player.modifier{end+1}=struct( ...
 %             'fhandle',  @modifier_dBscale, ... % use a decibel scale
@@ -541,6 +564,7 @@ switch testID;
         % Modifier to scale mixing information
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
+            'mod_stage',    'premix', ... % run modification prior to mixing. 
             'dBstep',   5, ...  % use constant 1 dB steps
             'change_step', 1, ...   % always 1 dB
             'data_channels', 1, ...
@@ -551,7 +575,8 @@ switch testID;
         % at the END of the modifier list, since other modifiers might also
         % modify the mixing matrix. 
         opts.player.modifier{end+1} = struct( ...
-            'fhandle',  @modifier_trackMixer);   % track mod_mixer            
+            'fhandle',  @modifier_trackMixer, ...
+            'mod_stage',    'premix');   % track mod_mixer            
             
     otherwise
         

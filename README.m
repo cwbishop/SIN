@@ -62,6 +62,11 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 			-> change_step: 
 			-> channels: 			
             
+            (required fields)
+            -> fhandle: function handle for modifier
+            -> mod_stage:   string describing when modifier should be run within a given player. These are only relevant for the "continuous" adaptive mode, I think. 
+                -> 'premix': apply prior to mixing. Useful for data_channel specific modifications, like scaling individual channels
+                -> 'postmix': apply after mixing, prior to sound playback
     -> Sandbox: a dirty area where variables can be stored if necessary and accessed by different functions (e.g., figure or axis information for plotting, etc).
     
     -> Calibration info (calibration): calibration information is provided here. This will mirror the "calibration" structure below exactly, whatever that ends up being.    
