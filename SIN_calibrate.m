@@ -1,8 +1,36 @@
 function [allresults]=SIN_calibrate(X, varargin)
 %% DESCRIPTION:
 %
-%   Function to calibrate playback/recording loop. This is still under
-%   development.
+%   This function is designed to calibrate stimuli for various
+%   playback/recording loops. There are several steps to this process.
+%
+%       1. The noise floor is measured. This is done by acquiring a
+%       recording with no active playback (zeros in all channels). 
+%
+%       2. A calibration stimulus is presented from each playback channel
+%       in turn and recorded. 
+%
+%       3. The power spectra between the ideal response (PSD of the output
+%       stimulus) and the recorded response are compared. A filter is
+%       estimated (see SIN_makeFilter) to correct for the transfer function
+%       of the playback/recording loop. The specifics of the filter
+%       making process is necessarily user defined (e.g., filter order,
+%       what to do with DC component, which frequencies to attempt to
+%       correct, etc.). 
+%
+%           Note: The noise floor may be used to remove noise from the
+%           environment or recording loop; the latter is often a problem
+%           with probe microphones. (This feature is not well-tested,
+%           though, so use with a suitable degree of caution)
+%
+%       4. 
+%
+%
+%   Note: While the code is written to work with nearly any stimulus, CWB
+%   strongly encourages the user to use a sufficiently long broadband
+%   stimulus (e.g., 10 s of white noise). Narrow band stimuli can (in
+%   theory) be used for calibration purposes, but may lead to inaccuracies.
+%   
 %
 % INPUT:
 %
@@ -15,12 +43,45 @@ function [allresults]=SIN_calibrate(X, varargin)
 %
 %   'data_channels':    integer, which channel of X to use for calibration.
 %                       
-%   'output_root':  root for file output - there will be several results
-%                   structures from portaudio_adaptiveplay and an
-%                   additional "compiled" data set that will serve as the
+%   'output_root':  root for calibration output files. These are all
+%                   "results" data structures returned from
+%                   portaudio_adaptiveplay. The only exception is the
+%                   compiled calibration.mat file, which has a smaller,
+%                   easier to digest data structure with filters for each
+%                   calibrated channel. 
+%   
+% Analysis flags (in 'specific' field):
+%
+%   'remove_noise_floor':    bool, partial out contribution of
+%                       environmental/recording loop noise during filter
+%                       estimation. 
+%
+%   'validate': bool, filter calibration stimulus and repeat calibration
+%               process. If the filter (and corrected range) are
+%               appropriate, then this should lead to well-matched spectra
+%               between the output stimulus and the recording from each
+%               channel. 
+%
+%                   Note: In many cases, speakers are simply incapable of
+%                   producing power in specific frequency ranges (typically
+%                   in higher frequency ranges for average speakers used
+%                   for human research). If this is the case, the user will
+%                   never be able to correct this frequency range fully.
+%                   Instead, CWB encourages the user to only attempt to
+%                   correct within the experimentally relevant range. 
+%
+%   'write_files':  bool, XXX maybe a user prompt might be more effective
+%                   here? XXX
+%
 % OUTPUT:
 %
 %   XXX Lots of information XXX
+%
+% Development:
+%
+%   1. Write a procedure to recommend a frequency range to correct. This
+%   can probably be done by presenting white noise and then determining
+%   the low and high-frequency cutoffs. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -44,8 +105,6 @@ mkdir(PATHSTR);
 %% LOAD PLAYBACK STIMULUS
 %   - Load the playback stimulus that will be used to calibrate the
 %   speakers.
-%   - We will use this to determine the number of data_channels below.
-%   That's pretty much all we'll use it for. 
 t.dtype = 2;    % only accept wav files for now.
 [stim, fs]=SIN_loaddata(X, t); 
 Xdim=size(stim); 
@@ -55,140 +114,70 @@ Xdim=size(stim);
 %   same data across functions. 
 stim=resample(stim, d.player.playback.fs, fs); 
 
+% Get figure title from options structure
 figtitle = d.player.modcheck.title; 
 
 %% RECORD NOISE FLOOR
+%
 %   This section is used to estimate the noise levels of the recording
 %   loop/environment. It will (eventually) be used below to estimate SNR of
 %   the calibration and playback stimulus. If the SNR is too low, we'll
 %   throw a warning and make the user redo the test. What "too low" is will
 %   be open to debate. 
+%
+%   The noise floor can also be used to estimate (and correct for) the
+%   power spectrum of the recording loop. 
 
-% % Create mod_mixer for portaudio_adaptiveplay
-% %   Assume we aren't putting any data into any output channels
-% d.player.mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels); 
-% 
-% % Set instructions in ANL_modcheck_keypress
-% d.player.modcheck.instructions=d.specific.instructions.noise_estimation; 
-% 
-% % Set title
-% d.player.modcheck.title = [figtitle 'Noise Estimation']; 
-% 
-% % Run portaudio_adaptiveplay
-% %   No sound will play here since the mod_mixer is set to zeros. But the
-% %   code otherwise works exactly the same way. 
-% results = portaudio_adaptiveplay(X, d); 
-% 
-% % Save results to file
-% save(fullfile(PATHSTR, [NAME '-Noise_Estimation']), 'results'); 
-    
-%% RECORD RESPONSE FROM REQUESTED PHYSICAL CHANNELS
-%   - Get recording
-%   - Save results structure to output_root + physical_channel information
-%   - Loop through each channel and all that jazz. 
-%   - Copy over necessary information 
+% call calibrate_runTest
+[~, noise_floor]=calibrate_runTest(X, d, zeros(Xdim(2), d.player.playback.device.NrOutputChannels), ...
+    d.specific.instructions.noise_estimation, ...
+    [figtitle 'Noise Estimation'], ...
+    fullfile(PATHSTR, [NAME '-Noise_Estimation'])); 
 
-% maximum length
-%   Initialize as length of playback stimulus. 
-ml=size(stim,1); 
+%% RECORD RESPONSE FROM EACH OUTPUT CHANNEL
+%   The output is recorded and later used to estimate a corrective filter
+%   for each channel. SIN_makeFilter is used to generate these filters. 
 
 % Loop through each physical channel in turn
 for p=1:length(d.specific.physical_channels)
     
-    % Create mod_mixer for portaudio_adaptiveplay
-    %   Assume we aren't putting any data into any output channels
-    d.player.mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels); 
+    % Reset mixer
+    mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels);
     
-    % Play sound from one speaker at full volume
-    d.player.mod_mixer(d.specific.data_channels, d.specific.physical_channels(p))=1; 
+    % Present specified data channel to physical device
+    mod_mixer(d.specific.data_channels, d.specific.physical_channels(p))=1; 
     
-    % Set instructions in ANL_modcheck_keypress
-    d.player.modcheck.instructions=d.specific.instructions.playback; 
-    
-    % Set title
-    d.player.modcheck.title = [figtitle 'Channel ' num2str(d.specific.physical_channels(p))]; 
-    
-    % Run portaudio_adaptiveplay
-    results = portaudio_adaptiveplay(X, d); 
-    
-    % Save results to file
-    save(fullfile(PATHSTR, [NAME '-Channel_' num2str(d.specific.physical_channels(p))]), 'results'); 
-    
-    % Grab data necessary frequency/level matching below.
-    
-    % save to larger structure
-    allresults(p)=results; 
-    
+    % call calibrate_runTest
+    results = calibrate_runTest(X, d, mod_mixer, ...
+    d.specific.instructions.playback, ...
+    [figtitle 'Channel ' num2str(d.specific.physical_channels(p))], ...
+    fullfile(PATHSTR, [NAME '-Channel_' num2str(d.specific.physical_channels(p))])); 
+
     % Copy recorded information to a cell array
     %   Easier to do spectrum matching below.
     rec{p} = results.RunTime.sandbox.mic_recording{1}(:, d.specific.record_channels); 
     
-    % Update maximum length if we encounter a longer recording
-    if size(rec{p},1) > ml
-        ml=size(rec{p},1); 
-    end % if size(rec ...
+    % Compute corrective filter
+    %   Call to non-existent SIN_makeFilter here.
+    %
+    %   Note: CWB is trying to create a zero-phase filter; that is, one
+    %   that can be used with filtfilt. So the math is divided by 2 to
+    %   account for the double filtering.         
+    if d.specific.remove_noise_floor
+        domath = '(X1 - X2 - X3)./2'; % Removes noise power from filter estimate. We typically don't want to correct for this.
+    else
+        domath = '(X1 - X2)./2'; 
+    end % if d.specific
     
-    % clear results
-    %   Less likely to get in trouble this way. 
-    clear results 
+    filt(:, p)=SIN_makeFilter(stim, rec{p}, noise_floor, d.makeFilter, 'domath', domath, 'datatype', 'tsdata'); 
+    
+    % Clear out dangerous variables
+    %   We don't want to screw up everything by letting this variable
+    %   linger.
+    clear results mod_mixer
     
 end % for p=1: ...
-
-%% CREATE FREQUENCY FILTER
-%   - Match spectra and levels using SIN_matchspectra.
-%   - Probably a good idea to match to average spectrum, then scale filters
-%   to match a target output level
-%   - Be sure to exclude DC from filtering, but CWB not 100% sure about
-%   this. Needs to do some soul searching.
-
-% Copy maximum length over to nfft field.
-%   Need to zero pad for linear convolution 
-% d.specific.matchspectra.nfft=ml + Xdim(1); 
-
-% Filter estimation is a two step process:
-%
-% Step 1:
-% Match all speakers to specified channel
-%   With this filter, we equate all speakers to the match2channel speaker. 
-%
-% Step2: 
-% Match match2channel speaker to original sound
-%   This step effectively "flattens" the frequency response of the
-%   speakers. It does *not* do anything about the relative phase. We don't
-%   want to correct phase anyway. 
-for p=1:length(d.specific.physical_channels)
     
-%     % Extract the arguments we need for matchspectra
-%     %   dPyy is the filter applied to Y (rec{p}) to match X (match2channel)
-%     %   Units are dB (for dPyy at least). See SIN_matchspectra for other
-%     %   details. 
-%     [Pxx, Pyy, Pyyo, Y, Yo, FS, tdPyy]=SIN_matchspectra(...
-%         rec{d.specific.physical_channels==d.specific.match2channel}, ... % recording from reference speaker
-%         rec{p}, ... % recording from a speaker
-%         d.specific.matchspectra, ... % pass necessary inputs to SIN_matchspectra
-%         'fsx',  d.player.record.fs, ... % sampling rate of X
-%         'fsy',  d.player.record.fs);  % sampling rate of Y 
-    
-%     % Save filter information
-%     dPyy(:, p)=tdPyy; % filter in dB
-%     clear tdPyy;     
-    
-    % Extract the arguments we need for matchspectra
-    %   dPyy is the filter applied to Y (rec{p}) to match X (match2channel)
-    %   Units are dB (for dPyy at least). See SIN_matchspectra for other
-    %   details. 
-    [Pxx, Pyy, tdPyy, FS, F]=SIN_matchspectra(...
-        stim, ... % original sound
-        rec{p}, ... % recording from a speaker
-        d.specific.matchspectra, ... % pass necessary inputs to SIN_matchspectra
-        'fsx',  d.player.record.fs, ... % sampling rate of X
-        'fsy',  d.player.record.fs);  % sampling rate of Y 
-    
-    % Filter information
-    dPyy(:, p)=tdPyy; % in dB
-    
-end % for p=d ...
-
 %% SAVE INFORMATION IN CALIBRATION FILE
 %   Save the relevant information in a calibration file
 calibration=struct(...    
@@ -202,82 +191,52 @@ calibration=struct(...
 % Save to file
 save(fullfile(PATHSTR, [NAME '-Calibration']), 'calibration'); 
 
-%% VALIDATE FREQUENCY FILTERS
-%   - Repeat the recordings above, but this time with the filtered sound
-%   output file. 
-%   - Compute spectra and levels as we would normally and compare
-%   
-%   - Add modifier (modifier_applyCal)
+function [results, rec]=calibrate_runTest(X, d, mod_mixer, instructions, figtitle, fname)
+%% DESCRIPTION:
+%
+%   Function to populate the necessary fields during calibration, run the
+%   calibration test, write data to file.
+%
+% INPUT:
+%
+%   X:  single element cell array, path to calibration wav file. 
+%
+%   mod_mixer:  data_channels x physical_channels mixer. 
+%
+%   instructions:   string, instructions to present to user during this
+%                   particular stage of testing.
+%
+%   figtitle:   string, figure title
+%
+%   fname:  string, path to where the results structure should be saved.
+%
+% OUTPUT:
+%
+%   results:    results structure from portaudio_adaptiveplay
+%
+% Development:
+%
+%   XXX
+%
+% Christopher W. Bishop
+%   University of Washington
+%   6/14
 
-% For now, just do the following; we'll write a function to do this soon.
-% For now, just check first channel
+% Create mod_mixer for portaudio_adaptiveplay
+%   Assume we aren't putting any data into any output channels
+d.player.mod_mixer=mod_mixer; 
 
-% Filter original sound (X) by corrective filter for channel 1
-% orig=SIN_loaddata(X); 
+% Set instructions in ANL_modcheck_keypress
+d.player.modcheck.instructions=instructions; 
 
-% fftstim=fft(stim);
-% ampstim=db(abs(fftstim)); 
-% angstim=angle(fftstim); 
-% 
-% 
-% stim_filt = frequency_linconv(stim, calibration.filter.impulse_response(:,1), 'fsx', FS, 'fsy', FS, 'filterType', 'power'); 
-% 
-% % scale (for now) since my levels are all messed up
-% stim_filt=stim_filt./max(abs(stim_filt)); 
-% 
-% % Write filtered sound to file
-% wavwrite(stim_filt, FS, 32, fullfile(PATHSTR, [NAME 'Channel_1.wav']));
-% 
-% % Change filename for sound playback
-% X={fullfile(PATHSTR, [NAME 'Channel_1.wav'])};
-% 
-% % Repeat playback with filtered sound
-% 
-% for p=1:1
-%         
-%     % Create mod_mixer for portaudio_adaptiveplay
-%     %   Assume we aren't putting any data into any output channels
-%     d.player.mod_mixer=zeros(Xdim(2), d.player.playback.device.NrOutputChannels); 
-%     
-%     % Play sound from one speaker at full volume
-%     d.player.mod_mixer(d.specific.data_channels, d.specific.physical_channels(p))=1; 
-%     
-%     % Set instructions in ANL_modcheck_keypress
-%     d.player.modcheck.instructions=d.specific.instructions.playback; 
-%     
-%     % Set title
-%     d.player.modcheck.title = [figtitle 'Channel ' num2str(d.specific.physical_channels(p))]; 
-%     
-%     % Run portaudio_adaptiveplay
-%     results = portaudio_adaptiveplay(X, d); 
-%     
-%     % Save results to file
-% %     save(fullfile(PATHSTR, [NAME '-Channel_' num2str(d.specific.physical_channels(p))]), 'results'); 
-%     
-%     % Grab data necessary frequency/level matching below.
-%     
-%     % save to larger structure
-% %     allresults(p)=results; 
-%     
-%     % Copy recorded information to a cell array
-%     %   Easier to do spectrum matching below.
-%     rec_filt{p} = results.RunTime.sandbox.mic_recording{1}(:, d.specific.record_channels); 
-%     
-%     % Update maximum length if we encounter a longer recording
-%     if size(rec_filt{p},1) > ml
-%         ml=size(rec{p},1); 
-%     end % if size(rec ...
-%     
-%     % clear results
-%     %   Less likely to get in trouble this way. 
-%     clear results 
-%     
-% end % for p=1: ...
+% Set title
+d.player.modcheck.title = figtitle; 
 
-% Compare spectra
-%   Perform "match spectra" computation to see if we're close or not
+% Run portaudio_adaptiveplay
+results = portaudio_adaptiveplay(X, d); 
 
+% Get recorded response from larger results structure 
+rec=results.RunTime.sandbox.mic_recording{1}(:, d.specific.record_channels); 
 
-%% DIAGNOSTICS
-%   - Determine how well our filters are working. 
-%   - Perhaps establish some guidelines 
+% Save results to file
+save(fname, 'results'); 

@@ -21,7 +21,14 @@ function d=varargin2struct(varargin)
 %   5/14
 
 % Flag for while loop
-keep_running=true; 
+%   140611 CWB: Fixed infinite loop when users pass in an empty argument
+%   list.
+if nargin>0
+    keep_running=true; 
+else 
+    keep_running=false;
+end % if 
+
 n=1; % counter used below. CWB hates this kind of thing, but can't think of a better way to do it quickly
 
 % Parameter/value pairs

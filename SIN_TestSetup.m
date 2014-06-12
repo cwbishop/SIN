@@ -103,8 +103,7 @@ switch testID;
             
     case 'Calibrate'
         
-        opts(1)=SIN_TestSetup('Calibrate (Acquire)'); 
-        opts(2)=SIN_TestSetup('Calibrate (Validate)'); 
+        opts(1)=SIN_TestSetup('Calibrate (Acquire)');         
         
     case 'Calibrate (Validate)'
         
@@ -139,7 +138,7 @@ switch testID;
             'reference', struct(...
                 'absoluteSPL', 114), ...
             'matchspectra', struct(...                
-                'fhandle',  @SIN_matchspectra, ... % use SIN_matchspectra to do computations
+                'fhandle',  @SIN_makeFilter, ... % use SIN_makeFilter to do computations
                 'mtype',    'power', ...
                 'plev',     true, ...
                 'frange',   [-Inf Inf], ... % use all frequencies in matching
@@ -155,6 +154,7 @@ switch testID;
             'data_channels',    1, ... % just one channel for white noise stimulus. 
             'calstimDir',   fullfile(opts.general.root, 'playback', 'calibration'), ... % we'll use the ANL babble masker as the calibration stimulus
             'calstim_regexp', 'whitenoise_10sec_sc.wav', ... % 10 sec white noise stimulus
+            'remove_noise_floor',   false, ... % do not attempt to remove power estimate of noise floor 
             'record_channels',  1); % just use channel 1 from stereo recording on my device.       
             
             

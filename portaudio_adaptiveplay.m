@@ -841,20 +841,6 @@ for trial=1:length(stim)
                     break % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
-                % Save data2play_mixed to sandbox
-                %   This is helpful for inline filtering applications that
-                %   require recent data playback. Some high-order filtering
-                %   applications might find the number of available "taps"
-                %   too sparse, so this might need to be changed to be
-                %   "smarter" use in the future. CWB just needs a
-                %   block_nsamps number of samples for filtering
-                %   (convolution) at the moment, so this is what he went
-                %   with. 
-                if isequal(d.player.state, 'run')
-                    warning('CWB might want to think about this'); 
-                    d.sandbox.prev_data2play_mixed = data2play_mixed; 
-                end % only get previous data if player is running. 
-                
                 % Post-mixing modifiers
                 %   Some modifiers need to be run AFTER mixing. For
                 %   instance, an inline digital filter to correct the
