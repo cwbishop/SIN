@@ -45,7 +45,7 @@ wavfiles={};
 
 switch testID
     
-    case {'HINT (SNR-50)', 'PPT'}
+    case {'HINT (SNR-50, Sentence-Based)', 'PPT'}
         
         % Return directories based on defaults.hint.list_filt
         list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 

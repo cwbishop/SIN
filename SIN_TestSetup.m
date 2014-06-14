@@ -82,7 +82,7 @@ switch testID;
         % Set sound output paramters. 
         opts.player.playback = struct( ...
             'device', portaudio_GetDevice(8), ... % device structure
-            'block_dur', 0.4, ... % 80 ms block duration.
+            'block_dur', 0.08, ... % 80 ms block duration.
             'fs', 44100); % sampling rate            
         
         % Recording device
@@ -102,23 +102,6 @@ switch testID;
             'mod_stage',    'premix'); 
             
     case 'Calibrate'
-        
-        opts(1)=SIN_TestSetup('Calibrate (Acquire)');         
-        
-    case 'Calibrate (Validate)'
-        
-        opts=SIN_TestSetup('Calibrate (Acquire)'); 
-        
-        % Add the additional modifier to do inline filtering
-        opts.player.modifier{end+1} = struct( ...
-            'fhandle',  @modifier_applyCal, ...
-            'mod_stage',    'postmix', ... % track after mixing has occurred
-            'calfile',  [opts.specific.output_root '-Calibration.mat']);   % use calibration file by default
-        
-        % Now, change output root
-        opts.specific.output_root = fullfile(opts.general.calibrationDir, date, [date '(validation)']);
-        
-    case 'Calibrate (Acquire)'
         
         % ============================
         % Get default information
@@ -226,7 +209,7 @@ switch testID;
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track prior to mixing
         
-    case 'HINT (SNR-50)'
+    case 'HINT (SNR-50, Sentence-Based)'
         
         % ============================
         % Get default information

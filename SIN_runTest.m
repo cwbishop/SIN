@@ -80,7 +80,7 @@ for t=1:length(testID)
     %   Each TEST ID has a unique set of instructions. 
     switch testID{t}
         
-        case {'HINT (SNR-50)', 'PPT'}
+        case {'HINT (SNR-50, Sentence-Based)', 'PPT'}
             
             % Launch HINT (SNR-50)
             results = portaudio_adaptiveplay(play_list, opts); 
