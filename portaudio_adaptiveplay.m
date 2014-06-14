@@ -422,7 +422,6 @@ FS = d.player.playback.fs;
 % d.player.state = 'run'; 
 
 %% SET ADDITIONAL VARIABLES
-d.sandbox.prev_data2play_mixed=[]; 
 d.sandbox.data2play_mixed=[]; 
 
 %% LOAD DATA
@@ -548,7 +547,8 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
     
     % Start filling next block after first sample of this block has been
     % played
-    refillat=ceil(1/block_nsamps);     
+    refillat=ceil(1/block_nsamps);
+%     refillat=round(block_nsamps/4); 
     
 end % if isequal
 
@@ -583,13 +583,20 @@ end % for modifier_num
 %% INITIALIZE BUFFER POSITION
 %   User must provide the buffer start position (in sec). This converts to
 %   samples
-buffer_pos = round(d.player.startplaybackat.*FS); 
+%
+%   Added error check to only allow buffer start position to be set for
+%   single file playback.
+if d.player.startplaybackat ~= 0 && size(stim, 1) ~= 1
+    error('Cannot initialize start position to non-zero value with multiple playback files');
+else
+    buffer_pos = round(d.player.startplaybackat.*FS); 
+end % if d.player ...
 
 for trial=1:length(stim)
 
     %% BUFFER POSITION
     if trial == 1
-        buffer_pos = buffer_pos + 1; % This starts at the first sample specified by the user. 
+        buffer_pos = buffer_pos + 1; % This starts at the first sample specified by the user.     
     else
         % Note: this might not be appropriate for 'looped' playback mode,
         % but CWB has not encountered this specific situation yet and thus
@@ -962,8 +969,7 @@ for trial=1:length(stim)
 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
-                while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ... 
-                        && block_num<nblocks ... % additional check here, we don't need to be as careful for the last block
+                while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
                         && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
                     pstatus=PsychPortAudio('GetStatus', phand); 
                 end % while
@@ -984,9 +990,9 @@ for trial=1:length(stim)
                 %   Note: This probably shouldn't be applied in "looped
                 %   playback" mode, but CWB needs to think about it more.
                 %   XXX
-                if block_num==nblocks && startofblock==block_start(1)
-                    data=zeros(block_nsamps, size(X,2)); 
-                    PsychPortAudio('FillBuffer', phand, data2play_mixed', 1, []);  
+%                 if block_num==nblocks && startofblock==block_start(1)
+                if block_num==nblocks                      
+                    PsychPortAudio('FillBuffer', phand, zeros(block_nsamps, size(X,2))', 1, []);  
                 end % if block_num==nblocks
                 
                 % Empty recording buffer frequently
@@ -1036,6 +1042,25 @@ for trial=1:length(stim)
                 if isequal(d.player.state, 'exit')
                     break; 
                 end % 
+            end % while
+            
+            % Grab the last known buffer position within our two-block
+            % playback buffer.
+%             pstatus=PsychPortAudio('GetStatus', phand);
+%             end_pos = mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock; 
+            end_block_pos = mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(block_start~=startofblock); % tells us where we were in the block the last time we checked
+            end_OutSamples = pstatus.ElapsedOutSamples; % tells us how many samples total have played
+            
+            % Wait until we hit the first sample of what would be the next
+            % block, then stop playback. This ensures all samples are
+            % presented before soundplayback is terminated. 
+            %   - CWB ran into issues with sounds being cut short with long
+            %   block_dur(ations) (e.g., 0.4 s). This was not obvious with
+            %   shorter block lengths.
+            %             while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock >= end_pos ...                         
+            while buffer_nsamps - end_block_pos > pstatus.ElapsedOutSamples - end_OutSamples ...
+                    && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
+                pstatus=PsychPortAudio('GetStatus', phand);             
             end % while
             
             % Schedule stop of playback device.
