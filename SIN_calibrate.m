@@ -164,12 +164,14 @@ for p=1:length(d.specific.physical_channels)
     %   that can be used with filtfilt. So the math is divided by 2 to
     %   account for the double filtering.         
     if d.specific.remove_noise_floor
-        domath = '(X1 - X2 - X3)./2'; % Removes noise power from filter estimate. We typically don't want to correct for this.
+        domath = '( (X1 - X2 - X3) - mean((X1 - X2 - X3)) )./2';    % Removes noise power from filter estimate.
+                                                                    % Also mean center to maintain original RMS value. I think ...                                                                 
     else
-        domath = '(X1 - X2)./2'; 
+        domath = '( (X1 - X2) - mean(X1-X2) )./2';  % Do not remove noise floor, but remove mean to preserve RMS value. 
     end % if d.specific
     
-    filt(:, p)=SIN_makeFilter(stim, rec{p}, noise_floor, d.makeFilter, 'domath', domath, 'datatype', 'tsdata'); 
+    % Get a filter appropriate for use with filtfilt
+    filt(:, p)=SIN_makeFilter(stim, rec{p}, noise_floor, d.specific.makeFilter, 'domath', domath, 'datatype', 'tsdata'); 
     
     % Clear out dangerous variables
     %   We don't want to screw up everything by letting this variable

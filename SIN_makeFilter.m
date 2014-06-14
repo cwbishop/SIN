@@ -107,7 +107,8 @@ function [filt]=SIN_makeFilter(varargin)
 for n=1:nargin
     
     % Break as soon as we encounter the first key/value pair
-    if ischar(varargin{n})
+    % Or break when we encounter an key/value structure
+    if ischar(varargin{n}) || isstruct(varargin{n})
         break
     end % if ischar ...
     
@@ -145,7 +146,8 @@ for i=1:n-1
     if isequal(p.datatype, 'tsdata')
         
         % Compute average PSD
-        [p.(dsname), f] = pwelch(p.(dsname), p.window, p.noverlap, p.nfft, FS);
+        %   Multiply p.window by FS to convert to # of samples
+        [p.(dsname), f] = pwelch(p.(dsname), round(p.window*FS), p.noverlap, p.nfft, FS);
         
     end % if isequal(... 
     
