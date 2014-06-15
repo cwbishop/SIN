@@ -77,7 +77,7 @@ if ~isstruct(NAL)
     NAL=varargin2struct(varargin{:});  
     
     % Add default fields
-    flds = {'dBstep', 'scoring_history', 'phase', 'isreversal', 'trial_percentage', 'state'};
+    flds = {'dBstep', 'dBnow', 'scoring_history', 'phase', 'isreversal', 'trial_percentage', 'state'};
     for i=1:numel(flds)
         if ~isfield(NAL, flds{i})
             NAL.(flds{i}) = [];
@@ -88,7 +88,27 @@ if ~isstruct(NAL)
     if isempty(NAL.state)
         NAL.state = 'run'; 
     end 
+    
+    % Set dBnow
+    %   dBnow tracks the cumulative scaling over all trials. So this will
+    %   be the equivalent of the sum of dBstep(1:end-1) typically. First
+    %   trial has a level (or SNR) of 0 by default. The applied changes are
+    %   all relative, so we can call the first point whatever we want. 0 is
+    %   easier to think about. 
+    if isempty(NAL.dBnow)
+        NAL.dBnow=0;
+    end % if isempty(NAL.dBnow);
+    
 end % if ~isstruct
+
+% Assign current phase. 
+%   The checks below determine if we are about to enter the next phase. 
+NAL.phase(end+1) = getNALphase(NAL); 
+
+% Refresh dBnow
+if ~isempty(NAL.dBstep)
+    NAL.dBnow(end+1) = NAL.dBnow(end) + NAL.dBstep(end); 
+end 
 
 % Append score
 NAL.scoring_history(:, end+1) = score; 
@@ -108,8 +128,6 @@ NAL.isreversal(end+1) = isReversal(NAL);
 % Which phase is the next trial?
 % What's the step size (dB) for the upcoming trial?
 [tphase, tdBstep] = getNALphase(NAL); 
-
-NAL.phase(end+1) = tphase; 
 
 if ~isempty(tdBstep)
     NAL.dBstep(end) = NAL.dBstep(end).*tdBstep; % multiply sign by dBstep size
@@ -158,16 +176,30 @@ function [o]=cSE(NAL)
 %
 %   Function to calculate corrected SEM from phases 2 and 3. 
 
+% Convert dBstep into cummulative levels
+%   First trial is our "zero" point. All subsequent trials are changed
+%   relative to zero.
+%
+%   Recall that dBstep is of the NEXT trial, so we have to shift the array.
+%   The last entry hasn't been presented yet, so clip it. 
+% dBstep = [0 NAL.dBstep(1:end-1)]; 
+
+% Initialize dB sum array
+dBsum=NAL.dBnow; 
+
+% Convert dBstep to cumulative levels
+% for i=1:length(dBstep)
+%     dBsum(i) = sum(dBstep(1:i));
+% end % for i=1:length(dBstep)
+
 % Get phase mask
 mask = NAL.phase == 2 | NAL.phase == 3;
 
 % Get temporary data
-tdBstep = NAL.dBstep(mask); 
+dBsum = dBsum(mask); 
 
 % Calculate cSE
-o = NAL.correction_factor * sem(tdBstep); 
-
-%% If we have no variance, should we be kicking back inf instead??? XXX
+o = NAL.correction_factor * sem(dBsum); 
 
 function [phase, dBstep] = getNALphase(NAL)
 %% DESCRIPTION:
@@ -187,6 +219,7 @@ persistent isphase2 isphase3 isphase4;
 
 if isempty(isphase2), isphase2=false; end
 if isempty(isphase3), isphase3=false; end
+if isempty(isphase4), isphase4=false; end 
 
 % Set phase
 if isphase4
@@ -211,9 +244,9 @@ display(cSE(NAL)); % for debuggin'
 %   In contrast, dBstep refers to the step for the NEXT trial. So we have
 %   to handle the checks independently. 
 if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  > NAL.min_trials ) ...
-        && cSE(NAL) < 0.8
-    phase = 4;  % phase 4 means we stop.
-elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1
+        && cSE(NAL) < 0.8 && isphase3
+    isphase4 = true;  % phase 4 means we stop.
+elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1 && isphase2
     isphase3 = true; 
 elseif numel(NAL.phase) >= 3 && nrevs > 0 % XXX Reversal check    
     isphase2 = true; 
@@ -221,9 +254,9 @@ end %
 
 % Get dBstep
 if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  > NAL.min_trials ) ...
-        && cSE(NAL) < 0.8
+        && cSE(NAL) < 0.8 && isphase3
     dBstep=[];     
-elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1
+elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1 && isphase2
     dBstep = 1; 
 elseif numel(NAL.phase) >= 3 && nrevs > 0 % XXX Reversal check
     dBstep = 2; 
