@@ -46,6 +46,15 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %                                               scoring scheme used in
 %                                               traditional HINT scoring. 
 %
+%                           'PPT':  binary scoring scheme in which the
+%                                   an "all or nothing" response is
+%                                   gathered from subjects. Only a single
+%                                   scoring field will appear in the GUI
+%                                   and the scoring algorithm will follow
+%                                   this single response. This scoring
+%                                   method is intended for use with the PPT
+%                                   test, hence the name
+%
 % OUTPUT:
 %
 %   'mod_code':     modification code.
@@ -151,10 +160,11 @@ w=strsplit(o.sentence{1});
 % Set scores to zero to begin with
 isscored=false(length(w),1); 
 
-% Determine scoring method
+%% DETERMINE WHICH ITEMS ARE SCORED
 %   Each scoring method has slightly different characteristics. These
 %   options can be expanded to incorporate nearly any scoring scheme. 
 switch d.player.modcheck.scoring_method
+    
     case {'word_based', 'sentence_based'}
         % All words are scored, but the # of correct is based on the number
         % of correct words. 
@@ -187,8 +197,21 @@ switch d.player.modcheck.scoring_method
             
         end % for i=1:length(w)
         
+    case {'PPT'}
+        
+        % In PPT, the listener responds with a subject impression of
+        % whether or not he/she understood 100% or not 100% of all words in
+        % the sentence. 
+        %
+        % To score this, the experimenter just needs an "all or nothing"
+        % scoring scheme. So, we give only a single radio button selection
+        % and mark the remaining words as "unscored" (-1). 
+        isscored(1) = true; 
+        
     otherwise
+        
         error('Unknown scoring method'); 
+        
 end % switch/otherwise
 
 %% CALL SCORING GUI
@@ -216,8 +239,9 @@ h=guidata(fhand);
 d.sandbox.axes=h.panel_plot; 
 d.sandbox.figure=h.figure1; 
 
-%% DETERMINE SCORE
-%   This will vary depending on the scoring_method parameter
+%% CALL SCORING ALGORITHM
+%   The specific algorithm may vary based 
+%   This will vary depending on the scoring_method parameter. 
 switch d.player.modcheck.scoring_method
     
     case {'keyword_based', 'word_based'}
@@ -229,11 +253,11 @@ switch d.player.modcheck.scoring_method
         d.player.modcheck.(d.player.score_labels{1})=d.player.modcheck.(d.player.score_labels{1}) + numel(find(score(isscored)==1));
         d.player.modcheck.(d.player.score_labels{2})=d.player.modcheck.(d.player.score_labels{2}) + numel(find(score(isscored)==2));
         
-    case {'sentence_based'}
+    case {'sentence_based', 'PPT'}
         
         % Only count as correct if the whole sentence is scored as 100%
         % correct. 
-        if score(isscored)==1 % if everything is correct
+        if all(score(isscored)==1) % if everything is correct
             d.player.modcheck.(d.player.modcheck.score_labels{1})=d.player.modcheck.(d.player.modcheck.score_labels{1})+1;
             
             % Make the sound quieter
@@ -248,10 +272,6 @@ switch d.player.modcheck.scoring_method
     otherwise
         error('Unknown scoring_method');
 end % switch
-
-%% DETERMINE IF A MODIFICATION IS NECESSARY
-%   
-% mod_mode=0; % hard coded for now for debugging. 
 
 %% COPY SCORE INFORMATION OVER TO d STRUCTURE
 
