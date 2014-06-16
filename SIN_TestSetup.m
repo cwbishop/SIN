@@ -17,7 +17,7 @@ function opts=SIN_TestSetup(testID)
 %
 % Development:
 %
-%   XXX
+%   1. Create case to return test list for GUI. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -33,23 +33,29 @@ switch testID;
         %   Some of the cases are callback specific (e.g., generating the
         %   test list, an empty options structure, etc.). These are
         %   excluded based on the exclusion list (exlist) below. 
-        opts = getCases(); 
+        tests = getCases(); 
         
-        % Exclusion list
-        %   Remove callback helpers (like 'empty', 'Project AD', etc);
-        exlist={'Defaults' 'testlist'}; 
+        % Only list the following as fully function "tests". The cases that
+        % are not listed are typically building blocks for these
+        % higher-level calls. These are the tests that are typically listed
+        % in the GUI. Other tests are meant only for "Advanced" users (not
+        % students), so we won't list them at all. 
+        %
+        %   CWB changed this to an exclusion list instead. 
+        tests2list={'Defaults' 'testlist'};
         
         % Assume we include everything by default
-        mask=true(size(opts)); 
+        mask=true(size(tests)); 
         
-        for c=1:length(opts)
-            if ~isempty(find(ismember(exlist, opts{c}), 1, 'first'))
+        for c=1:length(tests)
+            if ~isempty(find(ismember(tests2list, tests{c}), 1, 'first'))
                 mask(c)=false;
             end
         end % for c
-        
-        % Return test names        
-        opts={opts{mask}}; 
+                
+        % Return test names 
+        %   List tests vertically (easier to skim through)
+        opts={tests{mask}}'; 
         
     case 'Defaults'
                 
@@ -99,8 +105,8 @@ switch testID;
         %   "resume", and "quit" requests.
         opts.player.modifier{1} = struct( ...
             'fhandle', @modifier_PlaybackControl, ...
-            'mod_stage',    'premix'); 
-            
+            'mod_stage',    'premix');             
+                
     case 'Calibrate'
         
         % ============================
@@ -208,6 +214,22 @@ switch testID;
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track prior to mixing
+      
+    case 'PPT'
+        
+        % Perceived Performance Test (PPT) is a subjective measure of
+        % performance on a HINT-style test. This should be otherwise
+        % identical to HINT (SNR-50, Sentence-Based) algorithm.
+        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)');
+        
+        % Change the test ID to PPT so the correct scoring scheme is used.
+        opts.specific.testID = testID; 
+        
+        % Change scoring method to PPT based scoring
+        opts.player.modcheck.scoring_method = 'PPT';
+        
+        % Change scoring labels to something more intuitive
+%         opts.player.modcheck.score_labels = {'C', 'Not_All'};
         
     case 'HINT (SNR-50, Sentence-Based)'
         
