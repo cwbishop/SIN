@@ -1,4 +1,4 @@
-function OUT = algo_NALadaptive(score, varargin)
+function NAL_OUT = algo_NALadaptive(score, varargin)
 %% DESCRIPTION:
 %
 %   Function to use an adaptive algorithm to control signal level (or
@@ -24,22 +24,11 @@ function OUT = algo_NALadaptive(score, varargin)
 %       - Note that cSE estimates are based on Phases 2 and 3 only.
 %       - Note that "N" defaults to 16 in the NAL program   
 %
-%   This function can be invoked in several ways. 
-%
-%       1. To initialize the algorithm. This *must* be done at the start of
-%       each tracking session. If this is *not* done, the user risks
-%       inaccurate results since the function uses 'persistent' scoring
-%       variables that must be cleared or otherwise "reset". ('initialize')
-%
-%       2. Query the current dBstep size. ('querydB')
-%
-%       3. Algorithm tracking (scoring array provided)
-%       
 % INPUT:
 %   
 %   score:  bool array, each element corresponds to a scorable unit (e.g.,
 %           phoneme, morpheme, word, etc.). True if the scorable unit is
-%           "correct". False if the scorable unit is "false". 
+%           "correct". False if the scorable unit is "incorrect". 
 %
 % Parameter list:
 %
@@ -50,6 +39,49 @@ function OUT = algo_NALadaptive(score, varargin)
 %
 %   'min_trials':   minumum number of trials to complete during phases 2
 %                   and 3.
+%
+% OUTPUT:
+%
+%   NAL_OUT:    NAL data structure with the following fields
+%
+%                   'target':   the target percentage (user defined)
+%
+%                   'correction_factor':    correction factor applied in
+%                                           standard error calcuations.
+%
+%                   'min_trials': the minimum number of trials needed in
+%                                 phases 2/3 before the algo will terminate
+%
+%                   'dBstep': 1xT array, each element corresponds to the
+%                             decibel change to apply to the next trial.
+%                             So, if dBstep=[5 5 5], then the 4th trial
+%                             will have a 15 dB net gain applied to it. T
+%                             is the number of trials
+%
+%                   'dBnow': the cumulative dBstep for the most recent
+%                            trial. If dBnow=[0 5 10], then the second
+%                            trial was presented at +5 dB relative to its
+%                            default volume level.
+%
+%                   'scoring_history': T element cell array, where T is the
+%                                      number of trials. Each cell contains
+%                                      the scoring information for the
+%                                      corresponding trial provided by the
+%                                      user.
+%
+%                   'phase': T element array, describes the testing phase
+%                            of the most recent trial. Phases range from 1
+%                            -4; 4 indicates the end of algorithm.
+%
+%                   'isreversal': T element array, true if the current
+%                                 trial is a reversal?
+%
+%                   'trial_percentage': T element array, the % correct for
+%                                       the corresponding trial
+%
+%                   'state': string, state of the algo.
+%                       'run': it's running
+%                       'finished': it's finished.
 %
 % References:
 %
@@ -73,7 +105,11 @@ persistent NAL;
 
 % Set NAL to structure. Only done during initialization... need to make
 % this smarter. 
+%
+% Also accommodates an initialization argument so users can reset the algo
+% manually (recommended). 
 if ~isstruct(NAL)
+    
     NAL=varargin2struct(varargin{:});  
     
     % Add default fields
@@ -89,6 +125,8 @@ if ~isstruct(NAL)
         NAL.state = 'run'; 
     end 
     
+    NAL.scoring_history = {}; % need this to be a cell array
+    
     % Set dBnow
     %   dBnow tracks the cumulative scaling over all trials. So this will
     %   be the equivalent of the sum of dBstep(1:end-1) typically. First
@@ -101,6 +139,18 @@ if ~isstruct(NAL)
     
 end % if ~isstruct
 
+% Allow for query or initialization return
+%   If user calls algo with no input arguments, then just return the NAL
+%   structure
+if (~exist('score', 'var') && nargin==0) || isequal(lower(score), 'initialize')
+    NAL_OUT=NAL; 
+    return;
+end % if ~exist('score' ...
+
+% Assign correct dimensions to score
+t.fs=0; 
+score = SIN_loaddata(score, t);
+
 % Assign current phase. 
 %   The checks below determine if we are about to enter the next phase. 
 NAL.phase(end+1) = getNALphase(NAL); 
@@ -111,7 +161,7 @@ if ~isempty(NAL.dBstep)
 end 
 
 % Append score
-NAL.scoring_history(:, end+1) = score; 
+NAL.scoring_history{end+1} = score; 
 
 % Score trial
 NAL.trial_percentage(end+1) = numel(score(score))/numel(score)*100;
@@ -140,7 +190,7 @@ if tphase == 4
 end % if tphase ...
 
 % Assign return variables
-OUT = NAL; 
+NAL_OUT = NAL; 
 
 function isRev = isReversal(NAL)
 %% DESCRIPTION:
@@ -235,7 +285,7 @@ end % if isphase4 ...
 nrevs = numel(find(NAL.isreversal));
 
 % Get (corrected) standard error for each phase
-display(cSE(NAL)); % for debuggin'
+% display(cSE(NAL)); % for debuggin'
 
 % Get phase
 %   Note that the PHASE refers to the phase of the most recently presented
@@ -243,22 +293,15 @@ display(cSE(NAL)); % for debuggin'
 %
 %   In contrast, dBstep refers to the step for the NEXT trial. So we have
 %   to handle the checks independently. 
-if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  > NAL.min_trials ) ...
+if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  >= NAL.min_trials ) ...
         && cSE(NAL) < 0.8 && isphase3
     isphase4 = true;  % phase 4 means we stop.
-elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1 && isphase2
+    dBstep=[]; 
+elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 4 && cSE(NAL) <= 1 && isphase2
     isphase3 = true; 
-elseif numel(NAL.phase) >= 3 && nrevs > 0 % XXX Reversal check    
-    isphase2 = true; 
-end % 
-
-% Get dBstep
-if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  > NAL.min_trials ) ...
-        && cSE(NAL) < 0.8 && isphase3
-    dBstep=[];     
-elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 3 && cSE(NAL) <= 1 && isphase2
     dBstep = 1; 
-elseif numel(NAL.phase) >= 3 && nrevs > 0 % XXX Reversal check
+elseif numel(NAL.phase) >= 4 && nrevs > 0 % XXX Reversal check    
+    isphase2 = true; 
     dBstep = 2; 
 end % 
 
