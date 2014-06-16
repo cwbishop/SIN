@@ -89,7 +89,7 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 %               CNT:    an array of CNT strucutres is returned.
 %
 %   DTYPE:  integer value specifying a CNT data type
-%               1:  double array
+%               1:  double array, single array, logical array
 %               2:  wav file
 %               3:  ERP
 %               4:  EEG
@@ -147,7 +147,7 @@ if isempty(X)
     display('No data to load'); 
     FS=NaN; 
     
-elseif isa(X, 'double') || isa(X, 'single')
+elseif isa(X, 'double') || isa(X, 'single') || isa(X, 'logical')
     % If it's a double, just make sure it's the proper dimensions
     %   Do same data massaging for single precision (common in EEGLAB). 
     DTYPE=1;
