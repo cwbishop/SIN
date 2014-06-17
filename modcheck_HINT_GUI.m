@@ -77,6 +77,13 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %                       -1: make target quieter
 %                       1:  make target louder
 %
+%       'NALadaptive':
+%                       0:  This is a dummy code, meaning "don't do
+%                           anything". Typically, however, this algorithm
+%                           is paired with edit modifier_NALscale_mixer,
+%                           which queries the algorithm and dynamically
+%                           sets the mixer values. 
+%
 %   d:  updated data structure used by portaudio_adaptiveplay.m
 %
 % Development:
@@ -251,7 +258,7 @@ end % switch/otherwise
     'title', ['HINT: ' o.id{1} ' (' num2str(numel(isscored(isscored))) ' possible)'], ...
     'words', {w}, ...
     'xdata',  1:d.sandbox.trial, ...
-    'ydata',  db(squeeze(d.sandbox.mod_mixer(d.player.modcheck.data_channels, d.player.modcheck.physical_channels, :))), ...
+    'ydata',  db(squeeze(d.sandbox.mod_mixer(d.player.modcheck.data_channels, d.player.modcheck.physical_channels, :))), ... % plot the mod_mixer history. This tells us precisely the scaling factor applied to our stimuli. 
     'xlabel', d.player.modcheck.xlabel, ...
     'ylabel', d.player.modcheck.ylabel, ...
     'ntrials', d.player.modcheck.ntrials, ...
@@ -338,47 +345,10 @@ switch d.player.modcheck.algo
 end % switch d.player.modcheck.algo
 
 %% CLOSE GUI
-%   Only close it down if we're done. 
-if trial==length(d.sandbox.playback_list)
+%   Only close it down if we're done. We are "done" if:
+%       - All trials have been presented
+%       - The player state has been set to exit (player will not present
+%       anymore stimuli). 
+if trial==length(d.sandbox.playback_list) || isequal(d.player.state, 'exit')
     close(d.sandbox.figure);
-end % 
-
-%% CALL SCORING ALGORITHM
-%   The specific algorithm may vary based 
-%   This will vary depending on the scoring_method parameter. 
-% switch d.player.modcheck.scoring_method
-%     
-%     case {'keyword_based', 'word_based'}
-%         
-%         % use dynamic field names to make the function more intuitive and
-%         % generalizable. 
-%         %   Use isscored as masker so we only look at words that were
-%         %   intended to be scored
-%         d.player.modcheck.(d.player.score_labels{1})=d.player.modcheck.(d.player.score_labels{1}) + numel(find(score(isscored)==1));
-%         d.player.modcheck.(d.player.score_labels{2})=d.player.modcheck.(d.player.score_labels{2}) + numel(find(score(isscored)==2));
-%         
-%     case {'sentence_based', 'PPT'}
-%         
-%         % Only count as correct if the whole sentence is scored as 100%
-%         % correct. 
-%         if all(score(isscored)==1) % if everything is correct
-%             d.player.modcheck.(d.player.modcheck.score_labels{1})=d.player.modcheck.(d.player.modcheck.score_labels{1})+1;
-%             
-%             % Make the sound quieter
-%             mod_code=-1;
-%         else
-%             d.player.modcheck.(d.player.modcheck.score_labels{2})=d.player.modcheck.(d.player.modcheck.score_labels{2})+1;
-%             
-%             % Make the sound louder
-%             mod_code=1;
-%         end % if 
-%         
-%     otherwise
-%         error('Unknown scoring_method');
-% end % switch
-
-%% COPY SCORE INFORMATION OVER TO d STRUCTURE
-
-% Save the raw scores for error checking later
-% d.player.modcheck.score{trial}=score; 
-
+end % if trial== ...
