@@ -89,8 +89,7 @@ function [NAL_OUT] = algo_NALadaptive(score, varargin)
 %
 % Development:
 %
-%   1. Phase information is offset by a single trial, I think. Needs more
-%   testing and more thinking by CWB. 
+%   None (for now). 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -113,7 +112,7 @@ if ~isstruct(NAL)
     NAL=varargin2struct(varargin{:});  
     
     % Add default fields
-    flds = {'dBstep', 'dBnow', 'scoring_history', 'phase', 'isreversal', 'trial_percentage', 'state'};
+    flds = {'dBstep', 'dBnow', 'scoring_history', 'phase', 'isreversal', 'trial_percentage', 'state', 'cSE'};
     for i=1:numel(flds)
         if ~isfield(NAL, flds{i})
             NAL.(flds{i}) = [];
@@ -174,6 +173,9 @@ NAL.dBstep(end+1) = stepSign(NAL); % this just gives us the SIGN, not the step S
 %   different, then it's a reversal. If they are the same, then it is NOT a
 %   reversal. 
 NAL.isreversal(end+1) = isReversal(NAL); 
+
+% Assign cSE estimate
+NAL.cSE = cSE(NAL); 
 
 % Which phase is the next trial?
 % What's the step size (dB) for the upcoming trial?
@@ -299,10 +301,10 @@ nrevs = numel(find(NAL.isreversal));
 %   In contrast, dBstep refers to the step for the NEXT trial. So we have
 %   to handle the checks independently. 
 if (numel(NAL.phase(NAL.phase == 2 | NAL.phase ==3 ) )  >= NAL.min_trials ) ...
-        && cSE(NAL) < 0.8 && isphase3
+        && NAL.cSE < 0.8 && isphase3
     isphase4 = true;  % phase 4 means we stop.
     dBstep=[]; 
-elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 4 && cSE(NAL) <= 1 && isphase2
+elseif numel(NAL.phase)>= numel(NAL.phase(NAL.phase==1)) + 4 && NAL.cSE <= 1 && isphase2
     isphase3 = true; 
     dBstep = 1; 
 elseif numel(NAL.phase) >= 4 && nrevs > 0 % XXX Reversal check    

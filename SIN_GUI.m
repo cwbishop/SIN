@@ -45,6 +45,15 @@ function varargout = SIN_GUI(varargin)
 %   6) Need to add a calibration validation step. Make sure the selected
 %   calibration file is up to snuff before we run anything. 
 %
+%   7) Remove list selection. This needs to be automated. Convenient to
+%   allow list selection for testing purposes, of course. Maybe just render
+%   this invisible for the final release?
+%
+%   8) Remove calibration panel from GUI. CWB has rethought this and
+%   calibration procedures will need to be applied well in advance of
+%   running a specific test. Calibration files will need to be
+%   automatically selected. 
+%
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
 % Edit the above text to modify the response to help SIN_GUI

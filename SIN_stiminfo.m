@@ -45,7 +45,14 @@ wavfiles={};
 
 switch testID
     
-    case {'HINT (SNR-50, Sentence-Based)', 'PPT'}
+    case {'MLST'}
+        
+        % This section will (eventually) kick back stimulus information and
+        % play lists for the MLST.
+        
+        error('Not developed yet'); 
+        
+    case {'HINT (SNR-50, Sentence-Based)', 'PPT', 'HINT (SNR-50, NALadaptive)'}
         
         % Return directories based on defaults.hint.list_filt
         list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 

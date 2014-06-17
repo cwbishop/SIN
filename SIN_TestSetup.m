@@ -231,6 +231,17 @@ switch testID;
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
 
+    case 'HINT (SNR-80, NALadaptive)'
+        
+        % Use the 'HINT (SNR-50, NALadaptive)' as a starting point
+        opts = SIN_TestSetup('HINT (SNR-50, NALadaptive)');
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change target percentage to 80% (instead of 50%)
+        opts.player.modcheck.algoParams.target = 80; 
+        
     case 'HINT (SNR-50, NALadaptive)'
         
         % Administer HINT using NALadaptive algorithm.
@@ -262,7 +273,7 @@ switch testID;
         opts.player.modcheck.algoParams = struct( ...
             'target',   50, ... % target SNR-50
             'correction_factor',    2, ... % use correction factor of 2 for SEM calculations. Default in paper
-            'min_trials',   16);    % 16 trials minimum in phase 2/3. 
+            'min_trials',   20);    % # of trials (minimum) in phase 2/3. Since using the HINT stimuli, use multiples of 10           
         
     case 'HINT (SNR-50, Sentence-Based)'
         
