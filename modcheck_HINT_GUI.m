@@ -24,40 +24,55 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %           XXX Needs data/physical_channels for plotting purposes. This
 %           should correspond to the data being tracked/adapted. XXX
 %
-%   The following parameters can (and probably should) be set in
-%   SIN_defaults.m 
+%   The following parameters are set in SIN_TestSetup.m 
 %
-%   'scoring_method':   string, type of scoring approach to use. This can
+%   'scoring_labels':   two element cell array containing a text label for
+%                       the first ("correct") and second ("incorrect")
+%                       radiobutton option. (e.g., {'Correct',
+%                       'Incorrect'}).
+%
+%   'scored_items':   string, type of scoring approach to use. This can
 %                       be expanded easily to incorporate new scoring
 %                       schemes.
 %
-%                           'word_based':   each word has an equal score
+%                           'allwords':   each word has an equal score
 %                                           associated with it. 
 %
-%                           'keyword_based':    Only keywords (capitalized)
-%                                               are scored.
+%                           'keywords':    Only keywords (capitalized)
+%                                          are scored.
 %
-%                           'sentence_based':   a binary scoring scheme in
-%                                               which the sentence is 
-%                                               "correct" if all words are
-%                                               repeateded correctly.
-%                                               Othewrise, the sentence is
-%                                               incorrect. This is the
-%                                               scoring scheme used in
-%                                               traditional HINT scoring. 
+%                           'sentences':   A binary scoring scheme with one
+%                                          scored "unit" per sentence. This
+%                                          approach is applicable for the
+%                                          PPT. 
 %
-%                           'PPT':  binary scoring scheme in which the
-%                                   an "all or nothing" response is
-%                                   gathered from subjects. Only a single
-%                                   scoring field will appear in the GUI
-%                                   and the scoring algorithm will follow
-%                                   this single response. This scoring
-%                                   method is intended for use with the PPT
-%                                   test, hence the name
+%   'algo': string, describing the algorithm to implement. Current algo
+%           options include:
 %
+%               'oneuponedown':   a one-up-one-down staircase algorithm based on
+%                           whether or not all scored items were "correct".
+%
+%               'NALadaptive': implements the NAL adaptive algorithm 
+%                           described in algo_NALadaptive.m.
+%
+%   Note: Additional parameters are necessary for the NALadaptive
+%   algorithm. These parameters should be placed in a field called
+%   "algoParams" with the following subfields. These are subject to
+%   change; see a full list of input arguments in algo_NALadaptive.
+%   Essentially, these inputs have to provide all necessary information to
+%   algo_NALadaptive.
+%
+%       'target':   target percentage for algorithm
+%       'correction_factor':    correction factor for SEM calculation.
+%       'min_trials':   minimum number of trials in phase 2 + phase 3. 
+%           
+%       
 % OUTPUT:
 %
-%   'mod_code':     modification code.
+%   'mod_code':     modification code. The returned modification code
+%                   depends on the algorithm implemented.
+%
+%       'oneuponedown':
 %                       0:  no modification necessary.
 %                       -1: make target quieter
 %                       1:  make target louder
@@ -102,6 +117,16 @@ trial = d.sandbox.trial;
 %       - Very slow step, so keep calls to a minimum. 
 if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence)
     
+    % Clear the NAL adaptive algorithm's persistent variables
+    %   If we don't do this, the algo will pick up where it last left off.
+    %   We don't want that. 
+    if isequal(d.player.modcheck.algo, 'NALadaptive');
+        clear algo_NALadaptive; % clear the algo
+        [d.sandbox.NAL] = algo_NALadaptive('initialize', ...
+            d.player.modcheck.algoParams); % initialize algorithm and NAL structure 
+                                  % user defined parameters. 
+    end % if isequal
+    
     % Grab sentence information
     %   This initial step will update the 'modcheck' field by adding in
     %   HINT list information from an XLS spreadsheet.
@@ -116,6 +141,7 @@ if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence
     d.player.modcheck.xlabel='Trial #';
     d.player.modcheck.ylabel='SNR (dB)'; 
     d.player.modcheck.ntrials=length(d.sandbox.playback_list); % number of trials (sets axes later)
+    d.player.modcheck.score = {};
 %     d.modcheck.score_labels={'Correct', 'Incorrect'}; % This is set in SIN_defaults
 
     % Scoring information
@@ -163,9 +189,9 @@ isscored=false(length(w),1);
 %% DETERMINE WHICH ITEMS ARE SCORED
 %   Each scoring method has slightly different characteristics. These
 %   options can be expanded to incorporate nearly any scoring scheme. 
-switch d.player.modcheck.scoring_method
+switch d.player.modcheck.scored_items
     
-    case {'word_based', 'sentence_based'}
+    case {'allwords'}
         % All words are scored, but the # of correct is based on the number
         % of correct words. 
         %
@@ -177,7 +203,7 @@ switch d.player.modcheck.scoring_method
         % Score all words
         isscored=true(size(isscored)); 
         
-    case {'keyword_based'}
+    case {'keywords'}
         
         % Determine keywords by capitalization in spreadsheet. 
         for n=1:length(w)
@@ -197,8 +223,12 @@ switch d.player.modcheck.scoring_method
             
         end % for i=1:length(w)
         
-    case {'PPT'}
+    case {'sentences'}
         
+        % This scoring method was originally written to support
+        % administering the PPT, so it is described within that context
+        % below. But this can be used to adminster other tests as well.
+        %
         % In PPT, the listener responds with a subject impression of
         % whether or not he/she understood 100% or not 100% of all words in
         % the sentence. 
@@ -239,47 +269,116 @@ h=guidata(fhand);
 d.sandbox.axes=h.panel_plot; 
 d.sandbox.figure=h.figure1; 
 
-%% CALL SCORING ALGORITHM
-%   The specific algorithm may vary based 
-%   This will vary depending on the scoring_method parameter. 
-switch d.player.modcheck.scoring_method
+% Append scoring information to modcheck
+%   Useful for algorithm tracking later. 
+d.player.modcheck.score{trial} = score; 
+
+%% APPLY ALGORITHM
+%   The algorithms return a decibel gain to apply to the next stimulus. 
+% [mod_code] = d.modcheck.algorithm.fhandle(logical(score(score~=1)), d.modcheck.algorithm); 
+switch d.player.modcheck.algo
     
-    case {'keyword_based', 'word_based'}
+    case {'oneuponedown'}
         
-        % use dynamic field names to make the function more intuitive and
-        % generalizable. 
-        %   Use isscored as masker so we only look at words that were
-        %   intended to be scored
-        d.player.modcheck.(d.player.score_labels{1})=d.player.modcheck.(d.player.score_labels{1}) + numel(find(score(isscored)==1));
-        d.player.modcheck.(d.player.score_labels{2})=d.player.modcheck.(d.player.score_labels{2}) + numel(find(score(isscored)==2));
-        
-    case {'sentence_based', 'PPT'}
-        
-        % Only count as correct if the whole sentence is scored as 100%
-        % correct. 
+        % Implement a one-up-one-down staircase algorithm
         if all(score(isscored)==1) % if everything is correct
-            d.player.modcheck.(d.player.modcheck.score_labels{1})=d.player.modcheck.(d.player.modcheck.score_labels{1})+1;
-            
-            % Make the sound quieter
-            mod_code=-1;
-        else
-            d.player.modcheck.(d.player.modcheck.score_labels{2})=d.player.modcheck.(d.player.modcheck.score_labels{2})+1;
-            
-            % Make the sound louder
-            mod_code=1;
-        end % if 
+            mod_code = -1; % step down
+        elseif any(score(isscored)==2) % if any scored items are incorrect
+            mod_code = 1; % step up
+        else 
+            % This should never happen, but CWB wants to be careful.
+            error('I do not know what to do with this scoring information'); 
+        end % if all ...
         
-    otherwise
-        error('Unknown scoring_method');
-end % switch
-
-%% COPY SCORE INFORMATION OVER TO d STRUCTURE
-
-% Save the raw scores for error checking later
-d.player.modcheck.score{trial}=score; 
+    case {'NALadaptive'}
+        
+        % Return empty mod_code
+        %   The mod_code is ignored here because the algorithm is too
+        %   complex to build based on a couple of mod codes. CWB thought
+        %   about setting the mod_code to the 'dBnext' return variable from
+        %   algo_NALadaptive, but decided against it since he has poor
+        %   control over what those values might be. If a mod_code is
+        %   returned that is used by an attached modifier, then all hell
+        %   will break loose.
+        %
+        %   Instead, CWB will add a modifier that queries the current state
+        %   of the algorithm and applies the requested dB change.
+        %
+        %   A mod_code of "0" generally means "Don't do anything", so kick
+        %   that back. Of course, the user will need to make sure that 0
+        %   doesn't "do anything" for the modifiers employed.
+        mod_code = 0;
+        
+        % Convert score into something interpretable by algo_NALadaptive
+        tscore=false(size(isscored)); % initialize to false
+        
+        % Assign true values for all "1"s.
+        tscore(score(isscored)==1) = true; 
+        
+        % Implement a NALadaptive algorithm
+        %   mod_code is the scaling factor to apply to the next stimulus.
+        [NAL] = algo_NALadaptive(tscore, ...
+            d.player.modcheck.algoParams);
+        
+        % Add NAL output to sandbox
+        d.sandbox.NAL = NAL; 
+        
+        % Check the phase. If phase 4 is reached, then terminate the algo,
+        % clear the cache, set the player state to exit.
+        if NAL.phase(end) == 4
+            
+            % Set player state to exit
+            d.player.state = 'exit';
+            
+            % Clear the persistent variables in the algorithm
+            clear algo_NALadaptive; 
+            
+        end % if NAL.phase ...
+        
+end % switch d.player.modcheck.algo
 
 %% CLOSE GUI
 %   Only close it down if we're done. 
 if trial==length(d.sandbox.playback_list)
     close(d.sandbox.figure);
 end % 
+
+%% CALL SCORING ALGORITHM
+%   The specific algorithm may vary based 
+%   This will vary depending on the scoring_method parameter. 
+% switch d.player.modcheck.scoring_method
+%     
+%     case {'keyword_based', 'word_based'}
+%         
+%         % use dynamic field names to make the function more intuitive and
+%         % generalizable. 
+%         %   Use isscored as masker so we only look at words that were
+%         %   intended to be scored
+%         d.player.modcheck.(d.player.score_labels{1})=d.player.modcheck.(d.player.score_labels{1}) + numel(find(score(isscored)==1));
+%         d.player.modcheck.(d.player.score_labels{2})=d.player.modcheck.(d.player.score_labels{2}) + numel(find(score(isscored)==2));
+%         
+%     case {'sentence_based', 'PPT'}
+%         
+%         % Only count as correct if the whole sentence is scored as 100%
+%         % correct. 
+%         if all(score(isscored)==1) % if everything is correct
+%             d.player.modcheck.(d.player.modcheck.score_labels{1})=d.player.modcheck.(d.player.modcheck.score_labels{1})+1;
+%             
+%             % Make the sound quieter
+%             mod_code=-1;
+%         else
+%             d.player.modcheck.(d.player.modcheck.score_labels{2})=d.player.modcheck.(d.player.modcheck.score_labels{2})+1;
+%             
+%             % Make the sound louder
+%             mod_code=1;
+%         end % if 
+%         
+%     otherwise
+%         error('Unknown scoring_method');
+% end % switch
+
+%% COPY SCORE INFORMATION OVER TO d STRUCTURE
+
+% Save the raw scores for error checking later
+% d.player.modcheck.score{trial}=score; 
+

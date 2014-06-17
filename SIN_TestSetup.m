@@ -226,10 +226,43 @@ switch testID;
         opts.specific.testID = testID; 
         
         % Change scoring method to PPT based scoring
-        opts.player.modcheck.scoring_method = 'PPT';
+        opts.player.modcheck.scored_items = 'sentences';
         
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
+
+    case 'HINT (SNR-50, NALadaptive)'
+        
+        % Administer HINT using NALadaptive algorithm.
+        
+        % Use the HINT as traditionally scored as a starting point
+        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)');
+        
+        % Change testID
+        opts.specific.testID = testID;
+        
+        % Find the scaling modifier
+        mask = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer); 
+        
+        % Make sure we have one and only one matching modifier
+        if numel(mask) ~= 1
+            error('Found too many (or too few) matching modifiers');
+        end % if numel(mask) ~= 1
+        
+        % Change function handle
+        opts.player.modifier{mask}.fhandle = @modifier_NALscale_mixer;
+        
+        % Clear out the fields we don't need. 
+        opts.player.modifier{mask} = rmfield(opts.player.modifier{mask}, {'dBstep', 'change_step'}); 
+        
+        % Change algorithm used by modcheck
+        opts.player.modcheck.algo = 'NALadaptive';
+        
+        % Add additional parameters for NAL algorithm
+        opts.player.modcheck.algoParams = struct( ...
+            'target',   50, ... % target SNR-50
+            'correction_factor',    2, ... % use correction factor of 2 for SEM calculations. Default in paper
+            'min_trials',   16);    % 16 trials minimum in phase 2/3. 
         
     case 'HINT (SNR-50, Sentence-Based)'
         
@@ -297,7 +330,8 @@ switch testID;
             'fhandle',         @modcheck_HINT_GUI, ...
             'data_channels',    2, ...
             'physical_channels', 1, ...
-            'scoring_method',  'sentence_based', ... % score whole sentence (as traditionally done)
+            'scored_items',  'allwords', ... % score all words. 
+            'algo',     'oneuponedown', ... % use a one-up-one-down algo
             'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         
         % ============================

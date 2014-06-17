@@ -1,4 +1,4 @@
-function NAL_OUT = algo_NALadaptive(score, varargin)
+function [NAL_OUT] = algo_NALadaptive(score, varargin)
 %% DESCRIPTION:
 %
 %   Function to use an adaptive algorithm to control signal level (or
@@ -135,7 +135,7 @@ if ~isstruct(NAL)
     %   easier to think about. 
     if isempty(NAL.dBnow)
         NAL.dBnow=0;
-    end % if isempty(NAL.dBnow);
+    end % if isempty(NAL.dBnow);    
     
 end % if ~isstruct
 
@@ -188,6 +188,11 @@ end
 if tphase == 4
     NAL.state = 'finished'; 
 end % if tphase ...
+
+% dBnext:
+%   The decibel scaling factor to apply to the upcoming stimulus
+NAL.dBnext = NAL.dBnow(end) + NAL.dBstep(end); 
+dBnext = NAL.dBnext; 
 
 % Assign return variables
 NAL_OUT = NAL; 
