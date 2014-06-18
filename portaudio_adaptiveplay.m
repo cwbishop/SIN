@@ -992,7 +992,7 @@ for trial=1:length(stim)
                 %   XXX
 %                 if block_num==nblocks && startofblock==block_start(1)
                 if block_num==nblocks                      
-                    PsychPortAudio('FillBuffer', phand, zeros(block_nsamps, size(X,2))', 1, []);  
+                    PsychPortAudio('FillBuffer', phand, zeros(block_nsamps, size(data2play_mixed,2))', 1, []);  
                 end % if block_num==nblocks
                 
                 % Empty recording buffer frequently
