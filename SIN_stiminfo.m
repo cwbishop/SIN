@@ -1,12 +1,10 @@
-function [list_dir, wavfiles]=SIN_stiminfo(testID, opts, varargin)
+function [list_dir, wavfiles]=SIN_stiminfo(opts, varargin)
 %% DESCRIPTION:
 %
 %   Function to return stimulus lists (directories, filenames) for the
 %   tests used in the SIN suite.
 %
 % INPUT:
-%
-%   testID: string, test ID as listed in SIN_defaults.testlist(:).name.
 %
 %   opts:   test options structure returned from SIN_TestSetup.m 
 %
@@ -43,6 +41,9 @@ function [list_dir, wavfiles]=SIN_stiminfo(testID, opts, varargin)
 list_dir={};
 wavfiles={}; 
 
+% Get testID from options struction
+testID = opts.specific.testID; 
+
 switch testID
     
     case {'MLST'}
@@ -67,7 +68,7 @@ switch testID
             wavfiles{i}= regexpdir(list_dir{i}, '.wav$', false);
         end % for i=1:length(list_id)
 
-    case {'ANL'}
+    case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)' }
 
         wavfiles=regexpdir(opts.specific.root, opts.specific.anl_regexp, false);
     
