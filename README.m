@@ -1,6 +1,10 @@
 =======================================================================================================
 Test Setup -> What the user has to provide to get the player functions to work. Options structures can be tailored to each player. The example below configures the portaudio_adaptiveplay function to administer the HINT. 
 
+    -> Subject information (subject): information about the subject 
+        -> subjectID : the subject identifier
+        -> subjectDir: directory where subject data (and other information) is stored
+        
 	-> General settings (general): Generally static information across an experiment (e.g., subject ID motif, etc.)
 		-> root: root directory for speech in noise (SIN) suite (required)		
 		
@@ -12,7 +16,12 @@ Test Setup -> What the user has to provide to get the player functions to work. 
 		-> hint_lookup: information about lookup list containing word information, list IDs, etc.
             -> filename: full path to the file containing list information (used by importHINT)
 			-> sheetnum: For Excel spreadsheets, we need to know which sheet to load - here, we load sheet two (2) (used by importHINT)            
-				
+		-> genPlaylist: fields required by SIN_getPlaylist to generate a playlist. For more information on these fields (and perhaps omitted fields), see help SIN_getPlaylist.
+            -> NLists: number of lists to include in playlist
+            -> Randomize: Randomization scheme (not implemented fully)
+            -> Repeats: rule governing how repeats are handled
+            -> UsedList: path to mat file containing UsedList. 
+            
 	-> Player settings (player): Options used by the designated player (example for portaudio_adaptiveplay).
 		
 		-> player_handle: function handle to player (e.g., @portaudio_adaptiveplay) (required) This might be used by SIN_RunTest to administer tests by ID)
