@@ -134,8 +134,7 @@ function [varargout] = SIN_UsedListInfo(UsedList, varargin)
 %
 % Development:
 %
-%   1. This could be written more efficiently as a class (OOP). Consider
-%   rewriting if there's time. 
+%   1. Add UUID to UsedList structure.    
 %
 % Christopher W. Bishop
 %   University of Washington

@@ -401,12 +401,12 @@ switch testID;
         % test sequence to the next (e.g., the buffer position and overall
         % sound levels, according to modifier_dBscale). Also need to copy
         % over calibration information from one test to the next.        
-        opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)'); 
-        opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)'); 
-        opts(3)=SIN_TestSetup('ANL (MCL-Estimate)'); 
-        opts(4)=SIN_TestSetup('ANL (BNL-Too Loud)'); 
-        opts(5)=SIN_TestSetup('ANL (BNL-Too Quiet)'); 
-        opts(6)=SIN_TestSetup('ANL (BNL-Estimate)'); 
+        opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)', subjectID); 
+        opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)', subjectID); 
+        opts(3)=SIN_TestSetup('ANL (MCL-Estimate)', subjectID); 
+        opts(4)=SIN_TestSetup('ANL (BNL-Too Loud)', subjectID); 
+        opts(5)=SIN_TestSetup('ANL (BNL-Too Quiet)', subjectID); 
+        opts(6)=SIN_TestSetup('ANL (BNL-Estimate)', subjectID); 
         
     case 'ANL (MCL-Too Loud)'
         % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
@@ -414,7 +414,7 @@ switch testID;
         % loud. 
         
         % Get base
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID = testID;
@@ -431,7 +431,7 @@ switch testID;
         
         % This is just like the ANL (base), but with different
         % instructions and a different starting buffer position.
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID = testID; 
@@ -445,7 +445,7 @@ switch testID;
         
     case 'ANL (MCL-Estimate)' 
         
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID=testID; 
@@ -464,7 +464,7 @@ switch testID;
         
     case 'ANL (BNL-Too Loud)'
         
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID=testID; 
@@ -480,7 +480,7 @@ switch testID;
         
     case 'ANL (BNL-Too Quiet)' 
         
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID=testID; 
@@ -496,7 +496,7 @@ switch testID;
         
     case 'ANL (BNL-Estimate)'
         
-        opts=SIN_TestSetup('ANL (base)'); 
+        opts=SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change testID
         opts.specific.testID=testID; 

@@ -18,7 +18,9 @@ function [subject_id]=SIN_getsubjects
 %   subject_id: cell array of subject IDs
 
 % Get Subject directory
-subDir = SIN_TestSetup('Defaults'); 
+%   Pass empty subjectID (second input) to placate SIN_TestSetup (for now).
+%   
+subDir = SIN_TestSetup('Defaults', ''); 
 subDir = subDir.general.subjectDir;
             
 % Get Subject List

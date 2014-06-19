@@ -5,34 +5,13 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %   a wrapper for SIN_stiminfo, which returns directory and file
 %   information.
 %
-%   CWB hopes to expand this function to also do the following
-%
-%       1. In tests like HINT and MLST, track which lists have been
-%       presented to a specific subject. Users can then specify whether or
-%       not they will allow playlists to repeat; this can proceed ine
-%       several ways:
-%
-%           A) minimize repeats: don't repeat lists until all available
-%           lists have been played
-%
-%           B) no repeats: throw a shoe if we run out of lists to present
-%
-%           C) no constraints: repeat lists at will (fully randomized list
-%           selection)
-%
 % INPUT:
-%
-%   The input can take one of several forms. 
 %
 % SIN specific: 
 %   
 %   opts:   SIN options structure, which must contain the parameters listed
-%           below in the "specific" field. 
-%
-% Parameters (for SIN_stiminfo):
-%
-%   - All parameters necessary to call SIN_stiminfo (see SIN_stiminfo for
-%   details; this can vary by test)
+%           below in the "specific" field. Specific must contain the
+%           'genPlaylist' subfield as well. 
 %
 % Parameters (for SIN_getPlaylist)
 %
@@ -48,12 +27,14 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %                   completed before the stimuli in the second list are
 %                   presented. (not implemented)
 %
+%                       '':     no randomization. 
+%
 %                       'lists':   Randomize list order. Note that stimuli
 %                                  within each list are NOT randomized.
 %
-%                       'within':       Randomize each list order
-%                                       independently of other lists, then
-%                                       concatenate lists.
+%                       'within':       Randomize each file order
+%                                       independently for each list, then
+%                                       concatenate (randomized) lists.
 %
 %                       'lists&within': a combination of 'lists' and
 %                                       'within' randomization schemes
@@ -78,7 +59,9 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %                   each participant. A single file should be used for all
 %                   tests if the user wants to prevent list repeats in
 %                   different tests (e.g., HINT (SNR-50) and HINT
-%                   (NALadaptive), etc.). 
+%                   (NALadaptive), etc.). Test-specific files an also be
+%                   used if the user just wants to prevent using the same
+%                   list in the context of a specific test. 
 %
 %   'Append2UsedList':  bool, instructions on whether or not to append the
 %                   selected lists to the 'used list' mat file. The
@@ -93,6 +76,13 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %
 % OUTPUT:
 %
+%   playlist:   cell array, each element is the path to a file to play.
+%
+%   lists:      cell array, equivalent of "list_dir" return from
+%               SIN_stiminfo
+%
+%   wavfiles:   cell array, equivalent of "wavfiles" return from
+%               SIN_stiminfo
 %
 % Development:
 %
@@ -129,28 +119,12 @@ if isempty(lists)
     return
 end % if isempty(lists)
 
-%% SORT LISTS BY NUMBER OF TESTS 
-%   - Sort lists by the number of tests each has been used in.
-%   - Can only do this if the user gives us UsedList information
-% if isfield(d, 'UsedList') && ~isempty(d.UsedList)
-    
-% Which of these lists have been presented previously?
-%   - returns 0 if unused, and a positive integer if it has been used.
-%   For more details, see help SIN_UsedListInfo.
-%     isused = SIN_UsedListInfo(d.UsedList, 'task', {{'isused'}}, 'lists', {lists});
-
-% Find the UsedLists with the minimum number of repeats; that is,
-% the lists that have been used in the fewest tests. 
-%   - Can get number of tests using 'ntests' method of
-%   SIN_UsedListInfo
+%% FIND THE NUMBER OF TIMES EACH LIST HAS BEEN USED
+%   - This information is used below to generate a playlist. 
 ntests = SIN_UsedListInfo(d.UsedList, 'task', {{'ntests'}}, 'lists', {lists}); 
 
 % group lists by the number of tests each has been used in    
 nunique = unique(ntests); % find the unique range of ntests.
-
-%% RANDOMIZE LIST ORDER
-%   - We want to randomize list order BEFORE we apply a list mask 
-%   XXX need to write this XXX
 
 %% GENERATE A LIST MASK 
 %   - This will be based on the number of lists (NLists) and the
