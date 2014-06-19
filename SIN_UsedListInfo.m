@@ -134,6 +134,9 @@ function [varargout] = SIN_UsedListInfo(UsedList, varargin)
 %
 % Development:
 %
+%   1. This could be written more efficiently as a class (OOP). Consider
+%   rewriting if there's time. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   6/14
