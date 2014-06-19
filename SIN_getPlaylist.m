@@ -1,4 +1,4 @@
-function [playlist, list_dir, wavfiles] = SIN_getPlaylist(opts, varargin)
+function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %% DESCRIPTION:
 %
 %   Function to return a playlist for a specific test. This is essentially
@@ -27,7 +27,7 @@ function [playlist, list_dir, wavfiles] = SIN_getPlaylist(opts, varargin)
 % SIN specific: 
 %   
 %   opts:   SIN options structure, which must contain the parameters listed
-%           below in the "specific" field
+%           below in the "specific" field. 
 %
 % Parameters (for SIN_stiminfo):
 %
@@ -66,7 +66,7 @@ function [playlist, list_dir, wavfiles] = SIN_getPlaylist(opts, varargin)
 %
 %   'Repeats':  string, description of how to handle repeated lists
 %
-%           'none': do not allow lists to repeat (ever) across all tests.
+%           'never': do not allow lists to repeat (ever) across all tests.
 %
 %           'allbefore':    cycle through all available lists before
 %                           repeating.
@@ -80,11 +80,16 @@ function [playlist, list_dir, wavfiles] = SIN_getPlaylist(opts, varargin)
 %                   different tests (e.g., HINT (SNR-50) and HINT
 %                   (NALadaptive), etc.). 
 %
-%   'Append2List':  bool, instructions on whether or not to append the
+%   'Append2UsedList':  bool, instructions on whether or not to append the
 %                   selected lists to the 'used list' mat file. The
 %                   appending should be handled by a second function that
 %                   can be invoked independently (e.g., after test
 %                   completion, for instance).
+%
+%                   Note: this is intended primarily for debugging
+%                   purposes. Generally, CWB recommends setting this to
+%                   false and managing the list in a smarter way elsewhere
+%                   (e.g., in SIN_runTest)
 %
 % OUTPUT:
 %
@@ -99,11 +104,13 @@ function [playlist, list_dir, wavfiles] = SIN_getPlaylist(opts, varargin)
 %   University of Washington
 %   6/14
 
-error('not game ready'); 
+%% SEED RANDOM NUMBER GENERATOR
+rng('shuffle', 'twister');
 
 %% GET PARAMETER LIST, PLACE IN STRUCTURE
-%   Combine options structure and parameter list. 
-d=varargin2struct(opts, varargin{:});  
+%   Combine options structure and parameter list. This function relies on
+%   the 'specific' subfield of opts.
+d=varargin2struct(opts.specific.genPlaylist, varargin{:});  
 
 %% INITIALIZE RETURN VARIABLES
 playlist = {}; 
@@ -112,73 +119,159 @@ playlist = {};
 %   - call SIN_stiminfo
 %   - if lists exist (list dir isn't empty), move forward. Otherwise, just
 %   return the wavfiles (e.g., with ANL)
-[list_dir, wavfiles]=SIN_stiminfo(opts); 
+[lists, wavfiles]=SIN_stiminfo(opts); 
 
 %% RETURN WAVFILES
 %   We only need to do the following if we have lists to choose from.
 %   If we don't (e.g., with ANL), then just return the wavfiles variable.
-if isempty(list_dir) 
+if isempty(lists) 
     playlist = wavfiles; 
     return
-end % if isempty(list_dir)
+end % if isempty(lists)
 
-%% REMOVE USED LISTS
-%
-%   - Load the UsedListMat file and check to see which lists have been used
-%   previously.
-%   - Whether or not the lists should be removed depends on the 'Repeats'
-%   setting, which is user defined. See help SIN_getPlaylist for more
-%   information. 
-if isfield(d, 'UsedListMat') && ~isempty(d.UsedList) && ~isequal(d.Repeats, 'any')
+%% SORT LISTS BY NUMBER OF TESTS 
+%   - Sort lists by the number of tests each has been used in.
+%   - Can only do this if the user gives us UsedList information
+% if isfield(d, 'UsedList') && ~isempty(d.UsedList)
     
-    % Which of these lists have been presented previously?
-    isused = SIN_UsedListInfo(d.UsedList, 'task', {{'isused'}}, 'lists', {list_dir});
-    
-    % Determine number of non-repeated lists
-    nlists = numel(find(logical(isused))); 
-    
-    % Check to make sure we have enough lists. If we don't we need to do
-    % one of two things:
-    %   - If d.Repeats is set to 'allbefore', then go ahead and select a
-    %   list that has already been run.
-    %       - Note: we want a built-in precaution so we select from lists
-    %       that have been used the least XXX. Perhaps a new method to
-    %       SIN_UsedListInfo?? XXX
-    if nlists < d.NLists && isequal(d.Repeats, 'allbefore')
-        
-        % Find the UsedLists with the minimum number of repeats; that is,
-        % the lists that have been used in the fewest tests. 
-        %   - Can get number of tests using 'ntests' method of
-        %   SIN_UsedListInfo
-        ntests = SIN_UsedListInfo(d.UsedList, 'task', {{'ntests'}}, 'lists', {list_dir}); 
-        
-        
-        
-    elseif nlists < d.NLists && isequal(d.Repeats, 'none')
-        error('Not enough unused lists to generate the playlist');         
-    end % if nlists < d.NLists
-    
-    % End with a logical mask of lists that we can use
-    
-elseif isequal(d.Repeats, 'any')
-    
-    % If the user does not place constraints on repeats (that is, all lists
-    % can be repeated at any time during testing), then return a logical
-    % mask allowing all list_dir to be used. 
-    listmask = true(numel(list_dir), 1);     
-end % if isfield(d, ...
+% Which of these lists have been presented previously?
+%   - returns 0 if unused, and a positive integer if it has been used.
+%   For more details, see help SIN_UsedListInfo.
+%     isused = SIN_UsedListInfo(d.UsedList, 'task', {{'isused'}}, 'lists', {lists});
 
-%% SELECT THE NUMBER OF PLAYLIST NEEDED
-%   - This must be specified in the opts.specific.numberoflists field
+% Find the UsedLists with the minimum number of repeats; that is,
+% the lists that have been used in the fewest tests. 
+%   - Can get number of tests using 'ntests' method of
+%   SIN_UsedListInfo
+ntests = SIN_UsedListInfo(d.UsedList, 'task', {{'ntests'}}, 'lists', {lists}); 
 
+% group lists by the number of tests each has been used in    
+nunique = unique(ntests); % find the unique range of ntests.
 
-%% RANDOMIZE LIST SELECTION
-%   - Follow one of several randomization schemes
+%% RANDOMIZE LIST ORDER
+%   - We want to randomize list order BEFORE we apply a list mask 
+%   XXX need to write this XXX
+
+%% GENERATE A LIST MASK 
+%   - This will be based on the number of lists (NLists) and the
+%   'Repeats' parameters.
+listmask = false(numel(ntests), 1); % assume we can't use any lists be default
+
+switch lower(d.Repeats)
+    
+    case 'never'
+        
+        % If we cannot repeat lists under any circumstances, then only
+        % allow lists that have not been used
+        listmask = find(ntests == 0); 
+        
+    case {'any'}
+        
+        % If we can repeat lists, then allow all lists through the mask
+        listmask = 1:numel(lists); 
+        
+    case 'allbefore'
+        
+        % list mask is a sorting array to order the lists based on how many
+        % times the tests have been repeated. 
+        [~, listmask] = sort(ntests, 'ascend'); 
+    otherwise
+        
+        % Throw an error if we encounter an unknown repeats parameter.
+        error('Unknown Repeats parameter');         
+        
+end % switch
+
+%% DO WE HAVE ENOUGH LISTS?
+%   - If not, then throw an error. 
+%   - Should only happen if the user requests more lists than are available
+%   or if Repeats is set to 'never'. 
+if d.NLists > numel(listmask)
+    error('Not enough lists!');    
+end % if d.NLists
+
+%% APPLY MASK TO ntests
+%   - ntests will be used below to shuffle lists
+ntests = ntests(listmask); 
+
+% Find the unique number of tests in ntests
+nunique = unique(ntests);
+
+%% RANDOMIZE LIST ORDER
+%   This randomization approach is not "truly" random. The randomization
+%   approach differs based on the Repeats scheme above.
+%       - For 'any', lists selection is truly randomized.
+%       - 'allbefore', each cluster of lists (clustered based on how many
+%       tests they have been usd in; so all lists with ntests==0 is a
+%       cluster, ntest==1 is another cluster, etc.) is randomized. 
+%       - 'never', the ntests == 0 cluster is randomized.
+if ~isempty(strfind(d.Randomize, 'lists'))
+    
+    switch lower(d.Repeats)
+        
+        case {'any', 'never'}
+            % Shuffle the whole list
+            listmask = randperm(numel(listmask)); 
+            
+        case 'allbefore'           
+            
+            % Shuffle each cluster
+            for i=1:numel(nunique)
+                
+                % Cluster-level logical mask
+                mask = ntests == nunique(i);
+                
+                % Temporary (smaller) listmask. Easier to work with
+                tlistmask = listmask(mask); 
+                
+                % Randomize
+                tlistmask = tlistmask(randperm(numel(tlistmask))); 
+                
+                % Reassign (shuffled) data to larger array
+                listmask(mask) = tlistmask; 
+            end % 
+            
+        otherwise
+            error('Some issue with randomization'); 
+            
+    end % switch
+    
+end % if ~isempty(strmatch ...
+    
+%% SELECT LISTS TO USE
+lists2use = listmask(1:d.NLists);
+
+%% CONSTRUCT PLAYLIST
+%   - Append the correct file names to the play list
+%   - Also, if the user wants stimuli shuffled "within" list, then shuffle
+%   before appending the playlist
+for i=1:numel(lists2use)
+    
+    % Grab the appropriate wavfiles
+    tpl = wavfiles{lists2use(i)}; 
+    
+    % Randomize individual playlists if necessary
+    if ~isempty(strfind(d.Randomize, 'within'))
+        tpl = tpl(randperm(numel(tpl))); 
+    end % if ~isempty
+    
+    % Append to playlist
+    playlist = [playlist; tpl];
+    
+end % for i=1:numel...
+
+%% FULL RANDOMIZATION
+%   If users want a fully randomized playlist (CWB discourages this in most
+%   contexts, particularly with "balanced" lists), then shuffle the whole
+%   playlist.
+if ~isempty(strfind(d.Randomize, 'full'))
+    playlist = playlist(randperm(numel(playlist))); 
+end % playlist 
 
 %% APPEND STIMULUS LIST TO USED LIST
-%   - If the user wants to, we can automatically append the selected lists
-%   to the "used lists" mat file. 
-%   - This should be handled by an independent function so we can call it
-%   in other functions as well ... maybe SIN_updateUsedList...something
-%   like that
-
+%   - If the user requests, we can add the compiled list to the "UsedList"
+%   mat file.
+%   - This is really only intended for debugging purposes. Not recommended.
+if d.Append2UsedList
+    SIN_UsedListInfo(d.UsedList, 'task', {{'add'}}, 'lists', {lists(lists2use)}, 'testID', opts.specific.testID);
+end % if d.Append2UsedList
