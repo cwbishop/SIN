@@ -1,4 +1,4 @@
-function opts=SIN_TestSetup(testID)
+function opts=SIN_TestSetup(testID, subjectID)
 %% DESCRIPTION:
 %
 %   Function to return test information. This will vary based on the test.
@@ -58,13 +58,14 @@ switch testID;
         opts={tests{mask}}'; 
         
     case 'Defaults'
-                
+               
         % Create an empty SIN testing structure
         opts = struct( ...
+            'subject', struct(), ... % subject specific information, like subject ID, etc. 
             'general', struct(), ... % general information
             'specific', struct(), ... % test specific parameters (used by auxiliary functions like modchecks/modifiers/GUIs
             'player', struct(), ... % player configuration structure (e.g., for portaudio_adaptiveplay)
-            'sandbox', struct());  % scratch pad for passing saved variables between different functions (e.g., data to plot, figure handles, etc.)
+            'sandbox', struct());  % scratch pad for passing saved variables between different functions (e.g., data to plot, figure handles, etc.)        
         
         % Root SIN directory
         opts.general.root = fileparts(which('SIN_TestSetup.m'));  
@@ -84,6 +85,13 @@ switch testID;
         %   This will vary by project. Field used to generate test list in
         %   SIN_GUI. CWB does not recall using it elsewhere. 
         opts.general.testlist = SIN_TestSetup('testlist'); 
+        
+        % Set subject information
+        %   - Set subject identifier (subjectID)
+        %   - Set subject-specific directory. This is different from the
+        %   subjectDir found in the general field. 
+        opts.subject.subjectID = subjectID; 
+        opts.subject.subjectDir = fullfile(opts.general.subjectDir, opts.subject.subjectID); 
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
@@ -112,7 +120,7 @@ switch testID;
         % ============================
         % Get default information
         % ============================
-        opts=SIN_TestSetup('Defaults'); 
+        opts=SIN_TestSetup('Defaults', subjectID); 
         
         % ============================
         % Test specific information. These arguments are used by
@@ -280,7 +288,7 @@ switch testID;
         % ============================
         % Get default information
         % ============================
-        opts=SIN_TestSetup('Defaults'); 
+        opts=SIN_TestSetup('Defaults', subjectID); 
         
         % ============================
         % Test specific information. These arguments are used by
@@ -288,7 +296,7 @@ switch testID;
         % ============================
         
         % set the testID (required)
-        opts.specific.testID='HINT (SNR-50)';
+        opts.specific.testID = testID;
         
         % root directory for HINT stimuli and lookup list
         opts.specific.root=fullfile(opts.general.root, 'playback', 'HINT');        
@@ -304,6 +312,15 @@ switch testID;
         opts.specific.hint_lookup=struct(...
             'filename', fullfile(opts.specific.root, 'HINT.xlsx'), ...
             'sheetnum', 2); 
+        
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
+        opts.specific.genPlaylist.Randomize = 'lists&within'; % randomize list order and stimuli within each list.
+        opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any. 
+        opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
+        opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
         
         % ============================
         % Player configuration
@@ -400,7 +417,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (MCL-Too Loud)';
+        opts.specific.testID = testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -417,7 +434,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (MCL-Too Quiet)'; 
+        opts.specific.testID = testID; 
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -431,7 +448,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (MCL-Estimate)'; 
+        opts.specific.testID=testID; 
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -450,7 +467,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (BNL-Too Loud)'; 
+        opts.specific.testID=testID; 
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -466,7 +483,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (BNL-Too Quiet)'; 
+        opts.specific.testID=testID; 
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -482,7 +499,7 @@ switch testID;
         opts=SIN_TestSetup('ANL (base)'); 
         
         % Change testID
-        opts.specific.testID='ANL (BNL-Too Quiet)'; 
+        opts.specific.testID=testID; 
         
         % Change instructions
         opts.player.modcheck.instructions={...
@@ -534,7 +551,7 @@ switch testID;
         % ============================
         % Get default information
         % ============================
-        opts=SIN_TestSetup('Defaults');
+        opts=SIN_TestSetup('Defaults', subjectID);
         
         % ============================
         % Test specific information. These arguments are used by
@@ -542,7 +559,7 @@ switch testID;
         % ============================
         
         % set the testID (required)
-        opts.specific.testID='ANL';
+        opts.specific.testID=testID;
         
         % root directory for HINT stimuli and lookup list
         opts.specific.root=fullfile(opts.general.root, 'playback', 'ANL');
@@ -635,3 +652,5 @@ switch testID;
         error('unknown testID')
         
 end % switch 
+
+%% ADD OPTIONS CHECK
