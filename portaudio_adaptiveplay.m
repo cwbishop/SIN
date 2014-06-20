@@ -234,80 +234,12 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %                       (longer before the change "fades in"). 
 %                       (seconds | default = 0.005 (5 msec))
 %
-% Unmodulated sound playback settings:
-%
-%   CWB originally tried to setup a slave device to manage a second audio
-%   buffer, but after some basic tests, it became clear that the audio
-%   playback quality was just too low. In fact, most attempts, even simply
-%   playing back a sound of interest, crashed MATLAB completely. This
-%   solution was not stable. So, CWB opted to allow users to grab a second
-%   handle (and buffer) to the same physical device. Although this is not
-%   strictly a "slave", it allows the user to present a sound that will not
-%   be subjected to modchecks and modifiers. 
-%
-%   This addition was intended to allow the user to present a masker during
-%   sound playback that would *not* be subjected to modchecks and
-%   modifiers. 
-%
-%   At time of writing, only a single file can be presented as an
-%   unmodulated sound. That is, the same sound is presented for each
-%   element of X or, if unmod_playbackmode is set to 'looped', is looped
-%   continuously throughout playback. 
-%
-%       'unmod_playback':   A single-element cell containing the filename
-%                           of the wavfile to be be presented.
-%
-%       'unmod_channels':   a channel array similar to the
-%                           'playback_channels' paramter described above,
-%                           but 'slave_channels' only applies to the file
-%                           specified by 'slave_playback'. (defaults to
-%                           playback_channels)
-%       
-%       'unmod_playbackmode':   string, the method of unmod playback. This
-%                               is still under development.
-%                               (default='')
-%                                   'looped':   Loop unmod playback. This
-%                                               is useful when a masker
-%                                               needs to be presented
-%                                               constantly throughout an
-%                                               otherwise independently
-%                                               controlled target stream
-%                                               (e.g., with HINT).
-%
-%                                   'stopafter':Stop the unmodulated noise
-%                                               after each trial. If this
-%                                               is set, both unmod_leadtime
-%                                               and unmod_lagtime need to
-%                                               be set. 
-%
-%       'unmod_leadtime':   double, how far in advance the slave device
-%                           should be started relative to the modulated
-%                           playback stream. (default=0 seconds). 
-%                           This proved useful when administering the HINT. 
-%                           This is implemented, but terribly crude and
-%                           should not be used for precisely controlled
-%                           relative timing (yet)
-%
-%       'unmod_lagtime':    Double, how long after modulated playback has
-%                           stopped before stopping the unmodulated
-%                           playback (secs) See notes on timing control for
-%                           unmod_leadtime; same deal here - things aren't
-%                           terribly precise yet. 
-%       
 % OUTPUT:
 %
 %   d:  data structure containing parameters and scored data. Fields depend
 %       on the modifier and modcheck employed. 
 %
 % Development:
-%
-%   1. Add timing checks to make sure we have enough time to do everything
-%   we need before the buffer runs out
-%
-%   13. Improve d.unmod_leadtime so the relative start times are reasonably
-%   close. 
-%
-%   18. change unmod_playbackmode names to something more informative. 
 %
 %   19. Need additional precautions when monitoring keypresses in
 %   'continuous' mode. If the user starts pressing keys before sounds play,
@@ -321,31 +253,10 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %   tried using "Direct Sound" recordings, but they were very crackly and
 %   low quality. 
 %
-%   22. The relative timing of unmodulated sound playback depends not just
-%   on the lead/lag settings, but *also* player.playback.block_dur. This
-%   needs to be addressed (or accounted for) with scheduling. 
-%
 %   23. Add in check for continuous adaptive mode. Need to make sure that
 %   the block_duration is shorter than our sound, otherwise we might as
 %   well do a "bytrial" adjustment - in fact, that would probably be
 %   cleaner. 
-%
-%   27. Need to handle the "unmodualted" noise in a smarter way. At
-%   present, the unmodulated noise is handled independently of the
-%   modulated output. Provided the "mixer" is available, it may be wise to
-%   add the unmodulated sound as an additional channel to the modulated
-%   data, then mix everything together. Not sure, though. Tough call. THis
-%   approach will make it difficult to control relative timing as the test
-%   is currently administered. But we might be able to setup a "scheduler"
-%   for the playback device and add start/stop times. 
-%
-%   28. Add post-mixing modifiers. This will be useful when applying
-%   channel-specific filtering to compensate for differences in device
-%   playback channels (e.g., with different speakers).
-%
-%   29. Copy over presented data to a sandbox variable. This will serve as
-%   a sanity check later since we will know *precisely* the data that were
-%   sent to the sound card after the fact.
 %
 %   30. Add status return variable. Helpful if we encounter an error and
 %   the invoking function needs to know about it. 
@@ -409,6 +320,7 @@ d.sandbox.start_time=now;
 FS = d.player.playback.fs; 
 
 %% SET PLAYER STATE 
+%
 %   Finite state - player can only have a single state at a time
 %
 %   The state is set either internally (by the player) or altered by
@@ -419,7 +331,6 @@ FS = d.player.playback.fs;
 %       'pause':    Pause playback
 %       'run':      Play or resume playback
 %       'exit':     Stop all playback and exit as cleanly as possible
-% d.player.state = 'run'; 
 
 %% SET ADDITIONAL VARIABLES
 d.sandbox.data2play_mixed=[]; 
@@ -493,21 +404,18 @@ end % try/catch
 if size(d.player.mod_mixer, 2) ~= pstruct.NrOutputChannels, error('columns in mod_mixer does not match the number of output channels.'); end 
 
 % Open the playback device 
-%   Only open audio device if 'continuous' selected. Otherwise, device
-%   opening/closing is handled through portaudio_playrec.
-%
 %   We now use buffered playback for both continuous and bytrial
 %   adaptive playback. So, open the handle if either is selected
 if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
     
-    % Open the unmodulated device buffer
+    % Open the playback device
     phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
     
-    % Open second handle for unmodulated sound playback
-    if ~isempty(d.player.unmod_playback)        
-        shand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
-        uX = SIN_loaddata(d.player.unmod_playback); 
-    end % if ~isempty(d.unmod_...
+%     % Open second handle for unmodulated sound playback
+%     if ~isempty(d.player.unmod_playback)        
+%         shand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
+%         uX = SIN_loaddata(d.player.unmod_playback); 
+%     end % if ~isempty(d.unmod_...
     
 end % 
 
@@ -640,42 +548,6 @@ for trial=1:length(stim)
     switch lower(d.player.adaptive_mode)
         
         case {'continuous', 'bytrial'}             
-                        
-            % SETUP unmod DEVICE
-            %   - Fill the buffer
-            %   - Wait for an appropriate lead time (see
-            %   'unmod_leadtime'). 
-            if ~isempty(d.player.unmod_playbackmode)
-                switch d.player.unmod_playbackmode
-                    case {'looped'}
-    
-                        % If this is looped playback, then start the playback of the
-                        % masker sound and let it run forever and ever. 
-                        if trial == 1
-                            PsychPortAudio('FillBuffer', shand, uX');                                                                                 
-                            PsychPortAudio('Start', shand, 0, [], 0);
-                        end % if trial == 1
-                        
-                    case {'stopafter'}
-                        
-                        % Fill the buffer once
-                        if trial ==1
-                            PsychPortAudio('FillBuffer', shand, uX');
-                        end % 
-                        
-                        % Infinite loop playback
-                        PsychPortAudio('Start', shand, 0, [], 0);
-                        
-                    otherwise
-                        error('Unknown unmod_mode'); 
-                end % switch/otherwise 
-        
-                % Crude wait time.                         
-                WaitSecs(d.player.unmod_leadtime); 
-                
-                % Now wait 
-                
-            end % if ~isempty(d.player.unmod_playbackmode 
     
             %% CREATE WINDOWING FUNCTION (ramp on/off)
             %   This is used for continuous adaptive mode. The windowing function can
@@ -872,7 +744,6 @@ for trial=1:length(stim)
                 %   speaker at the commandline (using audioplayer or
                 %   wavplay or some other variant). 
                 d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
-                
                 
                 % Get playback device status
                 pstatus=PsychPortAudio('GetStatus', phand);
@@ -1071,12 +942,6 @@ for trial=1:length(stim)
                 PsychPortAudio('Stop', phand, 0);                                
             end % if isequal ...
             
-            % Stop unmodulated noise
-            if isequal(d.player.unmod_playbackmode, 'stopafter')
-                WaitSecs(d.player.unmod_lagtime);
-                PsychPortAudio('Stop', shand, 0); 
-            end % 
-                        
             % Run the modcheck.
             if isequal(d.player.adaptive_mode, 'bytrial')
                 
