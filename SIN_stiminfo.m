@@ -63,9 +63,9 @@ switch testID
         %   - List all wav files within the directory.
         wavfiles={};
         list_name={};
-        for i=1:length(list_dir)
+        for i=1:length(list_dir)            
             list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.specific.list_regexp):end-1); 
-            wavfiles{i}= regexpdir(list_dir{i}, '.wav$', false);
+            wavfiles{i}= regexpdir(list_dir{i}, opts.specific.wav_regexp, false);
         end % for i=1:length(list_id)
 
     case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)' }

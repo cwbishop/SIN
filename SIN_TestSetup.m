@@ -57,6 +57,9 @@ switch testID;
         %   List tests vertically (easier to skim through)
         opts={tests{mask}}'; 
         
+        % Return here so we don't try to assign a UUID.        
+        return
+        
     case 'Defaults'
                
         % Create an empty SIN testing structure
@@ -114,7 +117,13 @@ switch testID;
         opts.player.modifier{1} = struct( ...
             'fhandle', @modifier_PlaybackControl, ...
             'mod_stage',    'premix');             
-                
+        
+        % Where the UsedList is stored. 
+        opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
+        
+        % Return so we do not assign a UUID to defaults. 
+        return
+        
     case 'Calibrate'
         
         % ============================
@@ -176,12 +185,7 @@ switch testID;
             'playback_mode',    'standard', ... % just play sound once
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    [], ... % leave empty, this will be generated in SIN_calibrate.m. See specific.physical_channels and specific.data_channels
-            'state',    'pause', ... % start in paused state
-            'unmod_playbackmode', [], ... % no unmodulated sound
-            'unmod_channels',   [], ... % no unmodulated sound
-            'unmod_leadtime',   [], ... % no unmodulated sound
-            'unmod_lagtime',    [], ... % no unmodulated sound
-            'unmod_playback',   {{}});  % no unmodulated sound        
+            'state',    'pause'); % start in paused state     
         
         % ============================
         % Modification check (modcheck) configuration  
@@ -255,7 +259,7 @@ switch testID;
         % Administer HINT using NALadaptive algorithm.
         
         % Use the HINT as traditionally scored as a starting point
-        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)');
+        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', subjectID);
         
         % Change testID
         opts.specific.testID = testID;
@@ -307,6 +311,9 @@ switch testID;
         %   two digits. 
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = '+noise.wav$'; % use files with noise in channel 1. 
+        
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
@@ -318,8 +325,7 @@ switch testID;
         % turn invokes SIN_stiminfo and other supportive functions.         
         opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
         opts.specific.genPlaylist.Randomize = 'lists&within'; % randomize list order and stimuli within each list.
-        opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any. 
-        opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
+        opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
         opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
         
         % ============================
@@ -337,19 +343,14 @@ switch testID;
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        true, ...   % randomize trial order before playback
+            'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'mod_mixer',    [ [0; 1] [0; 0 ] ], ... % play HINT target speech to first channel only
-            'state',    'run', ... % start in run state
-            'unmod_playbackmode', 'stopafter', ... % stop unmodulated noise playback after each trial
-            'unmod_channels',   [1 2], ...
-            'unmod_leadtime',   1, ... % start unmodulated sound 1 sec before sentence onset
-            'unmod_lagtime',    1, ... % continue noise 1 sec after sentence ends
-            'unmod_playback',   {{fullfile(opts.specific.root, 'HINT-Noise.wav')}}); % noise file
+            'state',    'run'); % Start in run state
             
         % ============================
         % Modification check (modcheck) configuration        
@@ -379,12 +380,7 @@ switch testID;
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track mod_mixer        
-%         opts.player.modifier{end+1}=struct( ...            
-%         opts.player.modifier{end+1}=struct( ...
-%             'fhandle',  @modifier_dBscale, ... % use a decibel scale
-%             'dBstep',   [4 2], ...  % decibel step size (4 dB, then 2 dB)
-%             'change_step', [1 5], ...   % trial on which to change the step size
-%             'channels', 2);  % apply modification to channel 2            
+         
     case 'ANL'
         % ANL is actually a sequence of tests. The list includes the
         % following:
@@ -572,6 +568,15 @@ switch testID;
         %   
         %   This field is used in SIN_stiminfo.m. 
         opts.specific.anl_regexp='ANL.wav'; 
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 0; % No lists to choose from
+        opts.specific.genPlaylist.Randomize = ''; % No stimuli to randomize
+        opts.specific.genPlaylist.Repeats = ''; % irrelevant since there aren't any lists
+        
+        opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
+        
         % ============================
         % Playback configuration
         %
@@ -579,7 +584,6 @@ switch testID;
         %   longer for longer files (due to indexing overhead)
         %
         % ============================
-%         opts.player.playback.block_dur=0.3; 
         
         % ============================
         % Player configuration
@@ -605,12 +609,7 @@ switch testID;
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    [ [0.5; 0.5] [0; 0] ], ... % Play both channels to left ear only. 
-            'state',    'pause', ... % start in paused state
-            'unmod_playbackmode', [], ... % no unmodulated sound
-            'unmod_channels',   [], ... % no unmodulated sound
-            'unmod_leadtime',   [], ... % no unmodulated sound
-            'unmod_lagtime',    [], ... % no unmodulated sound
-            'unmod_playback',   {{}});  % no unmodulated sound
+            'state',    'pause'); % start in paused state
         
         % ============================
         % Modification check (modcheck) configuration        
@@ -653,4 +652,6 @@ switch testID;
         
 end % switch 
 
-%% ADD OPTIONS CHECK
+%% ADD UUID TO STRUCTURE
+%   - Assigns (or overwrites) a UUID.
+opts = SIN_assignUUID(opts); 

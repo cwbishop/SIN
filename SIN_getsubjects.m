@@ -19,7 +19,6 @@ function [subject_id]=SIN_getsubjects
 
 % Get Subject directory
 %   Pass empty subjectID (second input) to placate SIN_TestSetup (for now).
-%   
 subDir = SIN_TestSetup('Defaults', ''); 
 subDir = subDir.general.subjectDir;
             

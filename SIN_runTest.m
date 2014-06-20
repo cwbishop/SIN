@@ -62,7 +62,7 @@ for t=1:length(testID)
             
             error('Not functional'); 
             
-        case {'ANL'}
+        case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)', 'ANL (BNL-Estimate)'}
             
             for i=1:length(opts)
                 % Copy over relevant sections from previous tests.
@@ -88,7 +88,7 @@ for t=1:length(testID)
                 results = portaudio_adaptiveplay(playlist, opts(i));             
                                 
                 % Save results to file 
-                save(fullfile(opts(i).subject.subjectDir, opts(i).specific.testID, [subjectID '-' opts(i).specific.testID]), 'results'); 
+                SIN_saveResults(results); 
                 
             end % for i=1:length(opts)
             
@@ -101,8 +101,7 @@ for t=1:length(testID)
             results = portaudio_adaptiveplay(playlist, opts); 
             
             % Save results to file 
-%             save(fullfile(opts(t).general.subjectDir, subjectID, testID{t}, [subjectID '-' testID{t}]), 'results'); 
-            save(fullfile(opts(i).subject.subjectDir, opts.specific.testID, [subjectID '-' opts.specific.testID]), 'results'); 
+            SIN_saveResults(results); 
     end % switch/otherwise
     
 end % for t=1:length(testID)

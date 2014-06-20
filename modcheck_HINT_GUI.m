@@ -168,8 +168,16 @@ end % if ~isfield p ...
 %   finds information for the sentence to be sored.
 fname=d.sandbox.playback_list{trial}; 
 
-% Stupid way to handle this, but a decent place to start.
-fname=fname(end-12:end); 
+% Get file parts
+[PATHSTR,NAME,EXT] = fileparts(fname);
+
+% Just need the List and file information. 
+%   - Find where the list information starts, then truncate to look just
+%   for the 01/03/02, etc. of the file. Then append a .wav to it. This
+%   approach is kind of silly, CWB admits, but it allows the user to use
+%   files with different suffixes without too much trouble. 
+[start, stop] = regexp(fname, d.specific.list_regexp);
+fname=[fname(start:stop+1) NAME(1:2) EXT]; 
 
 % Find sentence information by matching the filepath between. 
 %   Don't reassign 'd' return, since this will be updated in stupid ways on
