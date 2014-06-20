@@ -320,9 +320,14 @@ function register_subject_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-d=handles.SIN_defaults;
+% Get subjectID
+subjectID = get(handles.subjectid, 'String'); 
+
+% Get some basic information about directory structures and the like
+opts = SIN_TestSetup('Defaults', subjectID);
+
 % Try registering subject
-[status, str]=SIN_register_subject(get(handles.subjectid, 'String'), 'register_tasks', {{'create'}}, d); 
+[status, str]=SIN_register_subject(subjectID, 'register_tasks', {{'create'}}, opts); 
 
 % Clear subject ID field
 set(handles.subjectid, 'String', ''); 
