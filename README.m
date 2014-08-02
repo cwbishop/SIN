@@ -22,6 +22,8 @@ Test Setup -> What the user has to provide to get the player functions to work. 
             -> Repeats: rule governing how repeats are handled
             -> UsedList: path to mat file containing UsedList. 
             
+        -> saveData2mat:    This is used by SIN_saveResults to write the output of HINT (and other) tests to file. This is the path to the mat file where data should be saved. 
+        
 	-> Player settings (player): Options used by the designated player (example for portaudio_adaptiveplay).
 		
 		-> player_handle: function handle to player (e.g., @portaudio_adaptiveplay) (required) This might be used by SIN_RunTest to administer tests by ID)

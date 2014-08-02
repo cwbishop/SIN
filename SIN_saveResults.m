@@ -35,7 +35,8 @@ opts = results.RunTime;
 %
 %   Results will be placed in the appropriate test folder within
 %   subject_data (or wherever data are stored). 
-fname = fullfile(opts.subject.subjectDir, opts.specific.testID, [opts.subject.subjectID '-' opts.specific.testID '-' opts.specific.uuid]);
+% fname = fullfile(opts.subject.subjectDir, opts.specific.testID, [opts.subject.subjectID '-' opts.specific.testID '-' opts.specific.uuid]);
+fname = opts.specific.saveData2mat; 
 
 %% SAVE RESULTS
 save(fname, 'results');

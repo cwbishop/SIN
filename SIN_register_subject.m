@@ -91,14 +91,14 @@ for t=1:numel(d.register_tasks)
 
             %% MAKE TEST DIRECTORIES
             %   For now, just create directories 
-            for i=1:length(d.general.testlist)
-                
-                % Check for errors making test directories 
-                if ~mkdir(fullfile(d.general.subjectDir, sid, d.general.testlist{i})); 
-                    status=false;
-                end % if ~mkdir(...
-                
-            end % for i=1:length(testlist)
+%             for i=1:length(d.general.testlist)
+%                 
+%                 % Check for errors making test directories 
+%                 if ~mkdir(fullfile(d.general.subjectDir, sid, d.general.testlist{i})); 
+%                     status=false;
+%                 end % if ~mkdir(...
+%                 
+%             end % for i=1:length(testlist)
             
             % Create error message if necessary
             if ~status

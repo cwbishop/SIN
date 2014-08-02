@@ -46,14 +46,7 @@ testID = opts.specific.testID;
 
 switch testID
     
-    case {'MLST'}
-        
-        % This section will (eventually) kick back stimulus information and
-        % play lists for the MLST.
-        
-        error('Not developed yet'); 
-        
-    case {'HINT (SNR-50, Sentence-Based)', 'PPT', 'HINT (SNR-50, NALadaptive)'}
+    case {'HINT (SNR-50, Sentence-Based)', 'PPT', 'HINT (SNR-50, NALadaptive)', 'MLST (Audio)', 'MLST (AV)'}
         
         % Return directories based on defaults.hint.list_filt
         list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
