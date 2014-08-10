@@ -99,7 +99,7 @@ switch testID;
         % Set sound output paramters. 
         opts.player.playback = struct( ...
             'device', portaudio_GetDevice(9), ... % device structure
-            'block_dur', 0.12, ... % 200 ms block duration.
+            'block_dur', .5, ... % 200 ms block duration.
             'fs', 44100); % sampling rate            
         
         % Recording device
@@ -109,7 +109,7 @@ switch testID;
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
-        opts.player.stop_if_error = true; display('Change stop_if_error back to TRUE'); 
+        opts.player.stop_if_error = true;
         
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
