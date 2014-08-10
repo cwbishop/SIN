@@ -432,6 +432,10 @@ if d.player.record_mic
     % predicted latency
     rstatus=PsychPortAudio('GetStatus', rhand);
     
+else
+    
+    rhand = []; 
+    
 end % if d.player.record_mic
 
 %% PLAYBACK BUFFER INFORMATION
@@ -584,7 +588,12 @@ for trial=1:length(stim)
             % Loop through each section of the playback loop. 
             while block_num <= nblocks
 
-                rstatus=PsychPortAudio('GetStatus', rhand);
+                % Only grab recording status if rhand has been opened. 
+                if ~isempty(rhand)
+                    rstatus=PsychPortAudio('GetStatus', rhand);
+                else 
+                    
+                end % if ~isempty(rhand)
                 
                 % Start recording device
                 %   Just start during the first trial. This will be emptied
@@ -782,7 +791,7 @@ for trial=1:length(stim)
 
                     PsychPortAudio('Start', phand, 0, [], 0);      
                     
-                    playback_start_time = GetSecs; % Get approximate playback start time 
+                    playback_start_time = GetSecs; % estimate of start time, I think ??
                     
 %                     else
 %                         PsychPortAudio('Start', phand, ceil( (nblocks)/2)+1, [], 0);                    
@@ -791,10 +800,23 @@ for trial=1:length(stim)
                     % Wait until we are in the second block of the buffer,
                     % then start rewriting the first. Helps with smooth
                     % starts 
+                    %
+                    % Note: pstatus.ElapsedOutSamples seems to only be
+                    % updated every N samples with ASIO drivers, where N is
+                    % pstatus.BufferSize. So we need a way to make this
+                    % work for ASIO drivers as well. Poop, says CWB. Just
+                    % poop. 
                     pstatus=PsychPortAudio('GetStatus', phand); 
-                    while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(2) < refillat % start updating sooner.  
-                        pstatus=PsychPortAudio('GetStatus', phand); 
-                    end % while
+                    % Try using the clock to track where we are in sound
+                    % playback. Not as precise, but should work equally
+                    % well with ASIO, MME, and other drivers. 
+                    t = GetSecs;
+                    while t - playback_start_time < block_nsamps/pstatus.SampleRate + refillat/pstatus.SampleRate, 
+                        t = GetSecs; 
+                    end % while GetSecs ...
+%                     while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(1) < refillat % start updating sooner.  
+%                         pstatus=PsychPortAudio('GetStatus', phand); 
+%                     end % while 
                     
                 end % if block_num==1               
     
@@ -835,15 +857,23 @@ for trial=1:length(stim)
                 end % isequal(d.player.state, 'run'); 
                 
 %                 toc
-                
+                tic
                 pstatus=PsychPortAudio('GetStatus', phand);
-
+                toc
+                
+                % Now, wait until we have completed playback of audio
+                % block.
+                t = GetSecs;
+                while mod(t - playback_start_time, buffer_nsamps/pstatus.SampleRate) - startofblock/pstatus.SampleRate < refillat/pstatus.SampleRate
+                    t=GetSecs;
+                end % while 
+                
                 % Now, loop until we're half way through the samples in 
-                % this particular buffer block.
-                while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
-                        && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
-                    pstatus=PsychPortAudio('GetStatus', phand); 
-                end % while
+                % this particular buffer block.                
+%                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
+%                         && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
+%                     pstatus=PsychPortAudio('GetStatus', phand); 
+%                 end % while
                 
                 % Error checking after each loop
                 if d.player.stop_if_error && (pstatus.XRuns >0)
