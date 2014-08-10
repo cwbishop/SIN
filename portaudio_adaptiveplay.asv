@@ -634,11 +634,7 @@ for trial=1:length(stim)
                 % Which buffer block are we filling?
                 %   Find start and end of the block
                 startofblock=block_start(1+mod(block_num-1,2));
-                
-                % Might be used below for time based tracking of buffer
-                % position (e.g., with ASIO drivers) 
-                startofblock_nsecs = startofblock/pstatus.SampleRate; 
-                
+    
                 % Load data using logical mask
                 %   There is a special case when the logical mask is split
                 %   - as in 110011. This occurs when the sound is not an
@@ -867,12 +863,6 @@ for trial=1:length(stim)
 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
-                t = GetSecs; % get the current time
-                while mod(t, buffer_nsecs) - startofblock_nsecs < refillat_secs ...
-                        && isequal(d.player.state, 'run')
-                    t = GetSecs;
-                end % while ...
-                
 %                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
 %                         && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
 %                     pstatus=PsychPortAudio('GetStatus', phand); 
