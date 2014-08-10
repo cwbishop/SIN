@@ -98,8 +98,8 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(8), ... % device structure
-            'block_dur', 0.08, ... % 80 ms block duration.
+            'device', portaudio_GetDevice(9), ... % device structure
+            'block_dur', 0.12, ... % 200 ms block duration.
             'fs', 44100); % sampling rate            
         
         % Recording device
@@ -109,7 +109,7 @@ switch testID;
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
-        opts.player.stop_if_error = true; 
+        opts.player.stop_if_error = true; display('Change stop_if_error back to TRUE'); 
         
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
@@ -342,14 +342,14 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    [ [0; 1] [0; 0 ] ], ... % play HINT target speech to first channel only
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0; 1] [0; 0 ] ], 0), ... % play HINT target speech to first channel only
             'state',    'run'); % Start in run state
             
         % ============================
