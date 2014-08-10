@@ -213,3 +213,10 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+#Custom
+*.wav
+*.xlsx
+*.mp4
+*.mp3
+*.f4v
