@@ -98,8 +98,8 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(9), ... % device structure
-            'block_dur', .5, ... % 200 ms block duration.
+            'device', portaudio_GetDevice(19), ... % device structure
+            'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100); % sampling rate            
         
         % Recording device
@@ -600,7 +600,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
@@ -700,6 +700,8 @@ opts = SIN_assignUUID(opts);
 %
 %   CWB decided to list the UUID first so multipart tests list together in
 %   the browser (easier to spot by eye). 
+%
+%   For multi-part tests, use the same UUID and the same saveData2mat file.
 for i=1:length(opts)
-    opts(i).specific.saveData2mat = fullfile(opts.subject.subjectDir, [opts.specific.uuid '-' opts.subject.subjectID '-' opts.specific.testID]);
+    opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).specific.uuid '-' opts(1).subject.subjectID '-' opts(1).specific.testID]);
 end %

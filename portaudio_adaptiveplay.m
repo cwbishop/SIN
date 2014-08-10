@@ -632,8 +632,12 @@ for trial=1:length(stim)
                 d.sandbox.buffer_pos = buffer_pos; 
                 
                 % Which buffer block are we filling?
-                %   Find start and end of the block
-                startofblock=block_start(1+mod(block_num-1,2));
+                %   Find start and end of the block                
+                if block_num == 1
+                    startofblock = block_start(2);
+                else
+                    startofblock=block_start(1+mod(block_num-1,2));
+                end % if block_num ==1 ;
                 
                 % Might be used below for time based tracking of buffer
                 % position (e.g., with ASIO drivers) 
@@ -836,12 +840,13 @@ for trial=1:length(stim)
                 %   Perhaps this should be changed to monitor the
                 %   pstatus.Active field?? Might lead to undetected errors
                 %   ... 
+%                 tic 
                 if pstatus.Active
                     PsychPortAudio('FillBuffer', phand, data2play_mixed', 1, []);  
 %                 elseif isequal(d.player.state, 'pause') || isequal(d.player.state, 'exit')
 %                     PsychPortAudio('FillBuffer', phand, zeros(size(data2play_mixed))', 1, []);                      
                 end % if isequal ...                
-                
+%                 toc
                 % Shift mask
                 %   Only shift if the player is in the 'run' state.
                 %   Otherwise, leave the mask as is. 
@@ -867,10 +872,12 @@ for trial=1:length(stim)
 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
+                tmp=[];
                 t = GetSecs; % get the current time
                 while mod(t, buffer_nsecs) - startofblock_nsecs < refillat_secs ...
-                        && isequal(d.player.state, 'run')
+                        && isequal(d.player.state, 'run')                    
                     t = GetSecs;
+                    tmp=[tmp; t]; 
                 end % while ...
                 
 %                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
@@ -879,7 +886,7 @@ for trial=1:length(stim)
 %                 end % while
                 
                 % Error checking after each loop
-                if d.player.stop_if_error && (pstatus.XRuns >0)
+                if d.player.stop_if_error && (pstatus.XRuns > 0)
                     warning('Error during sound playback. Check buffer_dur.'); 
                     d.player.state='exit';
                     break 
