@@ -98,18 +98,19 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(19), ... % device structure
+            'device', portaudio_GetDevice(29), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
-            'fs', 44100); % sampling rate            
+            'fs', 44100, ... % sampling rate            
+            'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(1), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording.
+            'device', portaudio_GetDevice(1), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
-        opts.player.stop_if_error = true;
+        opts.player.stop_if_error = false; display('Change stop_if_error back to TRUE');
         
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
@@ -421,7 +422,7 @@ switch testID;
             'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
@@ -437,7 +438,7 @@ switch testID;
             'Good. Using the down button, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you push the down button, I will turn the story down (use 5 dB steps)'};
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Estimate)' 
         
@@ -456,7 +457,7 @@ switch testID;
         opts.player.modifier{2}.dBstep = 2; 
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0] [0; 0] ]; % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (BNL-Too Loud)'
         
@@ -472,7 +473,7 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; .5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
         
     case 'ANL (BNL-Too Quiet)' 
         
@@ -488,7 +489,7 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
         
     case 'ANL (BNL-Estimate)'
         
@@ -508,7 +509,7 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=[ [0.5; 0.5] [0; 0] ]; % discourse channel and babble to first channel only
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
         
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a
@@ -607,7 +608,7 @@ switch testID;
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'startplaybackat',    0, ...  % start playback at beginning of sound 
-            'mod_mixer',    [ [0.5; 0.5] [0; 0] ], ... % Play both channels to left ear only. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0), ... % Play both channels to left ear only. 
             'state',    'pause'); % start in paused state
         
         % ============================

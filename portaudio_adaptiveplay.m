@@ -409,7 +409,7 @@ if size(d.player.mod_mixer, 2) ~= pstruct.NrOutputChannels, error('columns in mo
 if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
     
     % Open the playback device
-    phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
+    phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
     
 %     % Open second handle for unmodulated sound playback
 %     if ~isempty(d.player.unmod_playback)        
@@ -419,19 +419,57 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
     
 end % 
 
+% Flag for Duplex check below (mode 3)
+isDuplex=false;
+
 % Open a recording device if specified, specify as a recording device. 
 if d.player.record_mic
-    
-    % Open recording device
-    rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, FS, rstruct.NrInputChannels); 
 
-    % Allocate Recording Buffer
-    PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
+    % This try/catch statement is designed to recover from errors when the
+    % playback/recording devices are the same (e.g., with Claro Halo on
+    % Miller Lab PC).
+    try
+        % First, just try opening the recording device. If it goes well,
+        % then we're done. If not, then we have work to do.
+        
+        % Open recording device
+        rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, FS, rstruct.NrInputChannels); 
+
+        % Allocate Recording Buffer
+        PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
     
-    % Get rstatus - we might need this later to correct for differences in
-    % predicted latency
-    rstatus=PsychPortAudio('GetStatus', rhand);
-  
+        % Get rstatus - we might need this later to correct for differences in
+        % predicted latency
+        rstatus=PsychPortAudio('GetStatus', rhand);
+        
+        % Flag for starting recording appropriately
+%         isDuplex = false;
+    catch
+        
+        % If you made it here, then there's a conflict with the
+        % recording/playback device (typically). Will now attempt to open
+        % in duplex mode. For more information, see https://docs.psychtoolbox.org/Open
+        % for more details.
+        
+        % Close down whatever is open
+        PsychPortAudio('Close'); 
+        
+        % Open as full duplex
+        %   Needs a two-element array for 'channel' input. See
+        %   https://docs.psychtoolbox.org/Open ('channels') for more
+        %   information. 
+        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 3, 0, FS, [pstruct.NrOutputChannels rstruct.NrInputChannels], d.player.playback.internal_buffer);
+        
+        % Now the recording handle is the same as the playback handle. 
+        rhand = phand;
+        
+        % Allocate Recording Buffer
+        PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
+        
+        % Flag for starting recording appropriately for duplex mode
+        isDuplex = true; 
+        
+    end % try/catch
 else
     % If the user does not want to do any mic recordings, then we need to
     % set rhand to an empty array. This helps with flow control below. 
@@ -633,11 +671,11 @@ for trial=1:length(stim)
                 
                 % Which buffer block are we filling?
                 %   Find start and end of the block                
-                if block_num == 1
-                    startofblock = block_start(2);
-                else
-                    startofblock=block_start(1+mod(block_num-1,2));
-                end % if block_num ==1 ;
+%                 if block_num == 1
+%                     startofblock = block_start(2);
+%                 else
+                startofblock=block_start(1+mod(block_num-1,2));
+%                 end % if block_num ==1 ;
                 
                 % Might be used below for time based tracking of buffer
                 % position (e.g., with ASIO drivers) 
@@ -811,6 +849,14 @@ for trial=1:length(stim)
                     
                     playback_start_time = GetSecs; % Get approximate playback start time 
                     
+                    % If we are running a device in full duplex mode, then
+                    % we need to tell portaudio_adaptiveplay when the
+                    % recording block starts.                    
+                    if isDuplex
+                        rec_block_start = playback_start_time;
+                        rec_start_time = playback_start_time; 
+                    end % if isDuplex
+                    
 %                     else
 %                         PsychPortAudio('Start', phand, ceil( (nblocks)/2)+1, [], 0);                    
 %                     end % if nblocks
@@ -887,7 +933,7 @@ for trial=1:length(stim)
                 
                 % Error checking after each loop
                 if d.player.stop_if_error && (pstatus.XRuns > 0)
-                    warning('Error during sound playback. Check buffer_dur.'); 
+                    warning('Error during sound playback. Check buffer_dur and internal_buffer.'); 
                     d.player.state='exit';
                     break 
                 end % if d.player.stop ....
