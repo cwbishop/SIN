@@ -98,19 +98,19 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(29), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(8), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(1), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(8), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
-        opts.player.stop_if_error = false; display('Change stop_if_error back to TRUE');
+        opts.player.stop_if_error = true; display('Change stop_if_error back to TRUE');
         
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
@@ -343,14 +343,14 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0; 1] [0; 0 ] ], 0), ... % play HINT target speech to first channel only
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0), ... % play HINT target speech to first channel only
             'state',    'run'); % Start in run state
             
         % ============================
@@ -601,7 +601,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
-            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)

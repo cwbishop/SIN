@@ -403,19 +403,71 @@ end % try/catch
 %   of output channels
 if size(d.player.mod_mixer, 2) ~= pstruct.NrOutputChannels, error('columns in mod_mixer does not match the number of output channels.'); end 
 
-% Flag for Duplex check below (mode 3)
-isDuplex=false;
-
 % Open the playback device 
 %   We now use buffered playback for both continuous and bytrial
 %   adaptive playback. So, open the handle if either is selected
 if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial') ...
    
 
-    if (d.player.record_mic && isempty(comp_struct(d.player.playback.device, d.player.record.device, 0))) 
+    % If record/playback are the same, load in mode 3 below. 
+    if (~d.player.record_mic  ~isempty(comp_struct(d.player.playback.device, d.player.record.device, 0))) 
+    
+        % Open the playback device
+        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
+    elseif 
         
         % Load in duplex mode (mode 3) if the recording and playback
         % devices are the same device. 
+        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 3, 0, FS, [pstruct.NrOutputChannels rstruct.NrInputChannels], d.player.playback.internal_buffer);
+    end % if (d ...
+    
+%     % Open second handle for unmodulated sound playback
+%     if ~isempty(d.player.unmod_playback)        
+%         shand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels);
+%         uX = SIN_loaddata(d.player.unmod_playback); 
+%     end % if ~isempty(d.unmod_...
+    
+end % 
+
+% Flag for Duplex check below (mode 3)
+isDuplex=false;
+
+% Open a recording device if specified, specify as a recording device. 
+if d.player.record_mic
+
+    % This try/catch statement is designed to recover from errors when the
+    % playback/recording devices are the same (e.g., with Claro Halo on
+    % Miller Lab PC).
+    try
+        % First, just try opening the recording device. If it goes well,
+        % then we're done. If not, then we have work to do.
+        
+        % Open recording device
+        rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, FS, rstruct.NrInputChannels); 
+
+        % Allocate Recording Buffer
+        PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
+    
+        % Get rstatus - we might need this later to correct for differences in
+        % predicted latency
+        rstatus=PsychPortAudio('GetStatus', rhand);
+        
+        % Flag for starting recording appropriately
+%         isDuplex = false;
+    catch
+        
+        % If you made it here, then there's a conflict with the
+        % recording/playback device (typically). Will now attempt to open
+        % in duplex mode. For more information, see https://docs.psychtoolbox.org/Open
+        % for more details.
+        
+        % Close down whatever is open
+        PsychPortAudio('Close', phand); 
+                
+        % Open as full duplex
+        %   Needs a two-element array for 'channel' input. See
+        %   https://docs.psychtoolbox.org/Open ('channels') for more
+        %   information. 
         phand = PsychPortAudio('Open', pstruct.DeviceIndex, 3, 0, FS, [pstruct.NrOutputChannels rstruct.NrInputChannels], d.player.playback.internal_buffer);
         
         % Now the recording handle is the same as the playback handle. 
@@ -424,43 +476,11 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
         % Allocate Recording Buffer
         PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
         
-        % We're in duplex mode, so set the flag 
-        isDuplex = true;
-    else
+        % Flag for starting recording appropriately for duplex mode
+        isDuplex = true; 
         
-        % If we don't need duplex mode, just open the device. 
-        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
-    end % if (d ...
-    
-end % 
-
-% Open a recording device if specified, specify as a recording device. 
-%   Only open the recording device separately if we want to record and we
-%   are not in duplex mode (mode 3, see above). 
-if d.player.record_mic && ~isDuplex 
-
-    % This try/catch statement is designed to recover from errors when the
-    % playback/recording devices are the same (e.g., with Claro Halo on
-    % Miller Lab PC).
-    % First, just try opening the recording device. If it goes well,
-    % then we're done. If not, then we have work to do.
-
-    % Open recording device
-    rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, FS, rstruct.NrInputChannels); 
-
-    % Allocate Recording Buffer
-    PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
-
-    % Get rstatus - we might need this later to correct for differences in
-    % predicted latency
-    rstatus=PsychPortAudio('GetStatus', rhand);
-    
-elseif ~isDuplex && ~d.player.record_mic
-    
-    % If we're in duplex mode, then rhand is already set above. If we're
-    % not in Duplex mode and we want a recording, it's also set above. This
-    % covers the last combination. 
-    
+    end % try/catch
+else
     % If the user does not want to do any mic recordings, then we need to
     % set rhand to an empty array. This helps with flow control below. 
     rhand = [];
