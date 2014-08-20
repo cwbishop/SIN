@@ -13,8 +13,13 @@ function addnoise2HINT(varargin)
 %
 %   'suffix':   tag appended to rewritten file
 %
-%   'leadlag':       two element double array, temporal onset/offset of noise
+%   'leadlag':      two element double array, temporal onset/offset of noise
 %                   relative to start/end of HINT stimuli. (units in sec)
+%
+%   'noiserange':   two-element double array, which time range of the noise
+%                   sample to use. The noise sample is often already faded
+%                   in/out, so we need to use stable samples somewhere in
+%                   the middle. 
 %
 % OUTPUT:
 %
@@ -37,6 +42,16 @@ wavlist = regexpdir(hintdir, '[0-9]{2}.wav$', true);
 t.dtype=2; % only allow wav
 [noise, nfs] = SIN_loaddata(noise, t); 
 
+% Find appropriate range for noise stimulus.
+%   Recall that the noise sample (at least for HINT) is faded in/out
+%   already, so we need to use some samples in the middle. 
+d.noiserange = round(d.noiserange .* nfs); 
+noise = noise(d.noiserange(1):d.noiserange(2), :); 
+
+% Check noise dimensions
+t.fs = nfs; 
+noise = SIN_loaddata(noise, t); 
+
 % Loop through each stimulus
 for i=1:numel(wavlist)
     
@@ -45,7 +60,7 @@ for i=1:numel(wavlist)
     
     % Load the wav file
     t.dtype=2; 
-    [wav, fs] = SIN_loaddata(wavlist{i}, t); 
+    [wav, fs] = SIN_loaddata(wavlist{i}, t);     
     
     % Error check for mismatch in sampling rate
     if fs ~= nfs, error('Sampling rates do not match. Something amiss'); end 
@@ -62,17 +77,20 @@ for i=1:numel(wavlist)
     nreps = ceil(size(wavout,1)/size(noise,1));
     
     % Repeat noise nreps times
-    noise = repmat(noise, nreps, 1);
+    %   Use rnoise variable to store "repeated noise". That way, the
+    %   original 'noise' samples are not ovewritten or inadvertently
+    %   ramped.
+    rnoise = repmat(noise, nreps, 1);
     
     % Truncate noise to correct number of samples
-    noise = noise(1:size(wavout,1), :);
+    rnoise = rnoise(1:size(wavout,1), :);
     
     % Apply onset/offset ramps to noise
     %   - Use 20 ms ramps
-    noise = fade(noise, fs, true, true, @hann, 0.02); 
+    rnoise = fade(rnoise, fs, true, true, @hann, 0.02); 
     
     % Mix noise with mixer, add to wav file
-    wavout = wavout + noise*d.mixer; 
+    wavout = wavout + rnoise*d.mixer; 
     
     % write 32-bit output wav file
     [pathstr,name,ext] = fileparts(wavlist{i});
