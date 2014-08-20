@@ -929,6 +929,9 @@ for trial=1:length(stim)
 %                 end % while
                 
                 % Error checking after each loop
+                %   For some reason, using ASIO drivers always leads to a
+                %   buffer underrun during first playthrough. So, for now,
+                %   CWB hard coded the exception here
                 if d.player.stop_if_error && (pstatus.XRuns > 1)
                     warning('Error during sound playback. Check buffer_dur and internal_buffer.'); 
                     d.player.state='exit';
@@ -1012,6 +1015,12 @@ for trial=1:length(stim)
             %   block_dur(ations) (e.g., 0.4 s). This was not obvious with
             %   shorter block lengths.
             %             while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock >= end_pos ...                         
+            %
+            %   - CWB left this wait loop unchanged (see notes on ASIO
+            %   drivers above). This is because it shouldn't end before the
+            %   end of the buffer, so we shouldn't get any pops or clicks.
+            %   CWB wanted to take advantage of this "bug" for smooth
+            %   endings.
             while buffer_nsamps - end_block_pos > pstatus.ElapsedOutSamples - end_OutSamples ...
                     && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
                 pstatus=PsychPortAudio('GetStatus', phand);             
@@ -1020,7 +1029,7 @@ for trial=1:length(stim)
             % Schedule stop of playback device.
             %   Should wait for scheduled sound to complete playback. 
             if isequal(d.player.state, 'run')
-                PsychPortAudio('Stop', phand, 1); 
+                PsychPortAudio('Stop', phand, 1);
             elseif isequal(d.player.state, 'exit')
                 PsychPortAudio('Stop', phand, 0);                                
             end % if isequal ...
