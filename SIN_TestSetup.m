@@ -23,7 +23,9 @@ function opts=SIN_TestSetup(testID, subjectID)
 %   University of Washington
 %   5/14
 
-if ~exist('testID', 'var') || isempty(testID), testID='testlist'; end 
+if ~exist('testID', 'var') || isempty(testID), 
+    testID='testlist'; 
+end 
 
 switch testID;
     
@@ -350,7 +352,9 @@ switch testID;
         
         % Change step size to 2 dB
         warning('Hard coded modifier number');
-        if ~isfield(opts.player.modifier{2}, 'dBstep'), error('Something wrong here'); end        
+        if ~isfield(opts.player.modifier{2}, 'dBstep'), 
+            error('Something wrong here'); 
+        end        
         opts.player.modifier{2}.dBstep = 2; 
         
         % Set mixer
@@ -387,6 +391,53 @@ switch testID;
         
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
+    case 'MLST (Audio)'
+        
+        % Configured to administer the (audio only) MLST. Different
+        % parameters required for the audiovisual version
+        
+        % Use the HINT as a starting point
+        %   - The HINT is quite similar to the MLST in many ways, so let's
+        %   use this as a starting point. 
+        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', subjectID); 
+        
+        % Change the test ID
+        opts.specific.testID = testID;
+        
+        % Change root directory
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'MLST (Adult)');
+        
+        % Change the wav_regexp
+        %   We are using MP3 format here.
+        warning('We might need to use MP4s instead of MP3s if we alter the timing and rewrite files for AV playback'); 
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp3$'; 
+        
+        % Change list_regexp
+        %   MLST has an underscore in list directories.
+        opts.specific.list_regexp='List_[0-9]{2}'; 
+        
+        % Change sentence lookup information
+        %   This is used for scoring purposes
+        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult).xlsx');
+        opts.specific.hint_lookup.sheetnum=1;   
+        
+        % Change mod_mixer to work with single channel data
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ 0.5 0], 0);
+        
+        % Remove the modiier_dbBscale_mixer
+        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        mask = 1:length(opts.player.modifier);
+        mask = mask~=ind;
+        opts.player.modifier = {opts.player.modifier{mask}}; 
+        
+        % For plotting purposes, track the first channel
+        opts.player.modcheck.data_channels = 1; 
+        
+    case 'MLST (AV)'
+        
+        % Configured to adminster the audiovisual (AV) MLST.
+        
+        error('Not yet developed');     
         
     case 'ANL (BNL-Estimate)'
         
@@ -401,13 +452,15 @@ switch testID;
         
         % Change step size to 2 dB and other information
         warning('Hard coded modifier number');
-        if ~isfield(opts.player.modifier{2}, 'dBstep'), error('Something wrong here'); end        
+        if ~isfield(opts.player.modifier{2}, 'dBstep'), 
+            error('Something wrong here'); 
+        end % if ~isfield(opts.player ...
         opts.player.modifier{2}.dBstep = 2; 
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
-        
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
+    
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a
         % very basic breakdown of the procedure.
@@ -543,40 +596,9 @@ switch testID;
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track mod_mixer            
            
-    case 'MLST (Audio)'
+    
         
-        % Configured to administer the (audio only) MLST. Different
-        % parameters required for the audiovisual version
-        
-        % Use the HINT as a starting point
-        %   - The HINT is quite similar to the MLST in many ways, so let's
-        %   use this as a starting point. 
-        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', subjectID); 
-        
-        % Change the test ID
-        opts.specific.testID = testID;
-        
-        % Change root directory
-        opts.specific.root=fullfile(opts.general.root, 'playback', 'MLST (Adult)');
-        
-        % Change the wav_regexp
-        %   We are using MP3 format here.
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp3$'; 
-        
-        % Change list_regexp
-        %   MLST has an underscore in list directories.
-        opts.specific.list_regexp='List_[0-9]{2}'; 
-        
-        % Change sentence lookup information
-        %   This is used for scoring purposes
-        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult).xlsx');
-        opts.specific.sheetnum=1; % Check. 
-        
-    case 'MLST (AV)'
-        
-        % Configured to adminster the audiovisual (AV) MLST.
-        
-        error('Not yet developed'); 
+    
     otherwise
         
         error('unknown testID')
@@ -603,3 +625,5 @@ opts = SIN_assignUUID(opts);
 for i=1:length(opts)
     opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).specific.uuid '-' opts(1).subject.subjectID '-' opts(1).specific.testID]);
 end %
+
+end % function end

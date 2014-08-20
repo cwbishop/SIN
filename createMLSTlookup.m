@@ -134,7 +134,8 @@ for i=1:numel(wavfiles)
         
         % Note that the file extension (.mp3 or .mp4) is omitted. This
         % makes data lookup easier down the road (CWB thinks, at least).
-        FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), NAME); 
+%         FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), NAME); 
+        FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), [NAME EXT]); 
         Sentence{end+1, 1} = sentence; 
         ScoringUnits(end+1, 1) = numel(keywords); % this should always be 3 for MLST
 %         FilePath(end+1, 1
@@ -149,4 +150,4 @@ display('');
 t = table(ID, FilePath, Sentence, ScoringUnits);
 
 % Write table to XLSX file
-writetable(t, fullfile(opts.specific.root, 'MLST.xlsx')); 
+writetable(t, fullfile(opts.specific.root, 'MLST (Adult).xlsx')); 

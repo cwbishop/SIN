@@ -109,7 +109,7 @@ if ~isfield(p, 'ydata'), p.ydata=[]; end
 % Misc defaults
 global max_words;    % the maximum number of scorable words
 global max_options;  % the maximum number of options for each word.
-max_words=7;
+max_words=8;
 max_options=2; 
 
 % Error check for p.words. GUI is designed to support 6 words, so throw an
