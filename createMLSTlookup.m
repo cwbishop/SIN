@@ -16,7 +16,7 @@ function createMLSTlookup
 % Notes on file name formatting:
 %
 %   MLST filenames follow the format of :
-%       SentenceList#_Talker#_Sentence#_LexicalCategory.FileExtension
+%       SentencePositionWithinlist#_Talker#_Sentence#_LexicalCategory.FileExtension
 %       (MP3/MP4)
 %
 %   As a regular expression, this looks like:
@@ -80,10 +80,10 @@ opts=SIN_TestSetup('MLST (Audio)', '');
 %   create filename information
 [~,t,r]=xlsread(fullfile(opts.specific.root, 'MLST Sentence Lists.xlsx'), 1);
 
-SentList = {}; 
-Talker = {};
-SentNum = {};
-LexCat = {}; 
+ID = {'ID'};
+FilePath={'File Path'};
+Sentence={'Legend'};
+ScoringUnits = NaN;
 
 for i=1:numel(wavfiles)
     
@@ -95,7 +95,7 @@ for i=1:numel(wavfiles)
         % Now break down file name into information we need
         C = strsplit(NAME, '_'); 
 %         SentenceList#_Talker#_Sentence#_LexicalCategory.FileExtension
-        SentList = C{1};
+        SentList = str2num(C{1});
         Talker = C{2}; 
         SentNum = str2num(C{3}); 
         LexCat = C{4};
@@ -104,11 +104,11 @@ for i=1:numel(wavfiles)
         % Note: the same sentence might be used more than once, so just
         % grab the first instance of the sentence since the keywords will
         % be the same in all sentences.
-        ind = find([r{:,2}]==SentNum); 
-        ind=ind(1); 
+        ind = find([r{2:end,2}]==SentNum); 
+        ind=ind(1) + 1 ; % add 1 back in to account for header being ommitted. 
         
         % Get key words
-        keywords = r{ind, 3:6}; 
+        keywords = {r{ind, 3:5}}; 
         
         % Get full sentence
         %   Make everything lower case. Below we'll capitalize the keywords
@@ -122,18 +122,31 @@ for i=1:numel(wavfiles)
             ind = strfind(sentence, keywords{k});
             
             % Capitalize it (for keyword scoring)
-            sentence(ind:numel(keywords{k})-1) = upper(keywords{k}); 
+            sentence(ind:ind + numel(keywords{k})-1) = upper(keywords{k}); 
             
         end % for k=1:numel(keywords)
 
         % Put all the information together into a format that's easy to
         % write to file 
-        ID(end+1,1) = i;
+        
+        % Make sure we have at least two digits for list # and file number.
+        ID{end+1,1} = sprintf('%02d_%02d', i, SentList);
+        
+        % Note that the file extension (.mp3 or .mp4) is omitted. This
+        % makes data lookup easier down the road (CWB thinks, at least).
+        FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), NAME); 
+        Sentence{end+1, 1} = sentence; 
+        ScoringUnits(end+1, 1) = numel(keywords); % this should always be 3 for MLST
 %         FilePath(end+1, 1
         
     end % w=1:numel(wavfiles{i})
     
 end % for i=1:numel(wavfiles)
 
-% Use Table to create a table for writing purposes
-% Write file using writetable
+display('');
+
+% Create a table
+t = table(ID, FilePath, Sentence, ScoringUnits);
+
+% Write table to XLSX file
+writetable(t, fullfile(opts.specific.root, 'MLST.xlsx')); 
