@@ -860,6 +860,12 @@ for trial=1:length(stim)
                     while mod(t - playback_start_time, buffer_nsecs) - block_start(2)/pstatus.SampleRate < refillat_secs
                         t = GetSecs;
                     end % while 
+                    
+                    % We need to get pstatus again here. This is important
+                    % for the first playthrough, especially with ASIO
+                    % drivers which seem to update slower-than-normal. So,
+                    % after we loop, grab the status again. 
+                    pstatus=PsychPortAudio('GetStatus', phand); 
 %                     while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(2) < refillat % start updating sooner.  
 %                         pstatus=PsychPortAudio('GetStatus', phand); 
 %                     end % while
