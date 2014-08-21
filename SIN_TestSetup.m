@@ -112,7 +112,7 @@ switch testID;
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
-        opts.player.stop_if_error = true; display('Change stop_if_error back to TRUE');
+        opts.player.stop_if_error = true; 
         
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
@@ -436,12 +436,21 @@ switch testID;
         % Use keyword scoring only
         %   Keywords are denoted as capital letters. 
         opts.player.modcheck.scored_items = 'keywords'; 
+        
     case 'MLST (AV)'
         
-        % Configured to adminster the audiovisual (AV) MLST.
+        % Start with MLST settings
+        opts = SIN_TestSetup('MLST (Audio)', subjectID); 
         
-        error('Not yet developed');     
+        % Change testID
+        opts.specific.testID = testID; 
         
+        % Change file filter to .mp4 (we need to play movies)
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, 'mp3', 'mp4'); 
+        
+        % Eventually add in a 'AV' playback flag. Just something to
+        % distinguish between 'audio only' and 'AV' ... something like
+        % that. 
     case 'ANL (BNL-Estimate)'
         
         opts=SIN_TestSetup('ANL (base)', subjectID); 

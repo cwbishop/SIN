@@ -411,7 +411,6 @@ isDuplex=false;
 %   adaptive playback. So, open the handle if either is selected
 if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial') ...
    
-
     if (d.player.record_mic && isempty(comp_struct(d.player.playback.device, d.player.record.device, 0))) 
         
         % Load in duplex mode (mode 3) if the recording and playback
@@ -439,9 +438,6 @@ end %
 %   are not in duplex mode (mode 3, see above). 
 if d.player.record_mic && ~isDuplex 
 
-    % This try/catch statement is designed to recover from errors when the
-    % playback/recording devices are the same (e.g., with Claro Halo on
-    % Miller Lab PC).
     % First, just try opening the recording device. If it goes well,
     % then we're done. If not, then we have work to do.
 
@@ -467,12 +463,17 @@ elseif ~isDuplex && ~d.player.record_mic
 end % if d.player.record_mic
 
 %% PLAYBACK BUFFER INFORMATION
-%   This information is only used in 'continuous' adaptive playback. Moved
-%   here rather than below to minimize overhead (below this would be called
-%   repeatedly, but these values do not change over stimuli). 
+%
+%   This information is only used in 'continuous' and 'bytrial' adaptive
+%   mode with auditory only stimuli. Moved here rather than below to 
+%   minimize overhead (below this would be called repeatedly, but these 
+%   values do not change over stimuli). 
+%
+%   Playback is handled differently for audiovisual adaptation. 
 %
 %   Use buffer information for 'bytrial' adaptive mode now as well. 
 if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
+    
     % Create empty playback buffer
     buffer_nsamps=round(d.player.playback.block_dur*FS)*2; % need 2 x the buffer duration
     

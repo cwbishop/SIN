@@ -90,10 +90,11 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 %
 %   DTYPE:  integer value specifying a CNT data type
 %               1:  double array, single array, logical array
-%               2:  wav file
+%               2:  wav file, MP3 file
 %               3:  ERP
 %               4:  EEG
 %               5:  CNT
+%               6:  MP4s
 %
 %   LABELS: A cell array of labels for each time series corresponding the
 %           the N dimensions of X. Labels vary based on what type of data
@@ -238,6 +239,25 @@ elseif isa(X, 'cell')
                 % If it's a CNT file
                 x(n)=loadcnt(X{n}, 'lddur', p.lddur, 't1', p.t1);
                 FS=x(n).header.rate; 
+                
+            case {'.mp4'}
+                
+                DTYPE = 6; % MP4s
+                
+                % Instructions on how to deal (and what to return) with
+                % video files
+                
+                % First, read in the audio track
+                [tx, FS]=audioread(X{n}); 
+                x=[x tx]; % multichannel support 
+                
+                % What to do with video?
+                %   - Use PTB to load video frames in as textures. See
+                %   LoadMovieIntoTexturesDemo for CWB's inspiration. 
+                                
+                % 
+                [win, winrect] = Screen('OpenOffscreenWindow', -1);
+                
             otherwise
                 error('File extension not recognized');         
         end % switch 
