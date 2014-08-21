@@ -224,7 +224,7 @@ switch d.player.modcheck.scored_items
         for n=1:length(w)
     
             % First, remove potential markups, like brackets ([]) and '/'
-            tw=strrep(w{d}, '[', '');
+            tw=strrep(w{n}, '[', '');
             tw=strrep(tw, ']', '');
             tw=strrep(tw, '/', '');    
             

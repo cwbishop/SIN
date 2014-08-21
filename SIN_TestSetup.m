@@ -242,7 +242,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
@@ -433,6 +433,9 @@ switch testID;
         % For plotting purposes, track the first channel
         opts.player.modcheck.data_channels = 1; 
         
+        % Use keyword scoring only
+        %   Keywords are denoted as capital letters. 
+        opts.player.modcheck.scored_items = 'keywords'; 
     case 'MLST (AV)'
         
         % Configured to adminster the audiovisual (AV) MLST.
@@ -551,7 +554,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)

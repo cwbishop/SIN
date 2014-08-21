@@ -115,6 +115,12 @@ for i=1:numel(wavfiles)
         %   for scoring purposes.
         sentence = lower(r{ind, 6});
         
+        % Clean up the sentence. 
+        %   Periods and other punctuation cause problems, so remove these
+        %   items. 
+        %       
+        sentence = strrep(sentence, '.', ''); 
+        
         % Make SentenceLegend (SentLeg)
         for k=1:numel(keywords)
             
@@ -126,6 +132,8 @@ for i=1:numel(wavfiles)
             
         end % for k=1:numel(keywords)
 
+        
+        
         % Put all the information together into a format that's easy to
         % write to file 
         
