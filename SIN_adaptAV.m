@@ -71,7 +71,6 @@ tfps = 60; % We want to target 60 Hz
 
 tvid = []; 
 
-
 % Stole code from here 
 %   https://psychtoolbox.org/bitsplusplustypicalscript
 whichScreen=max(Screen('Screens'));
