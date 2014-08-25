@@ -100,14 +100,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(16), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(15), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(16), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(15), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -448,9 +448,15 @@ switch testID;
         % Change file filter to .mp4 (we need to play movies)
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, 'mp3', 'mp4'); 
         
+        % Need to change mod_mixer for MP4 files because they are all
+        % stereo files. The two channels seem to be identical (not
+        % confirmed though), so we can just ignore the second channel.
+        opts.player.mod_mixer=[opts.player.mod_mixer; zeros(size(opts.player.mod_mixer))]; 
+        
         % Eventually add in a 'AV' playback flag. Just something to
         % distinguish between 'audio only' and 'AV' ... something like
         % that. 
+        
     case 'ANL (BNL-Estimate)'
         
         opts=SIN_TestSetup('ANL (base)', subjectID); 

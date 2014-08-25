@@ -1,4 +1,4 @@
-function SIN_adaptAV(deviceID)
+function fliptimes = SIN_adaptAV(deviceID)
 %% DESCRIPTION:
 %
 %   Test function for loading and presenting audiovisual files in sync. 
@@ -17,7 +17,11 @@ opts = SIN_TestSetup('MLST (AV)', '');
 
 %% GET A PLAYLIST
 %   Returns the filenames for playback. We really only need one file
-% playlist = SIN_getPlaylist(opts); 
+playlist = SIN_getPlaylist(opts); 
+
+% Read in videos and audio
+% X = SIN_loaddata(playlist); 
+
 % moviename = playlist{1};
 % Hard code movie name for consistent testing
 moviename=fullfile('C:\Users\cwbishop\Documents\GitHub\SIN\playback\MLST (Adult)\List_01', '1_T5_046_HS.mp4');
@@ -55,6 +59,12 @@ PsychPortAudio('Stop', phand, 1);
 % Now, load the audio track into the buffer
 PsychPortAudio('FillBuffer', phand, aud');
 
+% Try setting a latency bias ... see if this affects things
+%   This setting DOES affect the start of sound playback. Positive values
+%   delay sound playback, negative values advance soundplayback (to a
+%   limit ... informal testing suggests that we need at least 20 ms to
+%   initialize sound playback). 
+% PsychPortAudio('LatencyBias', phand, -10); % set latency bias as something outrageously high.
 % Load video frames
 obj = VideoReader(moviename);
 
@@ -65,11 +75,11 @@ vid = read(obj); % these are the frames in AxBx3xN, where A/B are the dimensions
 %   - This necessarily uses interpn, since resample only accepts integers
 %   ratios. Interp1 isn't as good (there will be some slop), but should be
 %   more robust to weird sampling rates (like 29.97 fps, which is common)
-ofps = obj.FrameRate;
+% ofps = obj.FrameRate;
 
-tfps = 60; % We want to target 60 Hz
+% tfps = 60; % We want to target 60 Hz
 
-tvid = []; 
+% tvid = []; 
 
 % Stole code from here 
 %   https://psychtoolbox.org/bitsplusplustypicalscript
@@ -77,7 +87,7 @@ whichScreen=max(Screen('Screens'));
 [window,screenRect] = Screen('OpenWindow',whichScreen);
 
 % Set monitor refresh rate
-hz=Screen('NominalFrameRate', window, 2, 60);
+% hz=Screen('NominalFrameRate', window, 2, 60);
 
 % Get monitor refresh rate (in sec)
 ifi = Screen('GetFlipInterval', window);
@@ -94,6 +104,15 @@ for i=1:size(vid,4)
     
 end % for i
 
+% This should load the textures ...
+% tic;
+% [textureIndex, runtime] = SIN_video2texture({moviename}, 'window', window);
+% toc
+% Screen('CloseAll'); 
+% textureIndex = textureIndex{1}; % convert from cell
+% Close the screen for testing
+% 
+
 [vbl1 visonset1]= Screen('Flip', window);
 
 % This Should present the first image in the movie sequence.
@@ -101,8 +120,8 @@ end % for i
 % Screen('DrawingFinished', window);
 
 % Schedule time of first frame
-suggestedLatencySecs = 5;
-waitframes = ceil((2 * suggestedLatencySecs) / ifi) + 1;
+% suggestedLatencySecs = 5;
+% waitframes = ceil((2 * suggestedLatencySecs) / ifi) + 1;
 
 % [vbl visual_onset t1] = Screen('Flip', window, vbl1 + (waitframes - 0.5) * ifi);
 
@@ -124,9 +143,13 @@ for i=1:numel(textureIndex)
         tic;
         % Start playback, go ahead and wait for start of playback (5th
         % input)
+        %   This (should) force the first frame to stay on the screen until
+        %   the sound has started (CWB thinks, at least).
         PsychPortAudio('Start', phand, 1, 1, 1);
+%         PsychPortAudio('Start', phand, 1, 1, 0);
         toc
         status = PsychPortAudio('GetStatus', phand);
+        display(status.Active)
         audio_onset = status.StartTime;
     end % 
     

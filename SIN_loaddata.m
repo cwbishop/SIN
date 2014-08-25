@@ -130,7 +130,10 @@ try FS=p.fs; catch FS=[]; p.fs=[]; end
 %   Will need to change default as support for new data types are added and
 %   supported. 
 if ~isfield(p, 'datatype') || isempty(p.datatype)
-    p.datatype=1:5;
+    
+    % Extended to 1:6 to deal with MP4 data format.
+    p.datatype=1:6;
+    
 end % ~isfield
 
 % LABELS as empty cell (for now). Populated below.
@@ -244,19 +247,32 @@ elseif isa(X, 'cell')
                 
                 DTYPE = 6; % MP4s
                 
+                % Create video object
+                vobj = VideoReader(X{n}); 
+                
                 % Instructions on how to deal (and what to return) with
                 % video files
                 
                 % First, read in the audio track
                 [tx, FS]=audioread(X{n}); 
-                x=[x tx]; % multichannel support 
                 
-                % What to do with video?
-                %   - Use PTB to load video frames in as textures. See
-                %   LoadMovieIntoTexturesDemo for CWB's inspiration. 
-                                
-                % 
-                [win, winrect] = Screen('OpenOffscreenWindow', -1);
+                % Check dimensions of data
+                t.fs=FS; 
+                tx = SIN_loaddata(tx, t); 
+                % Video information is kept separately, so we don't need
+                % want to return a concatenated double matrix
+%                 x=[x tx]; % multichannel support 
+                
+                % Now load the video
+                %   - Create a videoreader object.
+                %   - Read in the video
+                v = read(vobj); 
+                
+                % Now store in structure
+                xs(n).aud=tx;   % save audio information for just this video
+                xs(n).vid=v;    % save video data
+                xs(n).FS=FS;    % set audio sampling rate for this video
+%                 xs(n).vobj=vobj; % save video object information
                 
             otherwise
                 error('File extension not recognized');         
@@ -275,9 +291,40 @@ elseif isa(X, 'cell')
     if ~isempty(FS), p.fs=FS; end 
     dtype=p.datatype;
     p.datatype=[];
-    [X, FS, LABELS]=SIN_loaddata(X, p);              
+    [X, FS, LABELS]=SIN_loaddata(X, p); 
     p.datatype=dtype;
+    
+    % Special check for MP4 loading
+    %   - MP4s return auditory and visual tracks. So we need to return a
+    %   structure with aud and vid fields. Can be exanded for other video
+    %   formats, CWB thinks.
+    %   
+    %   - Changed this check from DTYPE==6 to exist('var', 'vobj') since
+    %   mixed loading of different data types would cause this check to
+    %   fail, depending on the order of files. 
+    if exist('vobj', 'var') 
+        X = xs; 
+%         % Temporary Structure
+%         xs.aud = X; 
+%         xs.vid = v; 
+%         
+%         % Also need sampling rate information for auditory data.
+%         %   Note: we don't assign visual sampling rate a field since this
+%         %   information is available in the video object, assigned below.
+%         xs.FS = FS;
+%                 
+%         % Also return visual object, in case the user needs other
+%         % information about the video
+%         xs.vobj = vobj;
+%         
+%         % Reassign structure to X. 
+%         clear X;
+        
+        
+    end % if DTYPE == 6
+    
     clear dtype; 
+    
 elseif iscntstruct(X)
     DTYPE=5; 
     % If we're dealing with a CNT structure
