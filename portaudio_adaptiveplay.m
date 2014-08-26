@@ -280,6 +280,10 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %   filtering purposes or any other speaker-specific modifications that
 %   must be applied to the (mixed) data sent to a single speaker. 
 %
+%   35. Re implement a simple sound playback for 'bytrial' adaptive mode.
+%   This should minimize the risk of buffer underruns (that is, not writing
+%   the PTB's buffer fast enough).
+%
 % Christopher W. Bishop
 %   University of Washington
 %   5/14
@@ -354,38 +358,17 @@ t.datatype=[2 6];
 
 % Store time series in cell array (stim)
 stim=cell(length(playback_list),1); % preallocate for speed.
-for i=1:length(playback_list)
-    display(i)
-%     waitbar(i/length(playback_list), ['Loading Stimulus ' num2str(i) ' of ' num2str(length(playback_list))]);
-    tic;
+for i=1:length(playback_list)    
+
     [tstim, fsx]=SIN_loaddata(playback_list{i}, t);
-    
-    % Need additional checks here for MP4 loading
-    %   - MP4s data are returned as a struct, so need to load data
-    %   differently.
-    if isstruct(tstim)
+    stim{i}=resample(tstim, FS, fsx); 
         
-        % preallocate vstim as a cell for speed.
-        if i==1
-            vstim=cell(length(playback_list),1); 
-        end 
-        
-        % Save audio information 
-        stim{i} = tstim.aud;
-%         stim{i} = resample(tstim.aud, FS, tstim.FS); 
-        vstim{i} = tstim.vid; % save the visual information
-        
-    else
-        stim{i}=resample(tstim, FS, fsx); 
-    end % if isstruct(tstim)
-    
     % Check against mixer
     %   Only need to check against first cell of mixer because we completed
     %   an internal check on the mixer above.
     if size(d.player.mod_mixer, 1) ~= size(stim{i},2)
         error([playback_list{i} ' contains an incorrect number of data channels']); 
     end % if numel
-    toc
 end % for i=1:length(file_list)
 
 clear tstim fsx;

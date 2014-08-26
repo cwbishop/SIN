@@ -68,7 +68,7 @@ function createMLSTlookup
 %% GET AN APPROPRIATE OPTIONS SET
 %   Use this to query lists and files below. We'll use most of the
 %   informstion to generate most of the content we need. 
-opts=SIN_TestSetup('MLST (Audio)', '');
+opts=SIN_TestSetup('MLST (AV)', '');
 
 %% GET FILENAMES
 %   Use the filenames to generate most of the content

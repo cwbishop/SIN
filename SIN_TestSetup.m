@@ -100,14 +100,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(15), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(12), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(15), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(12), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -321,7 +321,7 @@ switch testID;
             'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0; 0 ] [0; 0] [0.5; 0] ], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
