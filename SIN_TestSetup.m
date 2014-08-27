@@ -100,14 +100,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(12), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(13), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(12), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(13), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -117,9 +117,11 @@ switch testID;
         % Add player control modifiers
         %   Include a basic playback controller to handle "pauses",
         %   "resume", and "quit" requests.
-        opts.player.modifier{1} = struct( ...
-            'fhandle', @modifier_PlaybackControl, ...
-            'mod_stage',    'premix');             
+        %   No, we don't want this added by default. Only to ANL
+        opts.player.modifier={}; 
+%         opts.player.modifier{1} = struct( ...
+%             'fhandle', @modifier_PlaybackControl, ...
+%             'mod_stage',    'premix');             
         
         % Where the UsedList is stored. 
         opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
@@ -321,7 +323,7 @@ switch testID;
             'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0; 0 ] [0; 0] [0.5; 0] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0 ] [0.5; 0] [0.5; 0] [0.5; 0]], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
@@ -428,7 +430,8 @@ switch testID;
         ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
         mask = 1:length(opts.player.modifier);
         mask = mask~=ind;
-        opts.player.modifier = {opts.player.modifier{mask}}; 
+        opts.player.modifier = {opts.player.modifier{mask}};         
+        
         
         % For plotting purposes, track the first channel
         opts.player.modcheck.data_channels = 1; 
@@ -448,10 +451,12 @@ switch testID;
         % Change file filter to .mp4 (we need to play movies)
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, 'mp3', 'mp4'); 
         
-        % Need to change mod_mixer for MP4 files because they are all
-        % stereo files. The two channels seem to be identical (not
-        % confirmed though), so we can just ignore the second channel.
-        opts.player.mod_mixer=[opts.player.mod_mixer; zeros(size(opts.player.mod_mixer))]; 
+        % The mod mixer here is only used for noise playback. MP4s play out
+        % of whatever pair of speakers is default in Windows through
+        % Windows Media Player.
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ [0.5] [0.5 ] [0.5] [0.5] ], 0);        
+        
+%         opts.player.mod_mixer=[opts.player.mod_mixer; zeros(size(opts.player.mod_mixer))]; 
         
         % Eventually add in a 'AV' playback flag. Just something to
         % distinguish between 'audio only' and 'AV' ... something like

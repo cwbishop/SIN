@@ -59,18 +59,88 @@ d.sandbox.block_num=-1; % block number we are in.
 d.sandbox.modifier_num=[];
 d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single modcheck/trial (for now)
 d.sandbox.playback_list=X;
-%% GET SCREEN INFORMATION
 
-% Initialize modcheck
+% Get playback/recording device information
+try
+    % Get playback device information 
+    [pstruct]=portaudio_GetDevice(d.player.playback.device);    % playback device structure
+    [rstruct]=portaudio_GetDevice(d.player.record.device);      % recording device structure
+catch
+    InitializePsychSound; 
+    [pstruct]=portaudio_GetDevice(d.player.playback.device);
+    [rstruct]=portaudio_GetDevice(d.player.record.device); 
+end % try/catch
+% Set FS
+FS = d.player.playback.fs;
+
+% Load noise 
+[noise, fs] = audioread('C:\Users\cwbishop\Documents\GitHub\SIN\playback\Noise\ISTS-V1.0_60s_24bit.wav'); 
+
+% Resample to sampling rate
+noise = resample(noise, FS, fs);
+
+% Set buffer size
+buffer_nsamps = size(noise,1); 
+
+% Initialize PTB sound playback using ASIO drivers.
+if (d.player.record_mic && isempty(comp_struct(d.player.playback.device, d.player.record.device, 0))) 
+        
+    % Load in duplex mode (mode 3) if the recording and playback
+    % devices are the same device. 
+    phand = PsychPortAudio('Open', pstruct.DeviceIndex, 3, 0, FS, [pstruct.NrOutputChannels rstruct.NrInputChannels], d.player.playback.internal_buffer);
+
+    % Now the recording handle is the same as the playback handle. 
+    rhand = phand;
+
+    % Allocate Recording Buffer
+    PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
+
+    % We're in duplex mode, so set the flag 
+    isDuplex = true;
+else
+
+    % If we don't need duplex mode, just open the device. 
+    phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, FS, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
+end % if (d ...
+
+% Add noise to noise specific channels
+%   - Use the mod_mixer settings to do this.
+noise = noise * d.player.mod_mixer; 
+
+% Fill the playback buffer
+PsychPortAudio('FillBuffer', phand, noise');
+
+%% INITIALIZE MODCHECK and MODIFIER
+%   These functions often have substantial overhead on their first call, so
+%   they need to be primed (e.g., if a figure must be generated or a sound
+%   device initialized).
+
+% Call modcheck
+%   this is not really a 'modcheck' here, but we'll use the same code.
 [mod_code, d]=d.player.modcheck.fhandle(d);
 
-%% OPEN ACTIVE X CONTROL
-wmp = actxcontrol('WMPlayer.OCX.7', [0 0 960 540], gcf);
+% Start noise playback
+%   This will loop until we stop it below. Infinite loop, so continuous
+%   masker presented. 
+PsychPortAudio('Start', phand, 0, [], 0);
 
-% wmp.settings.autoStart = false; 
+%% OPEN ACTIVE X CONTROL
+%   Use Screen('Resolution', window number) to get screen resolution and
+%   configure player size
+wmp = actxcontrol('WMPlayer.OCX.7', [0 0 1920 1200], gcf);
+
+% Set stretch to fit
+wmp.stretchToFit = true; 
+
+% Set volume to max
+%   This should be hard-coded, don't make it an option. We always want the
+%   player at 100% volume. 
+wmp.settings.volume=100;
 
 %% LOOP THROUGH FILES AND PLAY THEM
 for trial=1:numel(X)
+    
+    % Need to start recordings, clear out recording variable. 
     
     % Update variables
     d.sandbox.trial = trial; 
@@ -83,9 +153,32 @@ for trial=1:numel(X)
 %     display(wmp.playState); 
     
     % Wait for playback to start 
-    while isempty(strfind(wmp.playState, 'Playing')), display(wmp.playState); end     
+%     while isempty(strfind(wmp.playState, 'Playing')), display(wmp.playState); end     
     
     % Sit until playback has finished
-    while isempty(strfind(wmp.playState, 'Stopped')), display(wmp.playState); end     
+%     while isempty(strfind(wmp.playState, 'Stopped')), display(wmp.playState); end     
     
+    % Run modcheck after each trial 
+    %   This should open the scoring interface
+    
+    % Run through modifiers
+    for modifier_num=1:length(d.player.modifier)
+    
+        % Update variable in sandbox
+        d.sandbox.modifier_num=modifier_num;
+
+        % Call modifier
+        %   Only run premix modifiers.
+        %       This should just track mod_mixer, which isn't changing. 
+        [~, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle([], mod_code, d); 
+
+    end % for modifier_num
+    [~, d]=d.player.modcheck.fhandle(d);
+    
+    % Get recording information, store in (growing) structure.
+    
+    % Clear out recording variable, start again. 
 end % for i
+
+% Close portaudio devices
+PsychPortAudio('Close'); 
