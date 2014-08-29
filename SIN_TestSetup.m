@@ -126,6 +126,10 @@ switch testID;
         % Where the UsedList is stored. 
         opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
         
+        % Preload stimuli by default
+        %   Generally do not want to preload AV stims, though, so look for
+        %   a change in MLST (AV). Also MLST (Audio)
+        opts.player.preload = true;
         % Return so we do not assign a UUID to defaults. 
         return
         
@@ -244,7 +248,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
@@ -426,19 +430,40 @@ switch testID;
         % Change mod_mixer to work with single channel data
         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ 0.5 0], 0);
         
-        % Remove the modiier_dbBscale_mixer
+        % Remove the modifier_dbBscale_mixer
         ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
         mask = 1:length(opts.player.modifier);
         mask = mask~=ind;
-        opts.player.modifier = {opts.player.modifier{mask}};         
-        
+        opts.player.modifier = {opts.player.modifier{mask}}; 
         
         % For plotting purposes, track the first channel
         opts.player.modcheck.data_channels = 1; 
         
+        % We aren't applying any changes. Just using the GUI for scoring. 
+        opts.player.modcheck.algo = 'none'; %
+        
         % Use keyword scoring only
         %   Keywords are denoted as capital letters. 
         opts.player.modcheck.scored_items = 'keywords'; 
+        
+        %% SETUP TO USE WITH WINDOWS MEDIA PLAYER
+        % Set PlayerType to WMP (Windows Media Player)
+        opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
+        opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
+        opts.player.screennum = 0;     % screen to use for visual playback
+        opts.player.screenposition = [0 0]; % set screen position
+        tmp = Screen('Resolution', opts.player.screennum);
+        
+        opts.player.screensize = [tmp.width tmp.height]; 
+        clear tmp; % clear out screen information
+        
+        opts.player.WMPvol = 100; % windows media player volume
+        
+        opts.player.preload = false; 
+        
+        %% CONTINUOUS NOISE INFORMATION
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'); % File name
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [ 0.5 0], 0);        
         
     case 'MLST (AV)'
         
@@ -574,7 +599,7 @@ switch testID;
         opts.player = varargin2struct( ...
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
-            'record_mic',       false, ...   % record playback and vocal responses via recording device. 
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
             'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)

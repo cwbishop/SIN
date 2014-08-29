@@ -349,7 +349,10 @@ switch d.player.modcheck.algo
             clear algo_NALadaptive; 
             
         end % if NAL.phase ...
+    case 'none'
         
+        % No algorithm applied
+        mod_code = 0;
 end % switch d.player.modcheck.algo
 
 %% CLOSE GUI
