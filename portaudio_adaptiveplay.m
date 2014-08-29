@@ -622,12 +622,10 @@ for trial=1:length(playback_list)
 
     end % if d.player.record_mic
     
-%     switch lower(d.player.adaptive_mode)
     % Switch statement determines which playback mode should be used.
     %   - PTB (Streaming): PsychToolBox (PTB) is used and data are streamed
     %   a block at a time. Designed for use with 'continuous' adaptive
     %   mode.
-    %       
     switch lower(d.player.playertype)
         
         case {'ptb (stream)'} 
@@ -846,8 +844,6 @@ for trial=1:length(playback_list)
                     %   running out of playback cycles. The while loop now
                     %   controls the termination of playback rather than
                     %   the player itself.
-%                     if nblocks==inf
-
                     PsychPortAudio('Start', phand, 0, [], 0);      
                     
                     playback_start_time = GetSecs; % Get approximate playback start time 
@@ -859,10 +855,6 @@ for trial=1:length(playback_list)
                         rec_block_start = playback_start_time;
                         rec_start_time = playback_start_time; 
                     end % if isDuplex
-                    
-%                     else
-%                         PsychPortAudio('Start', phand, ceil( (nblocks)/2)+1, [], 0);                    
-%                     end % if nblocks
                     
                     % Wait until we are in the second block of the buffer,
                     % then start rewriting the first. Helps with smooth
@@ -878,9 +870,6 @@ for trial=1:length(playback_list)
                     % drivers which seem to update slower-than-normal. So,
                     % after we loop, grab the status again. 
                     pstatus=PsychPortAudio('GetStatus', phand); 
-%                     while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(2) < refillat % start updating sooner.  
-%                         pstatus=PsychPortAudio('GetStatus', phand); 
-%                     end % while
                     
                 end % if block_num==1               
     
@@ -895,13 +884,10 @@ for trial=1:length(playback_list)
                 %   Perhaps this should be changed to monitor the
                 %   pstatus.Active field?? Might lead to undetected errors
                 %   ... 
-%                 tic 
                 if pstatus.Active
                     PsychPortAudio('FillBuffer', phand, data2play_mixed', 1, []);  
-%                 elseif isequal(d.player.state, 'pause') || isequal(d.player.state, 'exit')
-%                     PsychPortAudio('FillBuffer', phand, zeros(size(data2play_mixed))', 1, []);                      
                 end % if isequal ...                
-%                 toc
+
                 % Shift mask
                 %   Only shift if the player is in the 'run' state.
                 %   Otherwise, leave the mask as is. 
@@ -921,8 +907,6 @@ for trial=1:length(playback_list)
 
                 end % isequal(d.player.state, 'run'); 
                 
-%                 toc
-                
                 pstatus=PsychPortAudio('GetStatus', phand);
 
                 % Now, loop until we're half way through the samples in 
@@ -932,11 +916,6 @@ for trial=1:length(playback_list)
                         && isequal(d.player.state, 'run')                    
                     t = GetSecs;                    
                 end % while ...
-                
-%                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
-%                         && isequal(d.player.state, 'run') % we don't want to loop and wait forever if the player isn't running. 
-%                     pstatus=PsychPortAudio('GetStatus', phand); 
-%                 end % while
                 
                 % Error checking after each loop
                 %   For some reason, using ASIO drivers always leads to a
