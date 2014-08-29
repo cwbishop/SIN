@@ -142,8 +142,9 @@ for i=1:numel(wavfiles)
         
         % Note that the file extension (.mp3 or .mp4) is omitted. This
         % makes data lookup easier down the road (CWB thinks, at least).
+        %   Leave out the file path information
 %         FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), NAME); 
-        FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), [NAME EXT]); 
+        FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), [NAME]); 
         Sentence{end+1, 1} = sentence; 
         ScoringUnits(end+1, 1) = numel(keywords); % this should always be 3 for MLST
 %         FilePath(end+1, 1
@@ -151,8 +152,6 @@ for i=1:numel(wavfiles)
     end % w=1:numel(wavfiles{i})
     
 end % for i=1:numel(wavfiles)
-
-display('');
 
 % Create a table
 t = table(ID, FilePath, Sentence, ScoringUnits);

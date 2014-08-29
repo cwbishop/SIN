@@ -30,7 +30,8 @@ for i=2:size(r,1)
         [PATHSTR,NAME,EXT] = fileparts(r{i,2});
     
         % new name
-        fname = fullfile(PATHSTR, [NAME suffix EXT]); 
+        %   Leave out extension. We are just matching root names. 
+        fname = fullfile(PATHSTR, [NAME suffix]); 
     
         % Reassign to r
         r{i,2} = fname; 

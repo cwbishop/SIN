@@ -177,7 +177,8 @@ fname=d.sandbox.playback_list{trial};
 %   approach is kind of silly, CWB admits, but it allows the user to use
 %   files with different suffixes without too much trouble. 
 [start, stop] = regexp(fname, d.specific.list_regexp);
-fname=[fname(start:stop+1) NAME EXT]; 
+% fname=[fname(start:stop+1) NAME EXT]; 
+fname = [fname(start:stop+1) NAME]; % don't match file extensions, just use the root of the name
 
 % Find sentence information by matching the filepath between. 
 %   Don't reassign 'd' return, since this will be updated in stupid ways on

@@ -1227,7 +1227,9 @@ for trial=1:length(playback_list)
     end % if d.player.record_mic
     
     % Stop device if we're in duplex mode
-    if isDuplex
+    %   - However, do NOT want to stop if we are configured to run
+    %   continuous noise. This is getting confusing ... 
+    if isDuplex && ~isfield(d.player, 'contnoise') && isempty(d.player.contnoise)
         PsychPortAudio('Stop', phand, 0);
     end % if isDuplex
 end % for trial=1:length(X)

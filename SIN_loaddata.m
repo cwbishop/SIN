@@ -90,11 +90,11 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 %
 %   DTYPE:  integer value specifying a CNT data type
 %               1:  double array, single array, logical array
-%               2:  wav file, MP3 file
+%               2:  wav file, MP3, MP4 files
+%                   - note: only audio track of MP4s loaded. 
 %               3:  ERP
 %               4:  EEG
 %               5:  CNT
-%               6:  MP4s
 %
 %   LABELS: A cell array of labels for each time series corresponding the
 %           the N dimensions of X. Labels vary based on what type of data
@@ -131,8 +131,7 @@ try FS=p.fs; catch FS=[]; p.fs=[]; end
 %   supported. 
 if ~isfield(p, 'datatype') || isempty(p.datatype)
     
-    % Extended to 1:6 to deal with MP4 data format.
-    p.datatype=1:6;
+    p.datatype=1:5;
     
 end % ~isfield
 
@@ -205,7 +204,7 @@ elseif isa(X, 'cell')
         
         % Determine file type to load. 
         switch lower(ext)
-            case {'.wav' '.mp3'}
+            case {'.wav' '.mp3' 'mp4'}
                 % If this is a WAV file
                 DTYPE=2;
                 [tx, FS]=audioread(X{n}); 
@@ -241,39 +240,8 @@ elseif isa(X, 'cell')
                 
                 % If it's a CNT file
                 x(n)=loadcnt(X{n}, 'lddur', p.lddur, 't1', p.t1);
-                FS=x(n).header.rate; 
-                
-            case {'.mp4'}
-                
-                DTYPE = 6; % MP4s
-                
-                % Create video object
-                vobj = VideoReader(X{n}); 
-                
-                % Instructions on how to deal (and what to return) with
-                % video files
-                
-                % First, read in the audio track
-                [tx, FS]=audioread(X{n}); 
-                
-                % Check dimensions of data
-                t.fs=FS; 
-                tx = SIN_loaddata(tx, t); 
-                % Video information is kept separately, so we don't need
-                % want to return a concatenated double matrix
-%                 x=[x tx]; % multichannel support 
-                
-                % Now load the video
-                %   - Create a videoreader object.
-                %   - Read in the video
-                v = read(vobj); 
-                
-                % Now store in structure
-                xs(n).aud=tx;   % save audio information for just this video
-                xs(n).vid=v;    % save video data
-                xs(n).FS=FS;    % set audio sampling rate for this video
-%                 xs(n).vobj=vobj; % save video object information
-                
+                FS=x(n).header.rate;                
+                                            
             otherwise
                 error('File extension not recognized');         
         end % switch 

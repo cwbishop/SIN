@@ -459,6 +459,9 @@ switch testID;
         
         opts.player.WMPvol = 100; % windows media player volume
         
+        % This way the player doesn't waste time loading the files into a
+        % matrix - we won't need these data in MATLAB since WMP will be
+        % handling playback. 
         opts.player.preload = false; 
         
         %% CONTINUOUS NOISE INFORMATION
@@ -480,8 +483,6 @@ switch testID;
         % of whatever pair of speakers is default in Windows through
         % Windows Media Player.
         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ [0.5] [0.5 ] [0.5] [0.5] ], 0);        
-        
-%         opts.player.mod_mixer=[opts.player.mod_mixer; zeros(size(opts.player.mod_mixer))]; 
         
         % Eventually add in a 'AV' playback flag. Just something to
         % distinguish between 'audio only' and 'AV' ... something like
@@ -604,6 +605,7 @@ switch testID;
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
+            'playertype',       'ptb (stream)', ... % use streaming playback mode 
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0), ... % Play both channels to left ear only. 
             'state',    'pause'); % start in paused state
@@ -618,14 +620,20 @@ switch testID;
             'map',      zeros(256,1), ...
             'title', 'Acceptable Noise Level (ANL)');
 %             'fhandle', @modcheck_ANLGUI, ...
-            
+         
+        
         % Assign keys in map
         opts.player.modcheck.map(opts.player.modcheck.keys)=1; 
         
         % ============================
         % Modifier configuration                
         % ============================
-        
+        % Add the modifier for playback control
+        %   Needed to start/stop/pause playback during testing 
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle', @modifier_PlaybackControl, ...
+            'mod_stage',    'premix');  % Apply during premixing phase. 
+            
         % Modifier to scale mixing information
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
