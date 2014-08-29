@@ -223,8 +223,8 @@ switch testID;
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
-            'filename', fullfile(opts.specific.root, 'HINT.xlsx'), ...
-            'sheetnum', 2); 
+            'filename', fullfile(opts.specific.root, 'HINT (+noise).xlsx'), ...
+            'sheetnum', 1); 
         
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
@@ -254,6 +254,7 @@ switch testID;
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (stream)', ... % use standard PTB playback. 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0), ... % play HINT target speech to first channel only
             'state',    'run'); % Start in run state
@@ -357,11 +358,10 @@ switch testID;
             'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level) (use 2 dB steps).'};           
         
         % Change step size to 2 dB
-        warning('Hard coded modifier number');
-        if ~isfield(opts.player.modifier{2}, 'dBstep'), 
-            error('Something wrong here'); 
-        end        
-        opts.player.modifier{2}.dBstep = 2; 
+        %   First, find the dBscale mixer modifier
+        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        opts.player.modifier{ind}.dBstep = 2; 
+        clear ind; 
         
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
@@ -498,13 +498,12 @@ switch testID;
         opts.player.modcheck.instructions={...
             'Good. Now turn the level of the background noise back up to the MOST noise that you would be willing to put-up-with and still follow the story for a long period of time without becoming tense or tired.'};           
         
-        % Change step size to 2 dB and other information
-        warning('Hard coded modifier number');
-        if ~isfield(opts.player.modifier{2}, 'dBstep'), 
-            error('Something wrong here'); 
-        end % if ~isfield(opts.player ...
-        opts.player.modifier{2}.dBstep = 2; 
-        opts.player.modifier{2}.data_channels=2; 
+        % Change step size to 2 dB
+        %   First, find the dBscale mixer modifier
+        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        opts.player.modifier{ind}.dBstep = 2; 
+        opts.player.modifier{ind}.data_channels=2; 
+        clear ind; 
         
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
