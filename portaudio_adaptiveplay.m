@@ -630,7 +630,7 @@ for trial=1:length(playback_list)
     %       
     switch lower(d.player.playertype)
         
-        case {'ptb (streaming)'} 
+        case {'ptb (stream)'} 
     
             %% CREATE WINDOWING FUNCTION (ramp on/off)
             %   This is used for continuous adaptive mode. The windowing function can
@@ -667,32 +667,7 @@ for trial=1:length(playback_list)
             % Loop through each section of the playback loop. 
             %% THIS IS THE SPLICE POINT FOR AV/AUDITORY ONLY PLAYBACK
             while block_num <= nblocks
-
-                % rhand is empty if record_mic == false. 
-%                 if ~isempty(rhand)
-%                     rstatus=PsychPortAudio('GetStatus', rhand);
-%                 end % if ~isempty(rhand)
-                
-                % Start recording device
-                %   Just start during the first trial. This will be emptied
-                %   after every trial. Should not need to restart the recording
-                %   device. 
-%                 if d.player.record_mic && trial ==1 && isequal(d.player.state, 'run') && ~rstatus.Active ...
-%                         && ~isDuplex % recording will start along with playback below if we're in duplex mode. So don't need to execute this.
-% 
-%                     % Last input (1) tells PsychPortAudio to not move forward
-%                     % until the recording device has started. 
-%                     PsychPortAudio('Start', rhand, [], [], 1); 
-% 
-%                     % rec_start_time is the (approximate) start time of the recording. This is
-%                     % used to track the total recording time. 
-%                     rec_start_time=GetSecs;
-%                     rec_block_start=rec_start_time; 
-%                     
-%                 end % if d.player.record_mic
-                
-%             for block_num=1:nblocks
-%                 tic
+                      
                 % Store block number in sandbox - necessary for some
                 % termination procedures
                 d.sandbox.block_num = block_num; 
@@ -702,11 +677,8 @@ for trial=1:length(playback_list)
                 
                 % Which buffer block are we filling?
                 %   Find start and end of the block                
-%                 if block_num == 1
-%                     startofblock = block_start(2);
-%                 else
                 startofblock=block_start(1+mod(block_num-1,2));
-%                 end % if block_num ==1 ;
+
                 
                 % Might be used below for time based tracking of buffer
                 % position (e.g., with ASIO drivers) 
@@ -955,12 +927,10 @@ for trial=1:length(playback_list)
 
                 % Now, loop until we're half way through the samples in 
                 % this particular buffer block.
-                tmp=[];
                 t = GetSecs; % get the current time
                 while mod(t, buffer_nsecs) - startofblock_nsecs < refillat_secs ...
                         && isequal(d.player.state, 'run')                    
-                    t = GetSecs;
-                    tmp=[tmp; t]; 
+                    t = GetSecs;                    
                 end % while ...
                 
 %                 while mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock < refillat ...                         
@@ -988,8 +958,25 @@ for trial=1:length(playback_list)
                 %   playback" mode, but CWB needs to think about it more.
                 %   XXX
 %                 if block_num==nblocks && startofblock==block_start(1)
-                if block_num==nblocks                      
+                if block_num==nblocks 
+                    
+                    % Fill the next block with zeros.
                     PsychPortAudio('FillBuffer', phand, zeros(block_nsamps, size(data2play_mixed,2))', 1, []);  
+                    
+                    % Now wait until we start in the next block of the
+                    % buffer, then fill the remaining samples with zeros.
+                    % The conditional checks are not very intuitive to CWB,
+                    % but seem to work. 
+                    t = GetSecs; % get the current time   
+                    while mod(t, buffer_nsecs) - startofblock_nsecs < block_nsecs ... 
+                            && mod(t, buffer_nsecs) - startofblock_nsecs > 0 ...
+                        && isequal(d.player.state, 'run')  
+                        t = GetSecs;                    
+                    end % while ...
+                
+                    % Fill the remaining samples with zeros
+                    PsychPortAudio('FillBuffer', phand, zeros(block_nsamps, size(data2play_mixed,2))', 1, []);                    
+                    
                 end % if block_num==nblocks
                 
                 % Empty recording buffer frequently
@@ -1043,8 +1030,6 @@ for trial=1:length(playback_list)
             
             % Grab the last known buffer position within our two-block
             % playback buffer.
-%             pstatus=PsychPortAudio('GetStatus', phand);
-%             end_pos = mod(pstatus.ElapsedOutSamples, buffer_nsamps) - startofblock; 
             end_block_pos = mod(pstatus.ElapsedOutSamples, buffer_nsamps) - block_start(block_start~=startofblock); % tells us where we were in the block the last time we checked
             end_OutSamples = pstatus.ElapsedOutSamples; % tells us how many samples total have played
             
@@ -1067,60 +1052,16 @@ for trial=1:length(playback_list)
             end % while
             
             % Schedule stop of playback device.
-            %   Should wait for scheduled sound to complete playback. 
-            if isequal(d.player.state, 'run')
-                PsychPortAudio('Stop', phand, 1);
-            elseif isequal(d.player.state, 'exit')
-                PsychPortAudio('Stop', phand, 0);                                
-            end % if isequal ...
-            
-            % Run the modcheck.
-            if isequal(d.player.adaptive_mode, 'bytrial')
-                
-                % Call modcheck     
-                [mod_code, d]=d.player.modcheck.fhandle(d);
-                
-            end % if isequal( ...          
-            
-%             % Only empty recording buffer if user tells us to 
-%             if d.player.record_mic && rstatus.Active
-%             
-%                 % Wait for a short time to compensate for differences in
-%                 % relative start time of the recording and playback device.
-%                 % After the wait, empty the buffer again. Now rec should
-%                 % contain all of the signal + some delay at the beginning
-%                 % that will need to be removed post-hoc in some sort of
-%                 % sensible way. This is not a task for
-%                 % portaudio_adaptiveplay. 
-%                 WaitSecs(rec_start_time-playback_start_time);
-%                 
-%                 pstatus=PsychPortAudio('GetStatus', phand);
-%                 rstatus=PsychPortAudio('GetStatus', rhand);
-%                 
-%                 % Check to make sure we are checking our buffer fast
-%                 % enough                
-%                 if GetSecs - rec_block_start > d.player.record.buffer_dur
-%                     error('Recording buffer too short'); 
-%                 end % if GetSecs ...
-%             
-%                 % Empty recording buffer, if necessary. 
-%                 % empty buffer
-%                 trec=PsychPortAudio('GetAudioData', rhand)';
-% 
-%                 % Empty recording buffer, if necessary. 
-%                 rec=[rec; trec]; 
-% 
-%                 % Error check for clipping
-%                 if any(any(abs(trec)>=1)) && d.player.stop_if_error
-%                     warning('Recording clipped!');
-%                     d.player.state='exit';                        
-%                 end %                 
-% 
-%                 % Save recording to sandbox
-%                 d.sandbox.mic_recording{trial} = rec; 
-%                 clear rec; % just to be safe, clear the variable
-%                 
-%             end % if d.player.record_mic
+            %   - Should wait for scheduled sound to complete playback.
+            %   - BUT, we DON'T want to stop if we are recording and in
+            %   duplex mode            
+            if ~isDuplex || ~d.player.record_mic
+                if isequal(d.player.state, 'run')
+                    PsychPortAudio('Stop', phand, 1);
+                elseif isequal(d.player.state, 'exit')
+                    PsychPortAudio('Stop', phand, 0);                                
+                end % if isequal ...             
+            end % if ~isDuplex || ~d.player.record_mic
             
             % Exit playback loop if the player is in exit state
             %   This break must be AFTER rec transfer to
@@ -1129,11 +1070,60 @@ for trial=1:length(playback_list)
             if isequal(d.player.state, 'exit');
                 break
             end % isequal(d.player.state, 'exit'); 
+            
         case {'ptb (standard)'}
-            % Uses PTB to present sounds, but loads whole files into buffer
-            % at a time. This circumvents (some) buffer underrun issues 
-            % with PTB (Streaming) player type. 
-            error('not implemented'); 
+            
+            % Use PsychToolBox (PTB) to present sounds. Unlike PTB
+            % streaming, sound data are loaded into buffer entirely, rather
+            % than block by block. This should circumvent some (rare)
+            % instances of buffer underrun errors. 
+            
+            % CWB used BasicSoundScheduleDemo as an example of sound
+            % playback. 
+            
+            % create data2play
+            data2play_mixed =Y*d.player.mod_mixer;
+            
+            % We do something SLIGHTLY different if we want recordings to
+            % work properly. Recall that there will be some inherent delay
+            % in sound playback/recording. So, we need to delay the stop
+            % time a bit. To do that, we'll pad the playback buffer by the
+            % required number of samples (zero it out).
+            if ~isempty(rhand)
+                lat = pstatus.PredictedLatency + rstatus.PredictedLatency; % recording latency
+            elseif ~isempty(phand)
+                lat = pstatus.PredictedLatency;
+            else 
+                lat = 0; 
+            end % isempty(rhand
+            
+            % Convert lat (sec) to samples
+            %   - Add a bit to latency, since recordings are still being
+            %   clipped. 
+            %   - With M-Audio FastTrack Pro using ASIO drivers, this is a
+            %   reasonably safe buffer. If we stop much sooner than this,
+            %   we start losing some of our data. 
+            lat = ceil(lat*1.05 * FS); 
+            
+            % Add zeros to end 
+            data2play_mixed = [data2play_mixed; zeros(lat, size(data2play_mixed,2))];  %#ok<AGROW>
+            
+            % Create a sound buffer for each trial 
+            buffer = PsychPortAudio('CreateBuffer', [], data2play_mixed');
+            
+            % Fill playback buffer with our data
+            PsychPortAudio('FillBuffer', phand, buffer);
+            
+            % Start playback, single repetition.
+            PsychPortAudio('Start', phand, 1, [], 1); 
+            
+            % Estimate start of playback
+            playback_start_time = GetSecs;
+            rec_block_start = playback_start_time;
+            rec_start_time = playback_start_time; 
+            
+            % Stop, but only after sound is complete. 
+            PsychPortAudio('Stop', phand, 1);             
             
         case {'wmp'}  
             
@@ -1148,8 +1138,8 @@ for trial=1:length(playback_list)
             if trial == 1
                 %% OPEN ACTIVE X CONTROL
                 %   Use Screen('Resolution', window number) to get screen resolution and
-                %   configure player size
-                wmp = actxcontrol(d.player.activex, [d.player.screenposition d.player.screensize], gcf);
+                %   configure player size. Always open in a new figure. 
+                wmp = actxcontrol(d.player.activex, [d.player.screenposition d.player.screensize], figure);
 
                 % Set autostart to false
                 %   We need to get information about the movie first.
@@ -1162,9 +1152,10 @@ for trial=1:length(playback_list)
                 %   Load using SIN_loaddata
                 %   Mix using noise_mixer field
                 [noise, nfs] = SIN_loaddata(d.player.contnoise); 
-                noise = noise*d.player.noise_mixer; 
-
+                
                 %% MULTIPLY NOISE BY NOISE MIXER
+                noise = noise*d.player.noise_mixer; 
+                
                 %% RESAMPLE NOISE TO SAMPLING RATE OF PLAYBACK DEVICE
                 noise = resample(noise, FS, nfs);
                 clear nfs
@@ -1196,8 +1187,6 @@ for trial=1:length(playback_list)
             
             % Play movie
             wmp.control.play(); 
-%             wmp.control.pause();
-%             wmp.control.play(); 
         
         otherwise
             
@@ -1217,8 +1206,9 @@ for trial=1:length(playback_list)
     pstatus=PsychPortAudio('GetStatus', phand);
     rstatus=PsychPortAudio('GetStatus', rhand);
     
-    % Only empty recording buffer if user tells us to 
-    if d.player.record_mic && rstatus.Active
+    % Only empty recording buffer if user tells us to
+    %   Recording device does NOT need to be active in order to do this. 
+    if d.player.record_mic % && rstatus.Active
 
         % Wait for a short time to compensate for differences in
         % relative start time of the recording and playback device.
@@ -1256,6 +1246,11 @@ for trial=1:length(playback_list)
         clear rec; % just to be safe, clear the variable
 
     end % if d.player.record_mic
+    
+    % Stop device if we're in duplex mode
+    if isDuplex
+        PsychPortAudio('Stop', phand, 0);
+    end % if isDuplex
 end % for trial=1:length(X)
 
 % Close all open audio devices
