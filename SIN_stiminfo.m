@@ -6,7 +6,10 @@ function [list_dir, wavfiles]=SIN_stiminfo(opts, varargin)
 %
 % INPUT:
 %
-%   opts:   test options structure returned from SIN_TestSetup.m 
+%   opts:   test options structure returned from SIN_TestSetup.m.
+%
+%           Alternatively, opts can be a simple string of the testID.
+%           Either should get you to the same place, CWB thinks.
 %
 % OUTPUT:
 %
@@ -41,8 +44,16 @@ function [list_dir, wavfiles]=SIN_stiminfo(opts, varargin)
 list_dir={};
 wavfiles={}; 
 
-% Get testID from options struction
-testID = opts.specific.testID; 
+% If user passed in the options structure, then grab the testID from a
+% likely location.
+%
+% If the user provides a string, assume it's the testID and assign
+% accordingly. 
+if isstruct(opts)
+    testID = opts.specific.testID; 
+elseif isa(opts, 'char')
+    testID=opts;
+end % if isstruct(opts)
 
 switch testID
     
@@ -65,6 +76,11 @@ switch testID
 
         wavfiles=regexpdir(opts.specific.root, opts.specific.anl_regexp, false);
     
+    case {'noise'}
+        
+        % Return noise samples stored in noise directory
+        wavfiles=regexpdir(opts.general.noiseDir, opts.general.noise_regexp, false); 
+        
     case {'Calibrate'}
         
         wavfiles=regexpdir(opts.specific.calstimDir, opts.specific.calstim_regexp, false); 
