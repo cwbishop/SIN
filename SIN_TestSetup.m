@@ -79,8 +79,11 @@ switch testID;
         opts.general.subjectDir = fullfile(opts.general.root, 'subject_data'); 
         
         % Calibration information
-        opts.general.calibrationDir = fullfile(opts.general.root, 'calibration');
-        opts.general.calibration_regexp = '.mat$'; % 
+        opts.general.noiseDir = fullfile(opts.general.root, 'playback', 'Noise'); 
+        opts.general.noise_regexp = '.wav'; % get wav files
+        
+%         opts.general.calibrationDir = fullfile(opts.general.root, 'calibration');
+%         opts.general.calibration_regexp = '.mat$'; % 
         
         % subject ID motif. Described using regexp. Used in
         % SIN_register_subject.m
@@ -416,7 +419,7 @@ switch testID;
         % Change the wav_regexp
         %   We are using MP3 format here.
         warning('We might need to use MP4s instead of MP3s if we alter the timing and rewrite files for AV playback'); 
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp3$'; 
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$'; 
         
         % Change list_regexp
         %   MLST has an underscore in list directories.
