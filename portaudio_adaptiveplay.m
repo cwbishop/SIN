@@ -1173,6 +1173,15 @@ for trial=1:length(playback_list)
             
     end % switch d.player.adaptive_mode
 
+    % Basic clipping check
+    %   Kill any audio devices when this happens, then throw an
+    %   error. 
+    if max(max(abs(data2play_mixed))) > 1 && d.player.stop_if_error, 
+        warning('Signal clipped!'); 
+        d.player.state='exit'; 
+        break % exit and return variables to the user. 
+    end % if max(max(abs(data))) > 1
+    
     % Run the modcheck, but only if it's 'bytrial'. 
     if isequal(d.player.adaptive_mode, 'bytrial')
 
