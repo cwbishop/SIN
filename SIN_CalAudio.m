@@ -58,6 +58,14 @@ function SIN_CalAudio(REF, varargin)
 %               (the result of .tmixer) and P is the number of output
 %               channels in the generated file (.wav or .mp4). 
 %
+%   'talign':   bool, implements a two-step calibration process for MP4
+%               files to improve audiovisual temporal alignment (talign).
+%               If this is set to true, then 'alignto' must also be
+%               defined. 
+%
+%   'alignto':  integer, which channel of MP4 files to use for temporal
+%               correction.
+%
 % Development:
 %
 %   1) Add a "calibrate by channel" option. This will likely be necessary
@@ -173,25 +181,86 @@ for i=1:numel(files)
                 %   when played with soundsc. Could not be heard on his PC
                 %   with wavplay or equivalent (unscaled) playback.
                 %
-                %   CWB will now try an intermediary step to write a wav
-                %   file, then replace the audio track of the MP4 with the
-                %   (correctly zeroed) Wav file
-%                 % Create command string                
-                cmd = ['ffmpeg -i "' files{i}{k} '" -filter_complex ' mixer2pan((d.tmixer.*scale)*d.omixer) ' -c:v copy "' fout '"'];
+                %   CWB worked out a work around that corrects any 
+                %   timing offsets introduced during video creation and
+                %   also creates stereo (or mono ... or other) MP4 files.
+%                 cmd = ['ffmpeg -i "' files{i}{k} '" -filter_complex ' mixer2pan((d.tmixer.*scale)*d.omixer) ' -c:v copy "' fout '"'];
                 
-                % Read in audio data
-%                 [data, fs]=audioread(files{i}{k}); 
-%                 
-%                 % Scale data
-%                 data = ((data*d.tmixer).*scale)*d.omixer;
-%                 
-%                 % Write temporary wav file)
-%                 temp_file = fullfile(PATHSTR, [NAME d.suffix '.mp4']);
-% %                 audiowrite(temp_file, data, fs, 'BitsperSample', d.bitdepth);
-%                 audiowrite(temp_file, data, fs);
-                % Now replace audio track 
-%                 % Execute command
-%                 system(cmd, '-echo'); 
+                % Outline of procedure
+                %   - Read in audio data from existing MP4
+                %   - Scale/Mix audio data
+                %   - Write scaled/mixed audio to .WAV file
+                %   - Replace existing audio tracks in MP4 with
+                %   newly-written WAV file
+                %   
+                %   If timing correction is enabled, then do the following
+                %   as well
+                %   - Load audio from newly written MP4 and WAV file
+                %   - Determine time delay between the two
+                %   - Shift WAV file to correct this temporal offset
+                %   - Rewrite WAV file
+                %   - Replace the audio track of the MP4 again
+                %   
+                %   Other possible steps:
+                %   - Might need to fade time series by the desired shift
+                %   enough (zero it out by at least that many samples) to
+                %   prevent acoustic artifacts. 
+                %   - Might need fading after the time shift to prevent
+                %   acoustic artifacts. 
+                
+                % Read in audio file from MP4
+                [odata, ofs] = audioread(files{i}{k}); 
+                
+                % Scale and mix data to create data
+                odata = ((odata*d.tmixer).*scale)*d.omixer;
+                
+                % Write WAV to file
+                wavout = fullfile(PATHSTR, [NAME d.suffix '.wav']);                 
+                audiowrite(wavout, odata, ofs, 'BitsperSample', d.bitdepth); 
+                
+                % Replace audio in MP4
+                %   - -y overwrites without asking in ffmpeg. Not used by
+                %   default. Maybe a separate parameter?
+                mp4out = fullfile(PATHSTR, [NAME d.suffix '.mp4']); 
+                cmd = ['ffmpeg -i "' files{i}{k} '" -i "' wavout '"' ...
+                    ' -map 0:0 -map 1 "' mp4out '"'];
+                system(cmd, '-echo');
+                
+                % Two-step procedure for AV temporal alignment.
+                %   Often times FFmpeg introduces errors in temporal
+                %   alignment between audio and visual tracks in the MP4.
+                %   This empirically determines any shift introduced and
+                %   attempts to correct (remove) them. 
+                %
+                %   CWB later discovered that the temporal alignments he
+                %   saw were in fact an attempt to align audio and video.
+                %   The video had an extra frame added to the beginning of
+                %   the MP4, so the audio had to be delayed appropriately. 
+                if d.talign
+                    
+                    % Read in audio data from MP4
+                    [ndata, nfs] = audioread(mp4out); 
+
+                    % Align signals, plot results
+                    %   Need another argument, 'align to'
+                    %   L is the number of samples the two signals are offset
+                    %   by
+                    [~, ~, L]=align_timeseries(odata(:, d.alignto), ndata(:, d.alignto), 'xcorr', 'fsx', ofs, 'fsy', nfs, 'pflag', 1);
+
+                    % Shift odata, rewrite wav file
+                    odata = circshift(odata, L); 
+
+                    % Rewrite WAV file 
+                    %   Write a corrected wav file
+                    tshift_wavout = fullfile(PATHSTR, [NAME d.suffix 'tshift' EXT]);
+                    audiowrite(fullfile(PATHSTR, [NAME d.suffix 'tshift' EXT]), odata, ofs, 'BitsperSample', d.bitdepth);
+
+                    % Remap audio (again)
+                    cmd = ['ffmpeg -i "' files{i}{k} '" -i "' tshift_wavout '"' ...
+                    ' -map 0:0 -map 1 "' mp4out '"'];
+                    system(cmd, '-echo');
+                    
+                end % if d.talign
                 
             otherwise
                 error('Unknown file extension');
