@@ -166,11 +166,32 @@ for i=1:numel(files)
                 
             case {'.mp4'}
                 
-                % Create command string                
+                %% NOTE:
+                %   CWB tried a direct call to FFmpeg with channel scaling
+                %   parameters, but there were data still present in zeroed
+                %   out channels. Sounded like high frequency squeaking
+                %   when played with soundsc. Could not be heard on his PC
+                %   with wavplay or equivalent (unscaled) playback.
+                %
+                %   CWB will now try an intermediary step to write a wav
+                %   file, then replace the audio track of the MP4 with the
+                %   (correctly zeroed) Wav file
+%                 % Create command string                
                 cmd = ['ffmpeg -i "' files{i}{k} '" -filter_complex ' mixer2pan((d.tmixer.*scale)*d.omixer) ' -c:v copy "' fout '"'];
                 
-                % Execute command
-                system(cmd, '-echo'); 
+                % Read in audio data
+%                 [data, fs]=audioread(files{i}{k}); 
+%                 
+%                 % Scale data
+%                 data = ((data*d.tmixer).*scale)*d.omixer;
+%                 
+%                 % Write temporary wav file)
+%                 temp_file = fullfile(PATHSTR, [NAME d.suffix '.mp4']);
+% %                 audiowrite(temp_file, data, fs, 'BitsperSample', d.bitdepth);
+%                 audiowrite(temp_file, data, fs);
+                % Now replace audio track 
+%                 % Execute command
+%                 system(cmd, '-echo'); 
                 
             otherwise
                 error('Unknown file extension');
