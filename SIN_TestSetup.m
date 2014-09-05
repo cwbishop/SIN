@@ -196,7 +196,7 @@ switch testID;
             'correction_factor',    2, ... % use correction factor of 2 for SEM calculations. Default in paper
             'min_trials',   20);    % # of trials (minimum) in phase 2/3. Since using the HINT stimuli, use multiples of 10           
         
-    case 'HINT (SNR-50, Sentence-Based)'
+    case 'HINT (SNR-50, keywords, 1up1down)'
         
         % ============================
         % Get default information
@@ -221,12 +221,12 @@ switch testID;
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
         % Set regular expression for wav files
-        opts.specific.wav_regexp = '+noise.wav$'; % use files with noise in channel 1. 
+        opts.specific.wav_regexp = '[0-9]{2};0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
-            'filename', fullfile(opts.specific.root, 'HINT (+noise).xlsx'), ...
+            'filename', fullfile(opts.specific.root, 'HINT (;0dB+spshn).xlsx'), ...
             'sheetnum', 1); 
         
         % The following set of subfields are required for playlist
@@ -257,9 +257,10 @@ switch testID;
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
-            'playertype',       'ptb (stream)', ... % use standard PTB playback. 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0), ... % play HINT target speech to first channel only
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
         % ============================
@@ -267,9 +268,9 @@ switch testID;
         % ============================
         opts.player.modcheck=struct(...
             'fhandle',         @modcheck_HINT_GUI, ...
-            'data_channels',    2, ...
+            'data_channels',    1, ...
             'physical_channels', 1, ...
-            'scored_items',  'allwords', ... % score all words. 
+            'scored_items',  'keywords', ... % score only keywords (excludes articles?)
             'algo',     'oneuponedown', ... % use a one-up-one-down algo
             'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         
@@ -283,7 +284,7 @@ switch testID;
             'mod_stage',    'premix',  ...  % apply modifications prior to mixing
             'dBstep',   [4 2], ...  % use variable step size. This matches HINT as normally administered
             'change_step', [1 5], ...   % This matches HINT as normally administered. 
-            'data_channels', 2, ...
+            'data_channels', 1, ... % HINT speech coming out of data channel 1 (now) 
             'physical_channels', 1);  % apply decibel step to discourse stream in first output channel 
         
         % Modifier to track mod_mixer settings
