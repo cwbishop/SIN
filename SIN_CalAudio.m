@@ -1,4 +1,4 @@
-function SIN_CalAudio(REF, varargin)
+function scale = SIN_CalAudio(REF, varargin)
 %% DESCRIPTION:
 %
 %   The calibration procedure for SIN sets the HINT-Noise.wav (a speech
@@ -44,6 +44,11 @@ function SIN_CalAudio(REF, varargin)
 %               this applies to MP4s since these invoke FFmpeg for scaling
 %               purposes. 
 %
+%               Note: audioread does not give bitdepth information from
+%               MP4s, so CWB cannot confirm the bitdepth of the audio in
+%               these files. But the log readout from FFmpeg suggests
+%               16-bit audio. Unconfirmed. 
+%
 %   'suffix':   string to append to end of file name for newly created
 %               files.
 %
@@ -58,6 +63,28 @@ function SIN_CalAudio(REF, varargin)
 %               (the result of .tmixer) and P is the number of output
 %               channels in the generated file (.wav or .mp4). 
 %
+%   'saveref':  bool, flag to write the reference data to file (.wav
+%               format).
+%
+%   'wav_regexp':   regular expression. If provided, the
+%                   specific.wav_regexp field is overwritten with this
+%                   parameter. This proved necessary to guarantee that the
+%                   user knows which files are being used for calibration
+%                   purposes. 
+%
+% AV Alignment Options (only applies to MP4s presently)
+%
+%   Note that these procedures circularly shift the data to account for
+%   changes in timing. So it's important that there be significant periods
+%   of silence (at least relative silence) at the beginning and end of each
+%   track. If there is NOT, data may be moved from the beginning of the
+%   sound to the end or vice versa. Also, if the noise floor is relatively
+%   high, there may be transients introduced following this procedure. If
+%   this is the case, then try fading sounds in/out prior to applying a
+%   shift. 
+%
+%   Transcoding Correction:
+%
 %   'talign':   bool, implements a two-step calibration process for MP4
 %               files to improve audiovisual temporal alignment (talign).
 %               If this is set to true, then 'alignto' must also be
@@ -65,6 +92,18 @@ function SIN_CalAudio(REF, varargin)
 %
 %   'alignto':  integer, which channel of MP4 files to use for temporal
 %               correction.
+%
+%   Manual Timing Adjustments:
+%
+%   'tadjust':  double, a manual temporal offset of the audio track in
+%               seconds. A negative value advances the audio in time (moves
+%               to left). A positive value delays the audio in time (moves
+%               to the right). This argument may be useful if the
+%               experimenter notices consistent temporal AV misalignments
+%               that the playback system is not correcting automatically. 
+%
+%               Note: this feature has not been thoroughly tested, so use
+%               with caution. 
 %
 % Development:
 %
@@ -86,11 +125,40 @@ d=varargin2struct(varargin{:});
 %   location of noise files. 
 opts = SIN_TestSetup(d.testID, ''); 
 
+%% OVERWRITE FILE FILTER IF NECESSARY
+if isfield(d, 'wav_regexp')
+    input(['Overwriting ' opts.specific.wav_regexp ' with ' d.wav_regexp '. Press enter to continue']);
+    
+    % Error check to make sure we haven't changed the field name to
+    % something else.
+    if ~isfield(opts.specific, 'wav_regexp')
+        error('wav_regexp field name may have changed');
+    end % 
+    
+    opts.specific.wav_regexp = d.wav_regexp;
+    
+end % isfield
+
 %% LOAD THE REFERENCE NOISE
-[ref_data, FS] = audioread(REF);
+[ref_data, rfs] = audioread(REF);
 
 %% SCALE NOISE
 ref_data = ref_data*d.nmixer; 
+
+%% WRITE SCALED REFERENCE
+%   Write the (scaled) reference file back to disk? 
+if d.writeref
+    
+    % Get file parts
+    [PATHSTR,NAME,EXT] = fileparts(REF);
+    
+    % Create output filename
+    fout = fullfile(PATHSTR, [NAME d.suffix EXT]); 
+    
+    % Write to file
+    audiowrite(fout, ref_data, rfs, 'BitsperSample', d.bitdepth); 
+    
+end % if d.writeref
 
 %% WRITE CALIBRATED STIMULI
 %   - Now, we load in the stimuli for the specific test we want to rewrite
@@ -169,6 +237,10 @@ for i=1:numel(files)
                 % Scale audio data
                 data = data.*scale; 
                 
+                % Multiply by omixer to generate appropriately sized output
+                % matrix.
+                data = data*d.omixer; 
+                
                 % Rewrite to file                               
                 audiowrite(fout, data, fs, 'BitsperSample', d.bitdepth); 
                 
@@ -214,6 +286,46 @@ for i=1:numel(files)
                 % Scale and mix data to create data
                 odata = ((odata*d.tmixer).*scale)*d.omixer;
                 
+                % This section of code applies a fixed temporal shift to
+                % all audio files. CWB intends to use this to adjust for
+                % any gross audiovisual temporal misalignments. 
+                %
+                % Input should be in seconds, not samples
+                if isfield(d, 'tadjust') && ~isempty(d.tadjust)
+                    
+                    % Warn user that this has not been well-tested yet. 
+                    warning(['Manual audio adjustments are not well-tested, ' ...
+                        'so use with appropriate caution. - CWB']); 
+                    
+                    % Convert tadjust to samples instead of seconds. 
+                    tadjust = round(d.tadjust * ofs); 
+                    
+                    % Fade beginning and end of sounds in/out,
+                    % respectively, zero out shifted portion
+                    fade_data = odata(abs(tadjust)+1:end-abs(tadjust),:);
+                    
+                    % Fade data in/out using 5 ms Hanning window. 
+                    fade_data = fade(fade_data, ofs, true, true, @hann, 0.005);
+                    
+                    % Prepend and Append tadjust zero samples
+                    fade_data = [zeros(abs(tadjust), size(odata,2)); fade_data; zeros(abs(tadjust), size(odata,2))];
+                    
+                    % Check size, make sure we haven't added or removed
+                    % samples
+                    if any(size(fade_data) ~= size(odata))
+                        error('Data sizes differ');
+                    end % if any
+                    
+                    % Now apply temporal shift to sound
+                    %   This approach really only works if there is very
+                    %   little acoustic energy at the beginning and end of
+                    %   each sound file. This is a safe assumption for
+                    %   MLST, but maybe not for other stimuli we may end up
+                    %   using. 
+                    odata = circshift(fade_data, tadjust); 
+                    
+                end % isfield(d, ...
+                
                 % Write WAV to file
                 wavout = fullfile(PATHSTR, [NAME d.suffix '.wav']);                 
                 audiowrite(wavout, odata, ofs, 'BitsperSample', d.bitdepth); 
@@ -235,7 +347,8 @@ for i=1:numel(files)
                 %   CWB later discovered that the temporal alignments he
                 %   saw were in fact an attempt to align audio and video.
                 %   The video had an extra frame added to the beginning of
-                %   the MP4, so the audio had to be delayed appropriately. 
+                %   the MP4, so the audio had to be delayed appropriately.
+                %   So this chunk of code might be totally unnecessary. 
                 if d.talign
                     
                     % Read in audio data from MP4
