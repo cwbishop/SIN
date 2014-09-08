@@ -57,7 +57,7 @@ end % if isstruct(opts)
 
 switch testID
     
-    case {'HINT (SNR-50, Sentence-Based)', 'PPT', 'HINT (SNR-50, NALadaptive)', 'MLST (Audio)', 'MLST (AV)'}
+    case {'HINT (SNR-50, keywords, 1up1down)', 'PPT', 'HINT (SNR-50, NALadaptive)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'}
         
         % Return directories based on defaults.hint.list_filt
         list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
