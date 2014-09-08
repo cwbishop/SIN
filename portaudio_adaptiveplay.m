@@ -1133,12 +1133,12 @@ for trial=1:length(playback_list)
                 [noise, nfs] = SIN_loaddata(d.player.contnoise); 
                 
                 %% MULTIPLY NOISE BY NOISE MIXER
-                noise = noise*d.player.noise_mixer; 
+                data2play_mixed = noise*d.player.noise_mixer; 
                 
                 %% RESAMPLE NOISE TO SAMPLING RATE OF PLAYBACK DEVICE
-                noise = resample(noise, FS, nfs);
+                data2play_mixed = resample(data2play_mixed, FS, nfs);
                 clear nfs
-                PsychPortAudio('FillBuffer', phand, noise');
+                PsychPortAudio('FillBuffer', phand, data2play_mixed');
 
                 % This starts playback and recording if we're in duplex mode. 
                 %   - Fifth input set to 1, so we wait for start of
@@ -1165,8 +1165,8 @@ for trial=1:length(playback_list)
             wmp.URL = playback_list{trial};            
             
             % Play movie
-            wmp.control.play(); 
-        
+            wmp.control.play();        
+            
         otherwise
             
             error(['Unknown adaptive mode (' d.player.adaptive_mode '). See ''''adaptive_mode''''.']); 
@@ -1188,7 +1188,7 @@ for trial=1:length(playback_list)
         % Call modcheck     
         [mod_code, d]=d.player.modcheck.fhandle(d);
 
-    end % if isequal( ...  
+    end % if isequal( ...     
     
     % Go ahead and update the player and recording device information. 
     pstatus=PsychPortAudio('GetStatus', phand);
