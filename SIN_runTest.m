@@ -43,7 +43,7 @@ function SIN_runTest(opts, playlist)
 %   5/14
 
 %% GET PLAYLIST
-if ~exist('playlist', 'var') || isempty(playlist), playlist = SIN_getPlaylist(opts(1)); end 
+if ~exist('playlist', 'var') || isempty(playlist), [playlist, lists] = SIN_getPlaylist(opts(1)); end 
 
 %% GET TESTID
 %   Base running decisions on the testID of the first options structure.
@@ -102,6 +102,6 @@ for t=1:length(testID)
             
             % Save results to file 
             SIN_saveResults(results); 
-    end % switch/otherwise
+    end % switch/otherwise    
     
 end % for t=1:length(testID)
