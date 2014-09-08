@@ -72,6 +72,10 @@ function scale = SIN_CalAudio(REF, varargin)
 %                   user knows which files are being used for calibration
 %                   purposes. 
 %
+%   'overwritemp4': bool, if true, automatically overwrite MP4s. If false,
+%                   user is prompted for each overwrite. False is safer,
+%                   but time consuming. 
+%
 % AV Alignment Options (only applies to MP4s presently)
 %
 %   Note that these procedures circularly shift the data to account for
@@ -330,11 +334,18 @@ for i=1:numel(files)
                 wavout = fullfile(PATHSTR, [NAME d.suffix '.wav']);                 
                 audiowrite(wavout, odata, ofs, 'BitsperSample', d.bitdepth); 
                 
+                % Is overwriteMP4 set?
+                if d.overwritemp4
+                    cmd = ['ffmpeg -y '];
+                else
+                    cmd = 'ffmpeg ';
+                end % if d.overwritemp4
+                
                 % Replace audio in MP4
                 %   - -y overwrites without asking in ffmpeg. Not used by
                 %   default. Maybe a separate parameter?
                 mp4out = fullfile(PATHSTR, [NAME d.suffix '.mp4']); 
-                cmd = ['ffmpeg -i "' files{i}{k} '" -i "' wavout '"' ...
+                cmd = [cmd '-i "' files{i}{k} '" -i "' wavout '"' ...
                     ' -map 0:0 -map 1 "' mp4out '"'];
                 system(cmd, '-echo');
                 
