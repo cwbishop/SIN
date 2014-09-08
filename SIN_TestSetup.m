@@ -129,6 +129,11 @@ switch testID;
         % Where the UsedList is stored. 
         opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
         
+        % Do not return the test as "to be used" test by default. There are
+        % many cases that should not (typically) be called by the user. So,
+        % don't return those.
+        opts.specific.listtest = false; 
+        
         % Preload stimuli by default
         %   Generally do not want to preload AV stims, though, so look for
         %   a change in MLST (AV). Also MLST (Audio)
@@ -140,8 +145,8 @@ switch testID;
         
         % Perceived Performance Test (PPT) is a subjective measure of
         % performance on a HINT-style test. This should be otherwise
-        % identical to HINT (SNR-50, Sentence-Based) algorithm.
-        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)');
+        % identical to 'HINT (SNR-50, keywords, 1up1down) algorithm.
+        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
         
         % Change the test ID to PPT so the correct scoring scheme is used.
         opts.specific.testID = testID; 
@@ -152,49 +157,16 @@ switch testID;
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
 
-    case 'HINT (SNR-80, NALadaptive)'
+    case 'HINT (SNR-80, keywords, 4down1up)'
         
-        % Use the 'HINT (SNR-50, NALadaptive)' as a starting point
-        opts = SIN_TestSetup('HINT (SNR-50, NALadaptive)');
+        % This will be very similar to HINT (SNR-50, keywords, 1up1down),
+        % but will need to change the algorithm.
+        opts=SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
         
-        % Change testID
-        opts.specific.testID = testID; 
-        
-        % Change target percentage to 80% (instead of 50%)
-        opts.player.modcheck.algoParams.target = 80; 
-        
-    case 'HINT (SNR-50, NALadaptive)'
-        
-        % Administer HINT using NALadaptive algorithm.
-        
-        % Use the HINT as traditionally scored as a starting point
-        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', subjectID);
-        
-        % Change testID
-        opts.specific.testID = testID;
-        
-        % Find the scaling modifier
-        mask = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer); 
-        
-        % Make sure we have one and only one matching modifier
-        if numel(mask) ~= 1
-            error('Found too many (or too few) matching modifiers');
-        end % if numel(mask) ~= 1
-        
-        % Change function handle
-        opts.player.modifier{mask}.fhandle = @modifier_NALscale_mixer;
-        
-        % Clear out the fields we don't need. 
-        opts.player.modifier{mask} = rmfield(opts.player.modifier{mask}, {'dBstep', 'change_step'}); 
-        
-        % Change algorithm used by modcheck
-        opts.player.modcheck.algo = 'NALadaptive';
-        
-        % Add additional parameters for NAL algorithm
-        opts.player.modcheck.algoParams = struct( ...
-            'target',   50, ... % target SNR-50
-            'correction_factor',    2, ... % use correction factor of 2 for SEM calculations. Default in paper
-            'min_trials',   20);    % # of trials (minimum) in phase 2/3. Since using the HINT stimuli, use multiples of 10           
+        % Change algorithm tracking
+        %   Start with 1up1down, then switch to 4down1up after trial 4
+        opts.player.modcheck.algo = {'1up1down' '4down1up'}; 
+        opts.player.modcheck.startalgoat=[1 5]; 
         
     case 'HINT (SNR-50, keywords, 1up1down)'
         
@@ -235,7 +207,7 @@ switch testID;
         opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
         opts.specific.genPlaylist.Randomize = 'lists&within'; % randomize list order and stimuli within each list.
         opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully.         
+        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % ============================
         % Player configuration
@@ -259,7 +231,7 @@ switch testID;
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-10); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
@@ -271,7 +243,8 @@ switch testID;
             'data_channels',    1, ...
             'physical_channels', 1, ...
             'scored_items',  'keywords', ... % score only keywords (excludes articles?)
-            'algo',     'oneuponedown', ... % use a one-up-one-down algo
+            'algo',     {{'1up1down'}}, ... % use a one-up-one-down algo
+            'startalgoat',     [1], ... % start algorithms at trials 1/5
             'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         
         % ============================
@@ -332,7 +305,7 @@ switch testID;
             'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0 ] [0.5; 0] [0.5; 0] [0.5; 0]], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-15); 0 ] [0; 0]], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
@@ -384,7 +357,7 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; .5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0; db2amp(-15)] [0; 0 ] ], 0); % discourse channel and babble to first channel only
         
     case 'ANL (BNL-Too Quiet)' 
         
@@ -400,8 +373,32 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only
-    case 'MLST (Audio)'
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
+    
+    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the AV aided condition. same test, different subject
+        % state. 
+        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID;         
+                
+    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';    
+        
+    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Same test, different subject state
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        
+        opts.specific.testID = testID;     
+        
+    case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
         % Configured to administer the (audio only) MLST. Different
         % parameters required for the audiovisual version
@@ -409,7 +406,7 @@ switch testID;
         % Use the HINT as a starting point
         %   - The HINT is quite similar to the MLST in many ways, so let's
         %   use this as a starting point. 
-        opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', subjectID); 
+        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
         
         % Change the test ID
         opts.specific.testID = testID;
@@ -420,7 +417,7 @@ switch testID;
         % Change the wav_regexp
         %   We are using MP3 format here.
         warning('We might need to use MP4s instead of MP3s if we alter the timing and rewrite files for AV playback'); 
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$'; 
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.wav$'; 
         
         % Change list_regexp
         %   MLST has an underscore in list directories.
@@ -428,11 +425,13 @@ switch testID;
         
         % Change sentence lookup information
         %   This is used for scoring purposes
-        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult).xlsx');
+        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult);0dB.xlsx');
         opts.specific.hint_lookup.sheetnum=1;   
         
         % Change mod_mixer to work with single channel data
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ 0.5 0], 0);
+        %   Scale speech track to full volume, assuming we calibrate to 65
+        %   dB SPL. 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [1 0], 0);
         
         % Remove the modifier_dbBscale_mixer
         ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
@@ -444,7 +443,7 @@ switch testID;
         opts.player.modcheck.data_channels = 1; 
         
         % We aren't applying any changes. Just using the GUI for scoring. 
-        opts.player.modcheck.algo = 'none'; %
+        opts.player.modcheck.algo = {'none'}; %        
         
         % Use keyword scoring only
         %   Keywords are denoted as capital letters. 
@@ -469,8 +468,8 @@ switch testID;
         opts.player.preload = false; 
         
         %% CONTINUOUS NOISE INFORMATION
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [ 0.5 0], 0);        
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR
         
     case 'MLST (AV)'
         
@@ -570,14 +569,15 @@ switch testID;
         %   speaker. 
         %   
         %   This field is used in SIN_stiminfo.m. 
-        opts.specific.anl_regexp='ANL.wav'; 
+        opts.specific.anl_regexp='ANL;0dB.wav'; 
+        
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
         % turn invokes SIN_stiminfo and other supportive functions.         
         opts.specific.genPlaylist.NLists = 0; % No lists to choose from
         opts.specific.genPlaylist.Randomize = ''; % No stimuli to randomize
         opts.specific.genPlaylist.Repeats = ''; % irrelevant since there aren't any lists        
-        opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
+        opts.specific.genPlaylist.Append2UsedList = true; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
         
         % ============================
         % Playback configuration
@@ -611,7 +611,7 @@ switch testID;
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'playertype',       'ptb (stream)', ... % use streaming playback mode 
             'startplaybackat',    0, ...  % start playback at beginning of sound 
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0), ... % Play both channels to left ear only. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
             'state',    'pause'); % start in paused state
         
         % ============================
@@ -653,11 +653,8 @@ switch testID;
         % modify the mixing matrix. 
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_trackMixer, ...
-            'mod_stage',    'premix');   % track mod_mixer            
-           
-    
+            'mod_stage',    'premix');   % track mod_mixer   
         
-    
     otherwise
         
         error('unknown testID')
@@ -681,8 +678,12 @@ opts = SIN_assignUUID(opts);
 %   the browser (easier to spot by eye). 
 %
 %   For multi-part tests, use the same UUID and the same saveData2mat file.
+%
+%   CWB decided that the format described above was WAY too confusing to
+%   look at, so went back to original format. 
 for i=1:length(opts)
-    opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).specific.uuid '-' opts(1).subject.subjectID '-' opts(1).specific.testID]);
+%     opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).specific.uuid '-' opts(1).subject.subjectID '-' opts(1).specific.testID]);
+    opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).subject.subjectID '-' opts(1).specific.testID '-' opts(1).specific.uuid]);
 end %
 
 end % function end
