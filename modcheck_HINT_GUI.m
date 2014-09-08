@@ -46,14 +46,24 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %                                          approach is applicable for the
 %                                          PPT. 
 %
-%   'algo': string, describing the algorithm to implement. Current algo
-%           options include:
+%   'algo': cell array, each element is the name of an algorithm to apply.
+%           Which algo is applied on a specific trial is decided by
+%           startalgoat parameter below. 
 %
-%               'oneuponedown':   a one-up-one-down staircase algorithm based on
+%               '1up1down':   a one-up-one-down staircase algorithm based on
 %                           whether or not all scored items were "correct".
+%
+%               '4down1up': four consecutive correct answers results in a
+%                           decrease mod_code. 1 incorrect response results
+%                           in an increase mod_code. 
 %
 %               'NALadaptive': implements the NAL adaptive algorithm 
 %                           described in algo_NALadaptive.m.
+%                               Note: NALadaptive is not well-tested. 
+%
+%   'startalgoat': integer vector, specifies the first trial overwhich the
+%                   corresponding algorithm should be applied.
+%                       
 %
 %   Note: Additional parameters are necessary for the NALadaptive
 %   algorithm. These parameters should be placed in a field called
@@ -72,7 +82,7 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %   'mod_code':     modification code. The returned modification code
 %                   depends on the algorithm implemented.
 %
-%       'oneuponedown':
+%       '1up1down', '4down1up':
 %                       0:  no modification necessary.
 %                       -1: make target quieter
 %                       1:  make target louder
@@ -149,6 +159,7 @@ if ~isfield(d.player.modcheck, 'sentence') || isempty(d.player.modcheck.sentence
     d.player.modcheck.ylabel='SNR (dB)'; 
     d.player.modcheck.ntrials=length(d.sandbox.playback_list); % number of trials (sets axes later)
     d.player.modcheck.score = {};
+    d.player.modcheck.nconsecutive = 0; % initialize # of consecutively correct trials. Used for 3down1up algo and potentially others.
 %     d.modcheck.score_labels={'Correct', 'Incorrect'}; % This is set in SIN_defaults
 
     % Scoring information
@@ -289,12 +300,24 @@ d.sandbox.figure=h.figure1;
 %   Useful for algorithm tracking later. 
 d.player.modcheck.score{trial} = score; 
 
+% Also append to 'o' structure and save it all together
+o.score = score; 
+
+% Append sentence information to structure as well
+d.player.modcheck.trial_info{trial} = o; % save over sentence information. All of it. 
+
+%% CHOOSE CORRECT ALGO
+%   In special cases, it may be necessary to combine algorithms for testing
+%   purposes (e.g., 1up1down for N trials, followed by 4down1up). This can
+%   be done using this algo selection criteria.
+d.player.modcheck.current_algo = d.player.modcheck.algo{find(trial>=d.player.modcheck.startalgoat, 1, 'last')};
+
 %% APPLY ALGORITHM
 %   The algorithms return a decibel gain to apply to the next stimulus. 
 % [mod_code] = d.modcheck.algorithm.fhandle(logical(score(score~=1)), d.modcheck.algorithm); 
-switch d.player.modcheck.algo
+switch d.player.modcheck.current_algo
     
-    case {'oneuponedown'}
+    case {'1up1down'}
         
         % Implement a one-up-one-down staircase algorithm
         if all(score(isscored)==1) % if everything is correct
@@ -350,10 +373,45 @@ switch d.player.modcheck.algo
             clear algo_NALadaptive; 
             
         end % if NAL.phase ...
+        
+    case '4down1up'
+        
+        % Following 4 correct responses, decrease the SNR. After a single
+        % incorrect response, increase SNR by the presecribed stepsize.
+        
+        % Is response correct or incorrect? 
+        %   - If all scored items are correct (first option (1)), then
+        %   increment the number of consecutive correct responses
+        %   (nconsecutive)
+        %
+        %   - If the listener missed something, then reset counter and
+        %   return a "1" to improve SNR by some set amount (determined in
+        %   modifier)
+        if all(score(isscored)==1) % if everything is correct
+            d.player.modcheck.nconsecutive = d.player.modcheck.nconsecutive + 1;
+        elseif any(score(isscored)==2) % if any scored items are incorrect
+            d.player.modcheck.nconsecutive = 0;
+            mod_code = 1; 
+        else 
+            % This should never happen, but CWB wants to be careful.
+            error('I do not know what to do with this scoring information'); 
+        end % if all ...
+        
+        % If we have 4 consecutive correct answers in a row, then return a
+        % "-1" to decrease SNR.
+        %
+        % Also reset counter to 0 to start counting over again
+        if d.player.modcheck.nconsecutive == 4
+            mod_code = -1; 
+            d.player.modcheck.nconsecutive = 0; 
+        end % if d.player.modcheck.Ncons...
+        
     case 'none'
         
         % No algorithm applied
         mod_code = 0;
+    otherwise
+        error('Unknown algorithm');
 end % switch d.player.modcheck.algo
 
 %% CLOSE GUI
