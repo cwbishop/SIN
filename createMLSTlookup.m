@@ -1,4 +1,4 @@
-function createMLSTlookup
+function createMLSTlookup(varargin)
 %% DESCRIPTION:
 %
 %   This function creates a suitable lookup table for MLST stimuli. This
@@ -12,6 +12,15 @@ function createMLSTlookup
 %
 %   OUT:    path to XLSX spreadsheet that will serve as our lookup table
 %
+%
+% Parameters:
+%
+%   'suffix':   suffix to append to file names and XLSX output file
+%
+%   'testID':   string, testID used to lookup most appropriate test
+%               information
+%
+%   'wav_regexp':   regular expression to overwrite .specific.wav_regexp. 
 %
 % Notes on file name formatting:
 %
@@ -65,10 +74,27 @@ function createMLSTlookup
 %   University of Washington
 %   6/14
 
+%% GET PARAMETERS
+d=varargin2struct(varargin{:});
+
 %% GET AN APPROPRIATE OPTIONS SET
 %   Use this to query lists and files below. We'll use most of the
 %   informstion to generate most of the content we need. 
-opts=SIN_TestSetup('MLST (AV)', '');
+opts=SIN_TestSetup(d.testID, '');
+
+%% OVERWRITE FILE FILTER IF NECESSARY
+if isfield(d, 'wav_regexp')
+    input(['Overwriting ' opts.specific.wav_regexp ' with ' d.wav_regexp '. Press enter to continue']);
+    
+    % Error check to make sure we haven't changed the field name to
+    % something else.
+    if ~isfield(opts.specific, 'wav_regexp')
+        error('wav_regexp field name may have changed');
+    end % 
+    
+    opts.specific.wav_regexp = d.wav_regexp;
+    
+end % isfield
 
 %% GET FILENAMES
 %   Use the filenames to generate most of the content
@@ -157,4 +183,4 @@ end % for i=1:numel(wavfiles)
 t = table(ID, FilePath, Sentence, ScoringUnits);
 
 % Write table to XLSX file
-writetable(t, fullfile(opts.specific.root, 'MLST (Adult).xlsx')); 
+writetable(t, fullfile(opts.specific.root, ['MLST (Adult)' d.suffix '.xlsx'])); 
