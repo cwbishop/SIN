@@ -215,7 +215,8 @@ function [results, status]=portaudio_adaptiveplay(X, varargin)
 %               currently include :
 %                   'run':  run the test/playback
 %                   'pause': pause playback
-%                   'exit':     player exit
+%                   'exit':     player exits normally
+%                   'error':    player exits, but in error state
 %
 % Windowing options (for 'continuous' playback only):
 %
@@ -782,7 +783,7 @@ for trial=1:length(playback_list)
                 %   error. 
                 if max(max(abs(data2play_mixed))) > 1 && d.player.stop_if_error, 
                     warning('Signal clipped!'); 
-                    d.player.state='exit'; 
+                    d.player.state='error'; 
                     break % exit and return variables to the user. 
                 end % if max(max(abs(data))) > 1
                     
@@ -923,7 +924,7 @@ for trial=1:length(playback_list)
                 %   CWB hard coded the exception here
                 if d.player.stop_if_error && (pstatus.XRuns > 1)
                     warning('Error during sound playback. Check buffer_dur and internal_buffer.'); 
-                    d.player.state='exit';
+                    d.player.state='error';
                     break 
                 end % if d.player.stop ....
                 
@@ -978,7 +979,7 @@ for trial=1:length(playback_list)
                     % Error check for clipping
                     if any(any(abs(trec)>=1)) && d.player.stop_if_error
                         warning('Recording clipped!');
-                        d.player.state='exit';                        
+                        d.player.state='error';                        
                     end % 
                         
                     % Reset recording time
@@ -1001,8 +1002,10 @@ for trial=1:length(playback_list)
                 clear mod_code;
                 
                 % If player state is in 'exit', then stop all playback and
-                % return variables
-                if isequal(d.player.state, 'exit')
+                % return variables.
+                %
+                % Do the same if we are in an 'error' state
+                if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
                     break; 
                 end % 
             end % while
@@ -1037,7 +1040,7 @@ for trial=1:length(playback_list)
             if ~isDuplex || ~d.player.record_mic
                 if isequal(d.player.state, 'run')
                     PsychPortAudio('Stop', phand, 1);
-                elseif isequal(d.player.state, 'exit')
+                elseif isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
                     PsychPortAudio('Stop', phand, 0);                                
                 end % if isequal ...             
             end % if ~isDuplex || ~d.player.record_mic
@@ -1046,7 +1049,7 @@ for trial=1:length(playback_list)
             %   This break must be AFTER rec transfer to
             %   d.sandbox.mic_recording or the recordings do not
             %   transfer. 
-            if isequal(d.player.state, 'exit');
+            if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
                 break
             end % isequal(d.player.state, 'exit'); 
             
@@ -1178,7 +1181,7 @@ for trial=1:length(playback_list)
     %   error. 
     if max(max(abs(data2play_mixed))) > 1 && d.player.stop_if_error, 
         warning('Signal clipped!'); 
-        d.player.state='exit'; 
+        d.player.state='error'; 
         break % exit and return variables to the user. 
     end % if max(max(abs(data))) > 1
     
@@ -1226,7 +1229,7 @@ for trial=1:length(playback_list)
         % Error check for clipping
         if any(any(abs(trec)>=1)) && d.player.stop_if_error
             warning('Recording clipped!');
-            d.player.state='exit';                        
+            d.player.state='error';                        
         end %                 
 
         % Save recording to sandbox
