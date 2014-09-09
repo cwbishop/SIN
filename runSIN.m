@@ -175,91 +175,22 @@ testID = contents{get(handles.test_popup,'Value')};
 contents = cellstr(get(handles.subject_popup,'String'));
 subjectID = contents{get(handles.subject_popup,'Value')};
 
-% Get test options from SIN_TestSetup
-opts = SIN_TestSetup(testID, subjectID); 
+% Error check for subject ID
+%   User must select a valid subject ID. If the ID isn't valid, then toss
+%   an error. 
+if isequal(subjectID, 'Select Subject')
+    post_feedback(hObject, eventdata, handles, ['Invalid Subject ID: ' subjectID ], 0); % post error message to terminal
+else
+    % Get test options from SIN_TestSetup
+    opts = SIN_TestSetup(testID, subjectID); 
 
-% Run the test
-%   - Playlist automatically handled by SIN_getPlaylist (Called from
-%   SIN_runTest). 
-SIN_runTest(opts); 
-% % Get wavfiles from GUI handle
-% wavfiles=handles.wavfiles; 
-% 
-% % Get test selection
-% test_val = get(handles.test_popup, 'Value'); 
-% testID = get(handles.test_popup, 'String');
-% 
-% % Get subject selection
-% subjectID = get(handles.subject_popup, 'String');
-% sub_val = get(handles.subject_popup, 'Value'); 
-% 
-% % Get list information
-% list = get(handles.list_popup, 'String');
-% list_val = get(handles.list_popup, 'Value'); 
-% if ischar(list), list={list}; end % convert to cell. Makes list check easier. 
-% 
-% % Validate list selection
-% if test_val ==1
-%     post_feedback(hObject, eventdata, handles, 'Error: Invalid Test', false);
-%     return
-% else 
-%     post_feedback(hObject, eventdata, handles, 'Valid test selected', true);
-% end 
-% 
-% % Subject validation
-% if sub_val==1
-%     post_feedback(hObject, eventdata, handles, 'Error: Invalid Subject', false);
-%     return;
-% else
-%     post_feedback(hObject, eventdata, handles, 'Valid subject selected', true);
-% end % if sub_val
-% 
-% % Validate list selection
-% if list_val==1 && numel(list)>1
-%     % If lists are avaiable but we haven't selected one, then throw a shoe.
-%     post_feedback(hObject, eventdata, handles, 'Error: Invalid List', false);
-%     return;
-% elseif numel(list)>1
-%     post_feedback(hObject, eventdata, handles, 'Valid list selected', true);
-% else
-%     post_feedback(hObject, eventdata, handles, 'No list available', []); 
-% end % if sub_val
+    % Run the test
+    %   - Playlist automatically handled by SIN_getPlaylist (Called from
+    %   SIN_runTest). 
+    SIN_runTest(opts); 
 
-% XXX Calibration check XXX
-
-% XXX Play list check XXX
-
-% % Launch the appropriate test
-% %   Only launch test if the following conditions are met
-% %       1. A test is selected
-% %       2. Some wav files are selected
-% %       3. A subject is selected.
-% if list_val ~= 1 && length(wavfiles)>1 
-%     
-%     % If there's a list selected, then present those sounds
-%     % Run the first cell array in wavfiles
-%     SIN_runTest(testID{test_val}, ...
-%         subjectID{sub_val}, ...
-%         handles.testopts, ...
-%         wavfiles{list_val-1});
-%     
-% elseif list_val == 1 && length(wavfiles)==1
-%     
-%     % Run the first cell array in wavfiles
-%     SIN_runTest(testID{test_val}, ...
-%         subjectID{sub_val}, ...
-%         handles.testopts, ...
-%         wavfiles);
-%     
-% else 
-%     
-%     post_feedback(hObject, eventdata, handles, 'Error: List Selection', false);    
-%     return;
-%     
-% end % if list_val ~= 1
-
-% Post completion status
-% post_feedback(hObject, eventdata, handles, [testID{test_val} ' complete'], true);    
+    post_feedback(hObject, eventdata, handles, [testID ' complete'], true);    
+end % if isequal(subjectID ...
 
 % --- Executes on selection change in calibration_popup.
 function calibration_popup_Callback(hObject, eventdata, handles)
