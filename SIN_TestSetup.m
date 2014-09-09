@@ -471,26 +471,6 @@ switch testID;
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
         opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR
         
-    case 'MLST (AV)'
-        
-        % Start with MLST settings
-        opts = SIN_TestSetup('MLST (Audio)', subjectID); 
-        
-        % Change testID
-        opts.specific.testID = testID; 
-        
-        % Change file filter to .mp4 (we need to play movies)
-        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, 'mp3', 'mp4'); 
-        
-        % The mod mixer here is only used for noise playback. MP4s play out
-        % of whatever pair of speakers is default in Windows through
-        % Windows Media Player.
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [ [0.5] [0.5 ] [0.5] [0.5] ], 0);        
-        
-        % Eventually add in a 'AV' playback flag. Just something to
-        % distinguish between 'audio only' and 'AV' ... something like
-        % that. 
-        
     case 'ANL (BNL-Estimate)'
         
         opts=SIN_TestSetup('ANL (base)', subjectID); 
