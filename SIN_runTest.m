@@ -1,4 +1,4 @@
-function SIN_runTest(opts, playlist)
+function results = SIN_runTest(opts, playlist)
 %% DESCRIPTION:
 %
 %   Master control function to run various tests associated with SIN. The
@@ -24,19 +24,11 @@ function SIN_runTest(opts, playlist)
 %               SIN_getPlaylist. This
 % OUTPUT:
 %
-%   None (yet) 
+%   results:    results of the *last* test run in a sequence. Could be 
+%               dangerous if users run a multipart test (e.g., ANL). Might
+%               need to modify. 
 %
 % Development:
-%
-%   2. Handle individual stage crashes better for ANL. Currently, if one
-%   stage fails, the program just moves on. Need to have option to repeat
-%   if we have an unusual exit status. This can also be said of all other
-%   tests - runTest will need to be smarter in handling errors. 
-%
-%   3. Handle testID information better for multi-part tests (like ANL).
-%   Currently, I just use the testID of the first element of opts. Works
-%   for my needs, but might break (or have silent errors) in other
-%   circumstances. 
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -58,10 +50,6 @@ for t=1:length(testID)
     %   Each TEST ID has a unique set of instructions. 
     switch testID{t}
         
-        case {'MLST'}
-            
-            error('Not functional'); 
-            
         case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)', 'ANL (BNL-Estimate)'}
             
             for i=1:length(opts)
@@ -85,8 +73,11 @@ for t=1:length(testID)
                 % Launch ANL (at least part of it) 
                 %   We'll need to run this essentially 4 or 5 times and save
                 %   the values in different files. 
-                results = portaudio_adaptiveplay(playlist, opts(i));             
-                                
+                results = portaudio_adaptiveplay(playlist, opts(i)); 
+                
+                % Check for errors after every step of test. 
+                results = errorCheck(results, playlist); 
+                
                 % Save results to file 
                 SIN_saveResults(results); 
                 
@@ -100,8 +91,55 @@ for t=1:length(testID)
             % Launch HINT (SNR-50)
             results = portaudio_adaptiveplay(playlist, opts); 
             
-            % Save results to file 
-            SIN_saveResults(results); 
     end % switch/otherwise    
     
+    % Save results to file 
+    SIN_saveResults(results); 
+    
 end % for t=1:length(testID)
+
+function results = errorCheck(results, playlist)
+%% DESCRIPTION:
+%
+%   Function to check for and recover from errors following a test. If
+%   error has occurred, prompt user for input on whether to continue
+%   testing or to repeat the last test. 
+%
+% INPUT:
+%
+%   results:    results structure from previous test
+%
+%   playlist:   playlist used for test
+%
+% OUTPUT:
+%
+%   results:    results structure after appropriate action taken (if any).
+%
+% Christopher W Bishop
+%   University of Washington
+%   9/14
+
+% Error checking
+%   - If the player encounters an error for any reason, then we need to
+%   give the user options on how to proceed. 
+if isequal(results.RunTime.player.state, 'error')
+
+    % First, run error clearing routine
+    SIN_ClearErrors; 
+
+    % We can just continue with testing
+    resp = [];
+    while isempty(resp) || isempty(strfind('cr', lower(resp)))
+        resp = lower(input('Error encountered. Would you like to continue testing or repeat the last test/test segment? (C for continue, R for repeat)', 's'));
+    end % while isempty
+
+    % If user wants to continue anyway, then just return control to the
+    % calling function. Otherwise, repeat the test. 
+    if resp == 'c'
+        return
+    elseif resp == 'r'
+        % Repeat the test
+        results = SIN_runTest(results.UserOptions, playlist);         
+    end % resp == c
+
+end % if isequal ... error ...
