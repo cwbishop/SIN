@@ -1,4 +1,4 @@
-function createHagerman(target, noise, FS, SNRs, varargin)
+function createHagerman(varargin)
 %% DESCRIPTION:
 %
 %   Function to create stimuli for Hagerman recordings. The basic idea is
@@ -20,52 +20,65 @@ function createHagerman(target, noise, FS, SNRs, varargin)
 %
 % INPUT:
 %
-%   target: cell array, file or file(s) to concatenate to create the target
-%           track.
-%
-%   noise:  path to file containing noise sample.
-%
-%   FS:     sampling rate for output data (and files). 
-%
-%   SNRs:   N-element vector, where each element specifies the desired SNR
-%           (in dB). 
-%
 % Parameters:
 %
-%   'target_mixer': Dx1 array, where D is the number of channels in the wav
+%   File input and preprocessing:
+%
+%   'targettracks':  cell array, each element contains the path to a file
+%                   that will ultimately be part of the target signal
+%                   (e.g., speech track).
+%
+%   'noisetrack':   string, path to the noise track. 
+%
+%   'tmixerin':     Dx1 array, where D is the number of channels in the wav
 %                   files and 1 is the number of resulting target channels 
 %                   (this can be 1 and only 1 as coded).
 %
-%   'noise_mixer':  like target_mixer but applied to the noise sample.
+%   'nmixerin':     like target_mixer but applied to the noise sample.
 %
-%   'Nnoisechans':  number of noise channels to have in the resulting wav
-%                   file
+%   'removesilence':    bool, if set, removes the silence from beginning
+%                       and end of noise and target samples before further
+%                       processing. If set to TRUE, must also set
+%                       ampthresh parameter. 
 %
-%   'holdnoise':    bool, a flag to hold the noise or speech track
-%                   constant. If false, then the speech track is held
-%                   constant and the noise track is scaled to target the
-%                   specified SNR(s).
+%   'ampthresh':    double, absolute amplitude threshold to use to
+%                   define leading and trailing periods of silence.
+%
+%   'fsout':    sampling rate of output file in Hz (e.g., 44100)
+%
+%   SNR Calculation:
+%
+%   'snrs':         double array, desired SNRs. 
+%
+%   Noise windowing/timing shifts
 %
 %   'windownoiseby':apply an X sec windowing function to the beginning and
 %                   end of noise track. If user does not want any
-%                   windowing, set to 0.
+%                   windowing, set to 0. Uses a Hanning windowing function
 %
 %   'noiseshift':   the temporal offset applied to noise between sequential
 %                   output channels (in sec). 
 %
-%   'remove_silence':   bool, if set, removes the silence from beginning
-%                       and end of noise and target samples before further
-%                       processing. If set to TRUE, must also set
-%                       signal_threshold parameter. 
+%   File Output:
 %
-%   'signal_threshold': double, absolute amplitude threshold to use to
-%                       define leading and trailing periods of silence.
+%   'basename': string, full path to base file name. (e.g.,
+%               fullpath('playback', 'Hagerman', 'mywav.wav'); 
 %
-%   'target_jitter':    two-element array, specifies the temporal jitter
-%                       between the end of of the previous target sample
+
+%
+%   'bitdepth': bit depth for output file (e.g., 24)
+%
+%   'gaprange':         two-element array, specifies the temporal jitter
+%                       between the end of of the previous target file
 %                       and the subsuquent target. Think of this as
 %                       introducing a variable (or fixed) silent period
 %                       between target sentences. 
+%   'tmixerout':    1xP array, where P is the number of output channels of 
+%                   thre returned data. Each coefficient weights and adds
+%                   the input target track to the output track
+%
+%   'nmixerout'     1xP array, like tmixerout about, but mixes input noise
+%                   track into output tracks. 
 %
 % Development:
 %
@@ -84,18 +97,18 @@ d=varargin2struct(varargin{:});
 %   rate (FS).
 
 % Load/resample target stimuli
-tstim = cell(numel(target), 1);
+tstim = cell(numel(d.targettracks), 1);
 for i=1:numel(tstim)
     
     % Load stimulus
-    [data, fs] = SIN_loaddata(target{i}); 
+    [data, fs] = SIN_loaddata(d.targettracks{i}); 
     
     % Resample stimulus
-    data = resample(data, FS, fs); 
+    data = resample(data, d.fsout, fs); 
     
     % Assign to tstim cell array
     %   Multiply by target mixer. 
-    tstim{i} = data*d.target_mixer; 
+    tstim{i} = data*d.tmixerin; 
     
     % Clear variables
     clear data fs 
@@ -103,114 +116,104 @@ for i=1:numel(tstim)
 end % for i=1:numel(tstim)
 
 % Load/resample noise stimuli
-[data, fs] = SIN_loaddata(noise); 
+[data, fs] = SIN_loaddata(d.noisetrack); 
 
 % Resample noise stimulus
 %   Multiply by mixer to reduce to a single channel
-nstim = resample(data, FS, fs)*d.noise_mixer; 
+nstim = resample(data, d.fsout, fs)*d.nmixerin; 
 
-%% REMOVE SILENCE 
-%
-%   If user specifies, remove silence from beginning and ends of target and
-%   noise stimuli.
-if d.remove_silence
-    
-    % Remove silence from tstim
-    for i=1:numel(tstim)
-    
-        % Remove silence from beginning and end of stimulus
-        tstim{i} = threshclipaudio(tstim{i}, d.signal_threshold, 'begin&end'); 
-
-    end % for i=1:numel(tstim)
-    
-    % Remove silence from noise
-    nstim = threshclipaudio(nstim, d.signal_threshold, 'begin&end'); 
-    
-end % if d.remove_silence
-
-%% INTRODUCE SILENCE IN TARGET TRACK
-%   If specified by the user, introduce a period of silence between each
-%   subsequent target stimulus.
-%
-%   Added silence may be fixed or jittered, depending on user
-%   specifications
-% if d.target_jitter(1) ~= 0 || d.target_jitter(2) ~= 0
-    
-% Loop through all stimuli
-for i=1:numel(tstim)
-
-    % Figure out the silent gap to apply
-    zpad = zeros(round((d.target_jitter(1) + diff(d.target_jitter)*rand(1))*FS), size(nstim,2));
-
-    % Append to stim
-    tstim_pad{i} = [tstim{i}; zpad]; 
-
-end % for i=1:numel(tstim)
-    
-% end % if d.target_jitter 
-
-%% CONCATENATE TARGET FILES
-%   Concatenate all target files to generate the "target" stimulus.
-% target = [];
-targpad = [];
-targ = [];
+%% CREATE CONCATENATED STIMULUS TRACK
+%   Concatenate all stimuli prior to RMS estimation. Might remove silenec
+%   as well, if user wants to.
+concat = [];
 for i=1:numel(tstim)
     
-    % Non zero padded target stimulus
-    targ = [targ; tstim{i}];
+    % Remove silence from target track ?
+    if d.removesilence
+        concat = [concat; threshclipaudio(tstim{i}, d.ampthresh, 'begin&end')]; 
+    else
+        concat = [concat; tstim{i}];
+    end % if d.removesilence
     
-    % With zero padding added
-    targpad = [targpad; tstim_pad{i}]; 
+end % 
+
+% Should we remove silence from noise as well?
+if d.removesilence
+    noiseref = threshclipaudio(nstim, d.ampthresh, 'begin&end'); 
+else 
+    noiseref = nstim;
+end % 
+
+% Estimate RMS of target and noise track
+rmstarg = rms(concat); 
+rmsnoise = rms(noiseref);
+
+% If holdtargSPL is set, then scale the noise to target
+scale = db2amp(db(rmstarg) - db(rmsnoise)); 
+nstim = nstim.*scale; % scale the noise stimulus. 
+
+% Mix nout with nmixerout
+% nout = nstim * d.nmixerout;
+
+% Clear potentially confusing variables
+clear concat noiseref noise
+
+% Generate output target track
+tout = []; % target output track
+for i=1:numel(tstim)
+    
+    % Estimate silent periods at beginning and end of sound
+    if i>1
+        leadsamps = size(tstim{i-1}, 1) - size(threshclipaudio(tstim{i-1}, d.ampthresh, 'begin'),1);
+    else 
+        leadsamps = 0; 
+    end 
+    
+    % Always calculate lag samps of current stimulus
+    lagsamps = size(tstim{i}, 1) - size(threshclipaudio(tstim{i}, d.ampthresh, 'end'),1); 
+    
+    % Set random number generator state to a constant so we get the same
+    % stimulus every time 
+    %   Will likely help prevent errors or oversights by CWB down the road
+    rng('default'); % resets default state of random number generate
+    
+    % Get total number of zeroed samples to add    
+    zsamps = round((d.gaprange(1) + diff(d.gaprange)*rand(1))*d.fsout) - (leadsamps + lagsamps);
+    
+    zpad = [tstim{i}; zeros(zsamps, size(tstim{i}, 2))]; 
+    
+    % Create zero padded track
+    %   Zeros are how we account for silent period after sound offset
+    tout = [tout; zpad]; 
+    
+    clear zpad
     
 end % for i=1:numel(tstim)
 
-%% MATCH NOISE DURATION TO TARG
-%   Need the total number of samples in the noise stimulus to match the
-%   target. So, repeat the noise file if we need to. Or truncate it.
-if size(nstim,1) > size(targpad,1)
-    nstim = nstim(1:size(targpad,1), :); 
-elseif size(nstim, 1) < size(targpad,1)
-    nstim = [ nstim; nstim(1:size(targpad,1) - size(nstim,1), :)];
-end % if size(nstim, 1)
+% Create matching noise sample
+nout = repmat(nstim, ceil(size(tout,1)./size(nstim,1)), 1); % repmat it to match
+nout = nout(1:size(tout,1)); % truncate to match
 
-%% CREATE N NOISE CHANNELS
-%   Temporally shift the noise in each noise channel
-nout = [];
-for i=1:d.Nnoisechans
-    
-    % Shift noise sample by predefined step
-    nout(:,i) = circshift(nstim, round(d.noiseshift*(i-1)*FS));
-    
-end % for i=1:d.Nnoisechans
-nstim = nout;
+% Mix noise and apply time shift
+nout = remixaudio(nout, 'fsx', d.fsout, 'mixer', d.nmixerout, 'toffset', d.noiseshift, 'writetofile', false);  
 
-%% WINDOW NOISE
-if d.windownoiseby ~= 0
-    
-    % Fade noise in and out
-    nstim = fade(nstim, FS, true, true, @hann, d.windownoiseby);
-    
-end % d.windownoiseby
+% Fade noise in/out
+nout = fade(nout, d.fsout, true, true, @hann, d.windownoiseby); 
 
-%% ESTIMATE POWER OF UNPADDED TARGET
-Pxx = db(rms(targ)); 
-Pyy = db(rms(nstim)); Pyy = mean(Pyy); % Use the average of all channels - they should be very close anyway
+% Mix tout with tmixerout
+tout = tout * d.tmixerout; 
 
-%% SCALE STIMULI
-%
-%   Need to scale stimuli to generate the required SNR. 
-%
-%   - If holdnoise is true, then scale the target track. 
-%   - Otherwise, scale the noise track. 
-nout = nan(size(nstim)); 
-for i=1:numel(SNRs)
+% Now, assuming we're at 0 dB SNR, create requested SNR outputs
+for i=1:numel(d.snrs)
     
-    % Pyy - Pxx gets us to 0 dB SNR.
-    nout = nstim .* db2amp(-1*SNRs(i) + (Pxx - Pyy));
+    % Scale noise, mix to create output track
+    out = tout + nout.*db2amp(d.snrs(i));
     
-end % for i=1:numel(SNRs)
-
-%% ADD SIGNAL TAG TO BEGINNING AND END OF TARGET TRACK. 
-%   Should we add a tag to the beginning and end of each channel? Would
-%   this be way overkill? Probably, but many it will help catch some issues
-%   down the road? Dunno. CWB needs to think about it. 
+    % output file name
+    [PATHSTR,NAME,EXT] = fileparts(d.basename);
+    fname = fullfile(PATHSTR, [NAME '(' num2str(d.snrs(i)) ' dB SNR)' EXT]);
+    
+    % Write file
+    audiowrite(fname, out, d.fsout, 'BitsperSample', d.bitdepth); 
+    
+end % for i=1:d.snrs 
