@@ -138,6 +138,16 @@ switch testID;
         %   Generally do not want to preload AV stims, though, so look for
         %   a change in MLST (AV). Also MLST (Audio)
         opts.player.preload = true;
+        
+        % Analysis defaults
+        %   Empty analysis function handle and parameters. Set 'run' to
+        %   false so SIN_runTest does not attempt to run an analysis by
+        %   default. 
+        opts.analysis = struct(...
+            'fhand',    '', ...
+            'run',  false, ...
+            'params', struct()); 
+        
         % Return so we do not assign a UUID to defaults. 
         return
         
@@ -635,6 +645,17 @@ switch testID;
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track mod_mixer   
         
+        % ============================
+        % Analysis Configuration               
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_ANL, ...  % functioin handle to analysis function
+            'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_ANL)
+                'order',    1:6, ...
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1
+                'nmask',    fillPlaybackMixer(opts.player.playback.device, [0;1], 0), ...   % get data chan 2/phys chan 1
+                'plot', true)); % generate plot
     otherwise
         
         error('unknown testID')
@@ -662,8 +683,7 @@ opts = SIN_assignUUID(opts);
 %   CWB decided that the format described above was WAY too confusing to
 %   look at, so went back to original format. 
 for i=1:length(opts)
-%     opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).specific.uuid '-' opts(1).subject.subjectID '-' opts(1).specific.testID]);
-    opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).subject.subjectID '-' opts(1).specific.testID '-' opts(1).specific.uuid]);
+    opts(i).specific.saveData2mat = fullfile(opts(1).subject.subjectDir, [opts(1).subject.subjectID '-' testID ' (' opts(1).specific.uuid ')']);
 end %
 
 end % function end
