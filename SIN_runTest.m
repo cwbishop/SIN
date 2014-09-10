@@ -97,8 +97,8 @@ for t=1:length(testID)
     
     % Run Analysis on the fly for spot checking??
     %   We'll generally want to do this, CWB thinks. 
-    if results(1).analysis.run
-        results = results.analysis.fhand(results, results.analysis.params);
+    if results(1).RunTime.analysis.run
+        results = results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
     end % if results(1).analysis.run
         
 end % for t=1:length(testID)

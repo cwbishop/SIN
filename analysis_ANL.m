@@ -74,7 +74,7 @@ BNL = db(results(d.order(6)).RunTime.player.mod_mixer(d.nmask), 'voltage'); % Ba
 ANL = MCL - BNL; 
 
 %% APPEND DATA TO ANALYSIS FIELD OF RESULTS
-results(1).RunTime.analysis.out = struct( ...
+results(1).RunTime.analysis.results = struct( ...
     'mcl',  MCL, ...
     'bnl',  BNL, ...
     'anl',  ANL); 
@@ -96,6 +96,8 @@ if d.plot
     data = db([results(d.order(2)).RunTime.player.mod_mixer(d.tmask) results(d.order(5)).RunTime.player.mod_mixer(d.nmask)]);
     plot(1:2, data, 'co', 'linewidth', 1.5);
     
+    % Plot ANL
+    plot(1.5, ANL, 'r*', 'linewidth', 2)
     % Set axis limits
    	xlim([0.5 2.5]);     
      
@@ -104,7 +106,7 @@ if d.plot
     
     % Markup
     title(results(1).RunTime.specific.testID); 
-    legend('MCL', 'BNL', 'SP(loud)', 'SP(quiet)', 'Noise(loud)', 'Noise(quiet)', 'location', 'best');    
+    legend('MCL', 'BNL', 'Loud', 'Quiet', 'ANL', 'location', 'best');    
     ylabel('dB SPL (re: reference)'); 
     set(gca, 'XTick', [1 2])
     set(gca, 'XTickLabel', {'Speech', 'Noise'})

@@ -274,7 +274,17 @@ switch testID;
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_trackMixer, ...
             'mod_stage',    'premix');   % track mod_mixer        
-         
+        
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
+                'plot', true)); % generate plot
     case 'ANL'
         % ANL is actually a sequence of tests. The list includes the
         % following:
@@ -653,8 +663,8 @@ switch testID;
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_ANL)
                 'order',    1:6, ...
-                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1
-                'nmask',    fillPlaybackMixer(opts.player.playback.device, [0;1], 0), ...   % get data chan 2/phys chan 1
+                'tmask',    logical(fillPlaybackMixer(opts.player.playback.device, [1;0], 0)), ...   % just get data/physical channel 1
+                'nmask',    logical(fillPlaybackMixer(opts.player.playback.device, [0;1], 0)), ...   % get data chan 2/phys chan 1
                 'plot', true)); % generate plot
     otherwise
         
