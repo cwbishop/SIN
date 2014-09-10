@@ -175,7 +175,7 @@ switch testID;
         
         % Change algorithm tracking
         %   Start with 1up1down, then switch to 4down1up after trial 4
-        opts.player.modcheck.algo = {'1up1down' '4down1up'}; 
+        opts.player.modcheck.algo = {@algo_HINT1up1down @algo_HINT4down1up}; 
         opts.player.modcheck.startalgoat=[1 5]; 
         
     case 'HINT (SNR-50, keywords, 1up1down)'
@@ -253,7 +253,7 @@ switch testID;
             'data_channels',    1, ...
             'physical_channels', 1, ...
             'scored_items',  'keywords', ... % score only keywords (excludes articles?)
-            'algo',     {{'1up1down'}}, ... % use a one-up-one-down algo
+            'algo',     {{@algo_HINT1up1down}}, ... % use a one-up-one-down algo
             'startalgoat',     [1], ... % start algorithms at trials 1/5
             'score_labels',   {{'Correct', 'Incorrect'}}); % scoring labels for GUI
         

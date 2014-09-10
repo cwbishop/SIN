@@ -206,12 +206,7 @@ fname = [fname(start:stop+1) NAME]; % don't match file extensions, just use the 
 %   change the GUI below.
 %
 %   See help for a conceptual description of each of these scoring methods
-
-% Break up sentence into words
-w=strsplit(o.sentence{1}); 
-
-% Set scores to zero to begin with
-isscored=false(length(w),1); 
+[iskey, words] = SIN_keywords(o.sentence{1}); 
 
 %% DETERMINE WHICH ITEMS ARE SCORED
 %   Each scoring method has slightly different characteristics. These
@@ -228,27 +223,12 @@ switch d.player.modcheck.scored_items
         % correct.        
         
         % Score all words
-        isscored=true(size(isscored)); 
+        isscored=true(numel(words)); 
         
     case {'keywords'}
         
-        % Determine keywords by capitalization in spreadsheet. 
-        for n=1:length(w)
-    
-            % First, remove potential markups, like brackets ([]) and '/'
-            tw=strrep(w{n}, '[', '');
-            tw=strrep(tw, ']', '');
-            tw=strrep(tw, '/', '');    
-            
-            % Only score if all the text is capitalized - that's the flag
-            % we're using to tag "key words"
-            if isstrprop(tw, 'upper')
-                isscored(n)=true;
-            else
-                isscored(n)=false;
-            end % if isstrprop ...
-            
-        end % for i=1:length(w)
+        % Get a logical vector from SIN_keywords
+        isscored = iskey;
         
     case {'sentences'}
         
@@ -276,7 +256,7 @@ end % switch/otherwise
 %   customizations. 
 [fhand, score]=HINT_GUI(...
     'title', ['HINT: ' o.id{1} ' (' num2str(numel(isscored(isscored))) ' possible)'], ...
-    'words', {w}, ...
+    'words', {words}, ...
     'xdata',  1:d.sandbox.trial, ...
     'ydata',  db(squeeze(d.sandbox.mod_mixer(d.player.modcheck.data_channels, d.player.modcheck.physical_channels, :))), ... % plot the mod_mixer history. This tells us precisely the scaling factor applied to our stimuli. 
     'xlabel', d.player.modcheck.xlabel, ...
@@ -310,109 +290,12 @@ d.player.modcheck.trial_info{trial} = o; % save over sentence information. All o
 %   In special cases, it may be necessary to combine algorithms for testing
 %   purposes (e.g., 1up1down for N trials, followed by 4down1up). This can
 %   be done using this algo selection criteria.
-d.player.modcheck.current_algo = d.player.modcheck.algo{find(trial>=d.player.modcheck.startalgoat, 1, 'last')};
+algo = HINT_chooseAlgo(d.player.modcheck.algo, d.player.modcheck.startalgoat, trial); 
 
 %% APPLY ALGORITHM
-%   The algorithms return a decibel gain to apply to the next stimulus. 
-% [mod_code] = d.modcheck.algorithm.fhandle(logical(score(score~=1)), d.modcheck.algorithm); 
-switch d.player.modcheck.current_algo
-    
-    case {'1up1down'}
-        
-        % Implement a one-up-one-down staircase algorithm
-        if all(score(isscored)==1) % if everything is correct
-            mod_code = -1; % step down
-        elseif any(score(isscored)==2) % if any scored items are incorrect
-            mod_code = 1; % step up
-        else 
-            % This should never happen, but CWB wants to be careful.
-            error('I do not know what to do with this scoring information'); 
-        end % if all ...
-        
-    case {'NALadaptive'}
-        
-        % Return empty mod_code
-        %   The mod_code is ignored here because the algorithm is too
-        %   complex to build based on a couple of mod codes. CWB thought
-        %   about setting the mod_code to the 'dBnext' return variable from
-        %   algo_NALadaptive, but decided against it since he has poor
-        %   control over what those values might be. If a mod_code is
-        %   returned that is used by an attached modifier, then all hell
-        %   will break loose.
-        %
-        %   Instead, CWB will add a modifier that queries the current state
-        %   of the algorithm and applies the requested dB change.
-        %
-        %   A mod_code of "0" generally means "Don't do anything", so kick
-        %   that back. Of course, the user will need to make sure that 0
-        %   doesn't "do anything" for the modifiers employed.
-        mod_code = 0;
-        
-        % Convert score into something interpretable by algo_NALadaptive
-        tscore=false(size(isscored)); % initialize to false
-        
-        % Assign true values for all "1"s.
-        tscore(score(isscored)==1) = true; 
-        
-        % Implement a NALadaptive algorithm
-        %   mod_code is the scaling factor to apply to the next stimulus.
-        [NAL] = algo_NALadaptive(tscore, ...
-            d.player.modcheck.algoParams);
-        
-        % Add NAL output to sandbox
-        d.sandbox.NAL = NAL; 
-        
-        % Check the phase. If phase 4 is reached, then terminate the algo,
-        % clear the cache, set the player state to exit.
-        if NAL.phase(end) == 4
-            
-            % Set player state to exit
-            d.player.state = 'exit';
-            
-            % Clear the persistent variables in the algorithm
-            clear algo_NALadaptive; 
-            
-        end % if NAL.phase ...
-        
-    case '4down1up'
-        
-        % Following 4 correct responses, decrease the SNR. After a single
-        % incorrect response, increase SNR by the presecribed stepsize.
-        
-        % Is response correct or incorrect? 
-        %   - If all scored items are correct (first option (1)), then
-        %   increment the number of consecutive correct responses
-        %   (nconsecutive)
-        %
-        %   - If the listener missed something, then reset counter and
-        %   return a "1" to improve SNR by some set amount (determined in
-        %   modifier)
-        if all(score(isscored)==1) % if everything is correct
-            d.player.modcheck.nconsecutive = d.player.modcheck.nconsecutive + 1;
-        elseif any(score(isscored)==2) % if any scored items are incorrect
-            d.player.modcheck.nconsecutive = 0;
-            mod_code = 1; 
-        else 
-            % This should never happen, but CWB wants to be careful.
-            error('I do not know what to do with this scoring information'); 
-        end % if all ...
-        
-        % If we have 4 consecutive correct answers in a row, then return a
-        % "-1" to decrease SNR.
-        %
-        % Also reset counter to 0 to start counting over again
-        if d.player.modcheck.nconsecutive == 4
-            mod_code = -1; 
-            d.player.modcheck.nconsecutive = 0; 
-        end % if d.player.modcheck.Ncons...
-        
-    case 'none'
-        
-        % No algorithm applied
-        mod_code = 0;
-    otherwise
-        error('Unknown algorithm');
-end % switch d.player.modcheck.algo
+%   Get a mod_code back from the algorithm after passing it in the scoring
+%   history. 
+mod_code = algo(d.player.modcheck.score); 
 
 %% CLOSE GUI
 %   Only close it down if we're done. We are "done" if:

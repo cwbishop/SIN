@@ -115,13 +115,6 @@ for i=1:numel(tstim)
     
 end % for i=1:numel(tstim)
 
-% Load/resample noise stimuli
-[data, fs] = SIN_loaddata(d.noisetrack); 
-
-% Resample noise stimulus
-%   Multiply by mixer to reduce to a single channel
-nstim = resample(data, d.fsout, fs)*d.nmixerin; 
-
 %% CREATE CONCATENATED STIMULUS TRACK
 %   Concatenate all stimuli prior to RMS estimation. Might remove silenec
 %   as well, if user wants to.
@@ -137,23 +130,35 @@ for i=1:numel(tstim)
     
 end % 
 
-% Should we remove silence from noise as well?
-if d.removesilence
-    noiseref = threshclipaudio(nstim, d.ampthresh, 'begin&end'); 
+% Only load noise stimulus if user specifies it
+if ~isempty(d.noisetrack)
+    % Load/resample noise stimuli
+    [data, fs] = SIN_loaddata(d.noisetrack); 
+
+    % Resample noise stimulus
+    %   Multiply by mixer to reduce to a single channel
+    nstim = resample(data, d.fsout, fs)*d.nmixerin; 
 else 
-    noiseref = nstim;
-end % 
+    nstim=[];
+end % if ~isempty(d.noisetrack ...
 
-% Estimate RMS of target and noise track
-rmstarg = rms(concat); 
-rmsnoise = rms(noiseref);
+% Should we remove silence from noise as well?
+if ~isempty(nstim)
+    if d.removesilence
+        noiseref = threshclipaudio(nstim, d.ampthresh, 'begin&end'); 
+    else 
+        noiseref = nstim;
+    end % 
+    
+    % Estimate RMS of target and noise track
+    rmstarg = rms(concat); 
+    rmsnoise = rms(noiseref);
 
-% If holdtargSPL is set, then scale the noise to target
-scale = db2amp(db(rmstarg) - db(rmsnoise)); 
-nstim = nstim.*scale; % scale the noise stimulus. 
-
-% Mix nout with nmixerout
-% nout = nstim * d.nmixerout;
+    % If holdtargSPL is set, then scale the noise to target
+    scale = db2amp(db(rmstarg) - db(rmsnoise)); 
+    nstim = nstim.*scale; % scale the noise stimulus. 
+    
+end % ~isempty(nstim)
 
 % Clear potentially confusing variables
 clear concat noiseref noise
@@ -190,15 +195,18 @@ for i=1:numel(tstim)
     
 end % for i=1:numel(tstim)
 
-% Create matching noise sample
-nout = repmat(nstim, ceil(size(tout,1)./size(nstim,1)), 1); % repmat it to match
-nout = nout(1:size(tout,1)); % truncate to match
+if ~isempty(nstim)
+    % Create matching noise sample
+    nout = repmat(nstim, ceil(size(tout,1)./size(nstim,1)), 1); % repmat it to match
+    nout = nout(1:size(tout,1)); % truncate to match
 
-% Mix noise and apply time shift
-nout = remixaudio(nout, 'fsx', d.fsout, 'mixer', d.nmixerout, 'toffset', d.noiseshift, 'writetofile', false);  
+    % Mix noise and apply time shift
+    nout = remixaudio(nout, 'fsx', d.fsout, 'mixer', d.nmixerout, 'toffset', d.noiseshift, 'writetofile', false);  
 
-% Fade noise in/out
-nout = fade(nout, d.fsout, true, true, @hann, d.windownoiseby); 
+    % Fade noise in/out
+    nout = fade(nout, d.fsout, true, true, @hann, d.windownoiseby); 
+    
+end % if ~isempty(nstim)
 
 % Mix tout with tmixerout
 tout = tout * d.tmixerout; 
@@ -207,7 +215,11 @@ tout = tout * d.tmixerout;
 for i=1:numel(d.snrs)
     
     % Scale noise, mix to create output track
-    out = tout + nout.*db2amp(d.snrs(i));
+    if ~isempty(nstim)
+        out = tout + nout.*db2amp(d.snrs(i));
+    else
+        out = tout;
+    end % out
     
     % output file name
     [PATHSTR,NAME,EXT] = fileparts(d.basename);
