@@ -7,7 +7,15 @@ function SIN_saveResults(results)
 %
 % INPUT:
 %
-%   results:    portaudio_adaptiveplay results structure
+%   results:    portaudio_adaptiveplay results structure. This may be a
+%               multielement structure gathered by SIN_runTest as well. If
+%               this is the case, then the multi-part results structure
+%               will be saved to the specific.saveData2mat field specified
+%               in the first element's results structure. 
+%
+%               Note: saving multipart data in the same file made
+%               determining the order of multipart tests more robustly and
+%               to keep the parts grouped together a more convenient way. 
 %
 % OUTPUT:
 %
@@ -24,7 +32,10 @@ function SIN_saveResults(results)
 %   that the player (or a modifier attached to the player) will change a
 %   relevant field. So we want to work with that rather than the
 %   UserOptions.
-opts = results.RunTime; 
+%
+%   - Only grab options structure from first element of results and save
+%   the whole structure to a single file. 
+opts = results(1).RunTime; 
 
 %% FILE NAME
 %
