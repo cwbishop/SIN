@@ -24,9 +24,8 @@ function results = SIN_runTest(opts, playlist)
 %               SIN_getPlaylist. This
 % OUTPUT:
 %
-%   results:    results of the *last* test run in a sequence. Could be 
-%               dangerous if users run a multipart test (e.g., ANL). Might
-%               need to modify. 
+%   results:    results structure. May be single element or multi-element
+%               depending on how the test is configured/run. 
 %
 % Development:
 %
@@ -43,6 +42,9 @@ if ~exist('playlist', 'var') || isempty(playlist), [playlist, lists] = SIN_getPl
 %   though, in other circumstances.
 testID = {opts(1).specific.testID}; 
 
+%% INITIALIZE RETURN VARIABLES
+allresults = struct(); % structure containing results information for each test/test stage. 
+
 % Loop through all tests (eventually)
 for t=1:length(testID)
         
@@ -58,13 +60,13 @@ for t=1:length(testID)
                 
                     % Buffer Position
                     opts(i).player.startplaybackat = ...
-                        results.RunTime.sandbox.buffer_pos./results.RunTime.player.playback.fs; 
+                        results(i-1).RunTime.sandbox.buffer_pos./results(i-1).RunTime.player.playback.fs; 
                 
                     % mod_mixer
                     %   Only want to copy over non-zero values. 
-                    mixer_mask = results.RunTime.player.mod_mixer ~= 0; 
+                    mixer_mask = results(i-1).RunTime.player.mod_mixer ~= 0; 
                     opts(i).player.mod_mixer(mixer_mask) = ...
-                        results.RunTime.player.mod_mixer(mixer_mask); 
+                        results(i-1).RunTime.player.mod_mixer(mixer_mask); 
 
                     % Calibration information 
                 
@@ -73,13 +75,10 @@ for t=1:length(testID)
                 % Launch ANL (at least part of it) 
                 %   We'll need to run this essentially 4 or 5 times and save
                 %   the values in different files. 
-                results = portaudio_adaptiveplay(playlist, opts(i)); 
+                results(i) = portaudio_adaptiveplay(playlist, opts(i)); 
                 
                 % Check for errors after every step of test. 
-                results = errorCheck(results, playlist); 
-                
-                % Save results to file 
-                SIN_saveResults(results); 
+                results(i) = errorCheck(results(i), playlist); 
                 
             end % for i=1:length(opts)
             
@@ -93,10 +92,18 @@ for t=1:length(testID)
             
     end % switch/otherwise    
     
-    % Save results to file 
+    % Save to results file
     SIN_saveResults(results); 
     
+    % Run Analysis on the fly for spot checking??
+    %   We'll generally want to do this, CWB thinks. 
+    if results(1).analysis.run
+        results = results.analysis.fhand(results, results.analysis.params);
+    end % if results(1).analysis.run
+        
 end % for t=1:length(testID)
+
+% Save allresults structure instead??
 
 function results = errorCheck(results, playlist)
 %% DESCRIPTION:
