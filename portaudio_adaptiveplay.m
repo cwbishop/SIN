@@ -418,7 +418,7 @@ isDuplex=false;
 % Open the playback device 
 %   We now use buffered playback for both continuous and bytrial
 %   adaptive playback. So, open the handle if either is selected
-if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial') ...
+if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial') || isequal(d.player.adaptive_mode, 'none')...
    
     if (d.player.record_mic && isempty(comp_struct(d.player.playback.device, d.player.record.device, 0))) 
         
@@ -481,7 +481,7 @@ end % if d.player.record_mic
 %   Playback is handled differently for audiovisual adaptation. 
 %
 %   Use buffer information for 'bytrial' adaptive mode now as well. 
-if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial')
+if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mode, 'bytrial') || isequal(d.player.adaptive_mode, 'none')
     
     % Create empty playback buffer
     buffer_nsamps=round(d.player.playback.block_dur*FS)*2; % need 2 x the buffer duration
@@ -528,17 +528,21 @@ d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single m
 %   device initialized).
 
 % Call modcheck
-[mod_code, d]=d.player.modcheck.fhandle(d);
+if ~isempty(fieldnames(d.player.modcheck))
+    [mod_code, d]=d.player.modcheck.fhandle(d);
+end
 
 % Initialized modifiers
 %   Multiple modifiers possible
 for modifier_num=1:length(d.player.modifier)
     
     % Update variable in sandbox
-    d.sandbox.modifier_num=modifier_num;
     
-    % Initialize modifier
-    [~, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle([], mod_code, d); 
+    d.sandbox.modifier_num=modifier_num;
+    if ~isempty(fieldnames(d.player.modifier{d.sandbox.modifier_num}))
+        % Initialize modifier
+        [~, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle([], mod_code, d); 
+    end % if ~isempty(modifier)
     
 end % for modifier_num
 
@@ -589,15 +593,16 @@ for trial=1:length(playback_list)
             d.sandbox.modifier_num=modifier_num;
     
             % Initialize modifier
-            [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+            if ~isempty(fieldnames(d.player.modifier{d.sandbox.modifier_num}))
+                [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+            end % if modifier
     
         end % for modifier_num                
 
     else
         % Assign X (raw data) to second variable for playback 
         Y=X; 
-    end % isequal(d.player.adaptive_mode, 'bytrial')           
-    
+    end % isequal(d.player.adaptive_mode, 'bytrial')   
     
     % Global prep, indepdent of PlayerType
     % rhand is empty if record_mic == false. 
@@ -1071,6 +1076,8 @@ for trial=1:length(playback_list)
             % in sound playback/recording. So, we need to delay the stop
             % time a bit. To do that, we'll pad the playback buffer by the
             % required number of samples (zero it out).
+            
+%             pstatus=PsychPortAudio('GetStatus', phand);  
             if ~isempty(rhand)
                 lat = pstatus.PredictedLatency + rstatus.PredictedLatency; % recording latency
             elseif ~isempty(phand)
@@ -1169,6 +1176,16 @@ for trial=1:length(playback_list)
             
             % Play movie
             wmp.control.play();        
+            
+            % Wait until playback has started
+            wmpstate = wmp.playState;
+            while isempty(strfind(wmp.playState, 'Playing')), 
+                WaitSecs(0.1); 
+                wmpstate = wmp.playState; 
+            end
+            
+            % Now wait for the player to stop
+            while isempty(strfind(wmp.playState, 'Stopped')), wmpstate = wmp.playState; end
             
         otherwise
             

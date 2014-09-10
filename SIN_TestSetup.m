@@ -103,14 +103,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(13), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(12), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(13), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(12), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -463,7 +463,7 @@ switch testID;
         opts.player.modcheck.data_channels = 1; 
         
         % We aren't applying any changes. Just using the GUI for scoring. 
-        opts.player.modcheck.algo = {'none'}; %        
+        opts.player.modcheck.algo = {@algo_HINTnochange}; %
         
         % Use keyword scoring only
         %   Keywords are denoted as capital letters. 
@@ -489,7 +489,7 @@ switch testID;
         
         %% CONTINUOUS NOISE INFORMATION
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR     
         
     case 'ANL (BNL-Estimate)'
         
@@ -569,7 +569,7 @@ switch testID;
         %   speaker. 
         %   
         %   This field is used in SIN_stiminfo.m. 
-        opts.specific.anl_regexp='ANL;0dB.wav'; 
+        opts.specific.wav_regexp='ANL;0dB.wav'; 
         
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
@@ -666,6 +666,100 @@ switch testID;
                 'tmask',    logical(fillPlaybackMixer(opts.player.playback.device, [1;0], 0)), ...   % just get data/physical channel 1
                 'nmask',    logical(fillPlaybackMixer(opts.player.playback.device, [0;1], 0)), ...   % get data chan 2/phys chan 1
                 'plot', true)); % generate plot
+            
+    case 'Hagerman'
+        
+        %% SETUP FOR HAGERMAN STYLE RECORDINGS
+        %   This specific experiment has some basic needs. 
+        %       - Play back and record a specific set of files in
+        %       randomized order. 
+        %       - Create some plots/summary statistics after run time. 
+        %   That's it! Let's see how quickly that can be done ...
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults', subjectID); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions, like importHINT and the like. 
+        % ============================
+        
+        % set the testID (required)
+        opts.specific.testID = testID;
+        
+        % root directory for HINT stimuli and lookup list
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
+        
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp=''; 
+                
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        
+        % full path to HINT lookup list. Currently an XLSX file provided by
+        % Wu. Used by importHINT.m
+                
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 0; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
+        opts.specific.genPlaylist.Randomize = ''; % randomize list order and stimuli within each list.
+        opts.specific.genPlaylist.Repeats = ''; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
+        
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        
+        % Function handle for designated player
+        opts.player.player_handle = @portaudio_adaptiveplay; 
+        
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        false, ...   % randomize trial order before playback
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 1] ], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'startplaybackat',    0, ...  % start playback at beginning of files
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'state',    'run'); % Start in run state
+            
+        % ============================
+        % Modification check (modcheck) configuration        
+        % ============================
+        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
+        
+        % ============================
+        % Modifier configuration        
+        % ============================
+        %   No modifiers for playback
+        % Modifier to scale mixing information
+        opts.player.modifier{end+1} = struct();  % No modifier necessary
+        
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
+                'plot', true)); % generate plot
+            
     otherwise
         
         error('unknown testID')

@@ -207,6 +207,7 @@ fname = [fname(start:stop+1) NAME]; % don't match file extensions, just use the 
 %
 %   See help for a conceptual description of each of these scoring methods
 [iskey, words] = SIN_keywords(o.sentence{1}); 
+isscored = false(numel(words)); % initalize scoring to false.
 
 %% DETERMINE WHICH ITEMS ARE SCORED
 %   Each scoring method has slightly different characteristics. These

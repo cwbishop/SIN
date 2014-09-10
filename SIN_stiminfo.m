@@ -72,9 +72,9 @@ switch testID
             wavfiles{i}= regexpdir(list_dir{i}, opts.specific.wav_regexp, false);
         end % for i=1:length(list_id)
 
-    case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)' }
+    case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)', 'Hagerman' }
 
-        wavfiles=regexpdir(opts.specific.root, opts.specific.anl_regexp, false);
+        wavfiles=regexpdir(opts.specific.root, opts.specific.wav_regexp, false);
     
     case {'noise'}
         
