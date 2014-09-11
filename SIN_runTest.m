@@ -93,7 +93,17 @@ for t=1:length(testID)
             % portaudio_adaptiveplay. 
             
             % Launch whatever the specified player is
-            results = opts.player.player_handle(playlist, opts); 
+            %   Need the loop in case we encounter multi-stage tests that
+            %   do not have any special instructions. 
+            for i=1:numel(opts)
+                
+                % Run the stage
+                results(i) = opts(i).player.player_handle(playlist, opts(i)); 
+                
+                % Check for errors after every stage of test. 
+                results(i) = errorCheck(results(i), playlist); 
+                
+            end % for i=1:numel(opts)
             
     end % switch/otherwise    
     
