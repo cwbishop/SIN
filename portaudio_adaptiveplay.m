@@ -1125,10 +1125,15 @@ for trial=1:length(playback_list)
             %% FILL BUFFER AND START NOISE PLAYBACK
             % Fill the playback buffer
             if trial == 1
+                
+                %% OPEN FIGURE FOR ACTIVE X CONTROLLER
+                %   Maximize to fit screen
+                wmpactxfig = figure('Position', [d.player.screenposition d.player.screensize]); 
+                
                 %% OPEN ACTIVE X CONTROL
                 %   Use Screen('Resolution', window number) to get screen resolution and
                 %   configure player size. Always open in a new figure. 
-                wmp = actxcontrol(d.player.activex, [d.player.screenposition d.player.screensize], figure);
+                wmp = actxcontrol(d.player.activex, [d.player.screenposition d.player.screensize], wmpactxfig);
 
                 % Set autostart to false
                 %   We need to get information about the movie first.
@@ -1170,23 +1175,19 @@ for trial=1:length(playback_list)
                 rec_block_start = GetSecs; 
             end % if trial == 1
             
+            %% BRING FIGURE TO FOREGROUND
+            %   If scoring GUI is open, it might have covered up the video.
+            %   This might not be a good fix if video and scoring are on
+            %   the same screen ...
+            figure(wmpactxfig); 
+            
             %% LOAD FILE INTO WMP
             % Set the current file
             wmp.URL = playback_list{trial};            
             
             % Play movie
             wmp.control.play();        
-            
-            % Wait until playback has started
-            wmpstate = wmp.playState;
-            while isempty(strfind(wmp.playState, 'Playing')), 
-                WaitSecs(0.1); 
-                wmpstate = wmp.playState; 
-            end
-            
-            % Now wait for the player to stop
-            while isempty(strfind(wmp.playState, 'Stopped')), wmpstate = wmp.playState; end
-            
+
         otherwise
             
             error(['Unknown adaptive mode (' d.player.adaptive_mode '). See ''''adaptive_mode''''.']); 
