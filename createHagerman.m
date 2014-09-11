@@ -32,7 +32,18 @@ function createHagerman(varargin)
 %
 %   'tmixerin':     Dx1 array, where D is the number of channels in the wav
 %                   files and 1 is the number of resulting target channels 
-%                   (this can be 1 and only 1 as coded).
+%                   (this can be 1 and only 1 as coded). This is the data
+%                   loaded from WAV files (or other media sources) are
+%                   matrix multiplied with this mixer to create a
+%                   single-channel, mixed signal that will be come the
+%                   "target track".
+%
+%                   *Note*: the mixer values for tmixerin and nmixerin should
+%                   *always* be position. So should the tmixerout and
+%                   nmixerout. Including negative numbers will lead to
+%                   mislabeled file generation. CWB has placed a couple of
+%                   safeguards against this, but you're the first line of
+%                   defense.
 %
 %   'nmixerin':     like target_mixer but applied to the noise sample.
 %
@@ -80,6 +91,22 @@ function createHagerman(varargin)
 %   'nmixerout'     1xP array, like tmixerout about, but mixes input noise
 %                   track into output tracks. 
 %
+%   Noise Floor Estimation:
+%
+%   Hagerman recordings can be affected by the noise floor of our
+%   playback/recording loop, so it would be wise to estimate the noise
+%   floor in some way. To do this, CWB will write an additional WAV file
+%   containing just zeros. This file will be presented and a recording
+%   gathered, which will allow us to estimate the noise floor of our
+%   playback/recording loop. Should be useful.
+%
+%   'estnoisefloor':    bool, if set, write noise floor estimation file. If
+%                       set, user must also define 'noisefloordur'
+%                       parameter below.
+%
+%   'noisefloordur':    double, duration of recording desired for noise
+%                       floor estimation in seconds. 
+%
 % Development:
 %
 %   1) CWB must recall that he needs to match the long-term spectrum of the
@@ -91,6 +118,16 @@ function createHagerman(varargin)
 
 %% MASSAGE INPUTS
 d=varargin2struct(varargin{:}); 
+
+%% CHECK MIXERS
+%   Mixers must only have zeros and positive numbers. Negative numbers will
+%   throw off the (rather stupid) naming scheme CWB came up with at the
+%   end. CWB thinks he'll end up regretting the quick fix ... CWB in the
+%   future, if you're reading this and scratching your head, then you knew
+%   you were being an idiot when you wrote this. Silly, silly bear.
+if any(d.tmixerin==-1) || any(d.nmixerin==-1) || any(d.tmixerout==-1) || any(d.nmixerout==-1)
+    error('Do not use negative values in your mixing matrices. Bad user! Read the help, please.');
+end % if any ...
 
 %% LOAD AND RESAMPLE STIMULI
 %   Load stimuli from file and resample to match user specified sampling
@@ -195,6 +232,9 @@ for i=1:numel(tstim)
     
 end % for i=1:numel(tstim)
 
+%% CREATE NOISE OUTPUT (nout)
+%   - Remix the audio and implement time delays using remixaudio
+%   - Fade noise samples in and out on all channels. 
 if ~isempty(nstim)
     % Create matching noise sample
     nout = repmat(nstim, ceil(size(tout,1)./size(nstim,1)), 1); % repmat it to match
@@ -214,18 +254,65 @@ tout = tout * d.tmixerout;
 % Now, assuming we're at 0 dB SNR, create requested SNR outputs
 for i=1:numel(d.snrs)
     
-    % Scale noise, mix to create output track
-    if ~isempty(nstim)
-        out = tout + nout.*db2amp(d.snrs(i));
-    else
-        out = tout;
-    end % out
-    
     % output file name
     [PATHSTR,NAME,EXT] = fileparts(d.basename);
-    fname = fullfile(PATHSTR, [NAME '(' num2str(d.snrs(i)) ' dB SNR)' EXT]);
+    
+    % Create 4 combinations of polarity 
+    %   target*1, noise*1: TorigNorig
+    %   target*-1, noise*1: TinvNorig
+    %   target*-1, noise*-1:    TinvNinv
+    %   target*1, noise*-1: TorigNinv
+    invmixer = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
+    
+    for n=1:size(invmixer,1)
+        % Scale noise, mix to create output track
+        if ~isempty(nstim)
+            out = tout.*invmixer(n,1) + nout.*db2amp(d.snrs(i)).*invmixer(n,2);
+        else
+            out = tout.*invmixer(n,1);
+        end % out
+        
+        % Generate target description string
+        if sign(invmixer(n,1))==1
+            tstr = 'Torig';
+        elseif sign(invmixer(n,1))==-1
+            tstr = 'Tinv';
+        else
+            error('I broke');
+        end %if ...
+        
+        % Generate Noise description string
+        if sign(invmixer(n,2))==1
+            nstr = 'Norig';
+        elseif sign(invmixer(n,2))==-1
+            nstr = 'Ninv';
+        else
+            error('I broke');
+        end %if ...
+        
+        % Make file name
+        fname = fullfile(PATHSTR, [NAME ';' num2str(d.snrs(i)) 'dB SNR;' tstr nstr EXT]);
+        
+        % Write file
+        audiowrite(fname, out, d.fsout, 'BitsperSample', d.bitdepth); 
+    end % 
+    
+end % for i=1:d.snrs 
+
+%% NOISE FLOOR ESTIMATION?
+%   Create WAV file with just zeros for noise floor estimation.
+if d.estnoisefloor
+    
+    % Number of zero samples
+    nsamps = round(d.noisefloordur * d.fsout);
+    
+    % Make zeros in all output tracks
+    out = zeros(nsamps, size(d.tmixerout,2));
+    
+    % Write file
+    fname = fullfile(PATHSTR, [NAME '(noise floor)' EXT]);
     
     % Write file
     audiowrite(fname, out, d.fsout, 'BitsperSample', d.bitdepth); 
     
-end % for i=1:d.snrs 
+end % end 
