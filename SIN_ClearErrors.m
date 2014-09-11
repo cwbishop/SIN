@@ -29,3 +29,7 @@ end %
 %% CLOSE FIGURES
 %   
 close all 
+
+%% CLOSE KEYBOARD QUEUES
+KbQueueStop;
+KbQueueRelease;
