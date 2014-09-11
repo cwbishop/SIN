@@ -31,6 +31,13 @@ switch testID;
     
     case 'testlist'
         
+        % Hard code available tests
+        %   CWB does not want users calling some tests directly from GUI
+        %   intentionally or otherwise. Most straightforward way to
+        %   control the tests is to manually list which tests are OK to
+        %   use.
+        
+        
         % Get cases within switch. Each case might be a test.
         %   Some of the cases are callback specific (e.g., generating the
         %   test list, an empty options structure, etc.). These are
@@ -79,8 +86,8 @@ switch testID;
         opts.general.subjectDir = fullfile(opts.general.root, 'subject_data'); 
         
         % Calibration information
-        opts.general.noiseDir = fullfile(opts.general.root, 'playback', 'Noise'); 
-        opts.general.noise_regexp = '.wav'; % get wav files
+%         opts.general.noiseDir = fullfile(opts.general.root, 'playback', 'Noise'); 
+%         opts.general.noise_regexp = '.wav'; % get wav files
         
 %         opts.general.calibrationDir = fullfile(opts.general.root, 'calibration');
 %         opts.general.calibration_regexp = '.mat$'; % 
@@ -150,7 +157,61 @@ switch testID;
         
         % Return so we do not assign a UUID to defaults. 
         return
+    case 'Calibration (HINT)'
         
+        % The calibration routine is pretty straightforward. All we need to
+        % do is to loop the playback of a calibration stimulus (e.g.,
+        % broadband noise) and have the experimenters adjust amp settings
+        % until a desired SPL is met.
+        
+        % Use ANL (base) as a starting point)
+        opts = SIN_TestSetup('ANL (base)', subjectID); 
+        
+        % Change test ID
+        opts.specific.testID = testID; 
+        
+        % Change root directory (for wavfile selection) and change
+        % wav_regexp to choose correct calibration file
+        opts.specific.root= fullfile(opts.general.root, 'playback', 'Noise');
+        opts.specific.wav_regexp = 'HINT-Noise;0dB.wav';
+        
+        % Change the mixer to match the single channel calibration sound
+        %   Initializes with zeros
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [], 0);
+        
+        % Reset instructions for modcheck
+        opts.player.modcheck.instructions = {['A sound will play from each speaker in turn. Place the SPL meter at ' ...
+            'the location of the listeners head with the sensor facing the active speaker.' ...
+            ' Adjust the amplifier settings until the SPL meter reads +65 dB SPL (XXX Weighting??)']};        
+        
+        % Redo key mapping to prevent users from increasing/decreasing
+        % volume.
+         opts.player.modcheck.map(opts.player.modcheck.keys(1:2))=false; 
+        
+        % Also remove *all* modifiers
+%         opts.player.modifier = {struct()}; 
+        
+        % Clear analysis
+        opts.analysis.run = false; 
+        
+        % Now create a test stage for each speaker in turn. All we should
+        % have to do is modify the mod_mixer to present the sound from the
+        % next speaker.
+        for i=1:opts.player.playback.device.NrOutputChannels
+            
+            % Set channel to "on"
+            cal(i) = opts;            
+            cal(i).player.mod_mixer(1, i) = 1;
+            
+            % Change title 
+            cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback.device.NrOutputChannels)]; 
+            
+        end % for i=1:opts ...        
+            
+        % Assign cal to opts
+        opts = cal;
+        
+        clear cal; 
     case 'Reading Span'
         % Launch and run the reading span test provided by Thomas Lunner
         % and friends.
@@ -180,6 +241,124 @@ switch testID;
         opts.specific.genPlaylist.Repeats = 'any';
         opts.specific.genPlaylist.Append2UsedList = false; % there's nothing to append to the used list mat file, so just tell it not to.             
         
+    case 'ANL'
+        % ANL is actually a sequence of tests. The list includes the
+        % following:
+        %
+        %   1. ANL (MCL-Too Loud)
+        %   2. ANL (MCL-Too Quiet)
+        %   3. ANL (MCL-Estimate)
+        %   4. ANL (BNL-Too Loud)
+        %   5. ANL (BNL-Too Quiet)
+        %   6. ANL (BNL-Estimate)
+        %
+        % These parameters serve as the base settings and tests to run, but
+        % additional steps must be taken to copy parameters over from one
+        % test sequence to the next (e.g., the buffer position and overall
+        % sound levels, according to modifier_dBscale). Also need to copy
+        % over calibration information from one test to the next.        
+        opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)', subjectID); 
+        opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)', subjectID); 
+        opts(3)=SIN_TestSetup('ANL (MCL-Estimate)', subjectID); 
+        opts(4)=SIN_TestSetup('ANL (BNL-Too Loud)', subjectID); 
+        opts(5)=SIN_TestSetup('ANL (BNL-Too Quiet)', subjectID); 
+        opts(6)=SIN_TestSetup('ANL (BNL-Estimate)', subjectID); 
+        
+    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the AV aided condition. same test, different subject
+        % state. 
+        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID;         
+                
+    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';    
+        
+    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Same test, different subject state
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        
+        opts.specific.testID = testID;     
+        
+    case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Configured to administer the (audio only) MLST. Different
+        % parameters required for the audiovisual version
+        
+        % Use the HINT as a starting point
+        %   - The HINT is quite similar to the MLST in many ways, so let's
+        %   use this as a starting point. 
+        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
+        
+        % Change the test ID
+        opts.specific.testID = testID;
+        
+        % Change root directory
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'MLST (Adult)');
+        
+        % Change the wav_regexp
+        %   We are using MP3 format here.
+        
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.wav$'; 
+        
+        % Change list_regexp
+        %   MLST has an underscore in list directories.
+        opts.specific.list_regexp='List_[0-9]{2}'; 
+        
+        % Change sentence lookup information
+        %   This is used for scoring purposes
+        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult);0dB.xlsx');
+        opts.specific.hint_lookup.sheetnum=1;   
+        
+        % Change mod_mixer to work with single channel data
+        %   Scale speech track to full volume, assuming we calibrate to 65
+        %   dB SPL. 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [1 0], 0);
+        
+        % Remove the modifier_dbBscale_mixer
+        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        mask = 1:length(opts.player.modifier);
+        mask = mask~=ind;
+        opts.player.modifier = {opts.player.modifier{mask}}; 
+        
+        % For plotting purposes, track the first channel
+        opts.player.modcheck.data_channels = 1; 
+        
+        % We aren't applying any changes. Just using the GUI for scoring. 
+        opts.player.modcheck.algo = {@algo_HINTnochange}; %
+        
+        % Use keyword scoring only
+        %   Keywords are denoted as capital letters. 
+        opts.player.modcheck.scored_items = 'keywords'; 
+        
+        %% SETUP TO USE WITH WINDOWS MEDIA PLAYER
+        % Set PlayerType to WMP (Windows Media Player)
+        opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
+        opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
+        opts.player.screennum = 0;     % screen to use for visual playback
+        opts.player.screenposition = [0 0]; % set screen position
+        tmp = Screen('Resolution', opts.player.screennum);
+        
+        opts.player.screensize = [tmp.width tmp.height]; 
+        clear tmp; % clear out screen information
+        
+        opts.player.WMPvol = 100; % windows media player volume
+        
+        % This way the player doesn't waste time loading the files into a
+        % matrix - we won't need these data in MATLAB since WMP will be
+        % handling playback. 
+        opts.player.preload = false; 
+        
+        %% CONTINUOUS NOISE INFORMATION
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR         
     case 'PPT'
         
         % Perceived Performance Test (PPT) is a subjective measure of
@@ -314,29 +493,100 @@ switch testID;
                 'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
                 'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
                 'plot', true)); % generate plot
-    case 'ANL'
-        % ANL is actually a sequence of tests. The list includes the
-        % following:
-        %
-        %   1. ANL (MCL-Too Loud)
-        %   2. ANL (MCL-Too Quiet)
-        %   3. ANL (MCL-Estimate)
-        %   4. ANL (BNL-Too Loud)
-        %   5. ANL (BNL-Too Quiet)
-        %   6. ANL (BNL-Estimate)
-        %
-        % These parameters serve as the base settings and tests to run, but
-        % additional steps must be taken to copy parameters over from one
-        % test sequence to the next (e.g., the buffer position and overall
-        % sound levels, according to modifier_dBscale). Also need to copy
-        % over calibration information from one test to the next.        
-        opts(1)=SIN_TestSetup('ANL (MCL-Too Loud)', subjectID); 
-        opts(2)=SIN_TestSetup('ANL (MCL-Too Quiet)', subjectID); 
-        opts(3)=SIN_TestSetup('ANL (MCL-Estimate)', subjectID); 
-        opts(4)=SIN_TestSetup('ANL (BNL-Too Loud)', subjectID); 
-        opts(5)=SIN_TestSetup('ANL (BNL-Too Quiet)', subjectID); 
-        opts(6)=SIN_TestSetup('ANL (BNL-Estimate)', subjectID); 
+    
+    case 'Hagerman'
         
+        %% SETUP FOR HAGERMAN STYLE RECORDINGS
+        %   This specific experiment has some basic needs. 
+        %       - Play back and record a specific set of files in
+        %       randomized order. 
+        %       - Create some plots/summary statistics after run time. 
+        %   That's it! Let's see how quickly that can be done ...
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults', subjectID); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions, like importHINT and the like. 
+        % ============================
+        
+        % set the testID (required)
+        opts.specific.testID = testID;
+        
+        % root directory for HINT stimuli and lookup list
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
+        
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp=''; 
+                
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        
+        % full path to HINT lookup list. Currently an XLSX file provided by
+        % Wu. Used by importHINT.m
+                
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
+        opts.specific.genPlaylist.Randomize = 'within'; % randomize playback order. 
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
+        
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        
+        % Function handle for designated player
+        opts.player.player_handle = @player_main; 
+        
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        false, ...   % randomize trial order before playback
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [[1; 0;0;0] [0;1;0;0] [0;0;1;0] [0;0;0;1]], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'startplaybackat',    0, ...  % start playback at beginning of files
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'state',    'run'); % Start in run state
+            
+        % ============================
+        % Modification check (modcheck) configuration        
+        % ============================
+        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
+        
+        % ============================
+        % Modifier configuration        
+        % ============================
+        %   No modifiers for playback
+        % Modifier to scale mixing information
+        opts.player.modifier{end+1} = struct();  % No modifier necessary
+        
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
+                'plot', true)); % generate plot
+            
     case 'ANL (MCL-Too Loud)'
         % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
         % listener is instructed to adjust the speech track until it is too
@@ -424,101 +674,7 @@ switch testID;
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
     
-    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Start with the AV aided condition. same test, different subject
-        % state. 
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        opts.specific.testID = testID;         
-                
-    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Start with the audio condition
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        opts.specific.testID = testID; 
-        
-        % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';    
-        
-    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Same test, different subject state
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        
-        opts.specific.testID = testID;     
-        
-    case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Configured to administer the (audio only) MLST. Different
-        % parameters required for the audiovisual version
-        
-        % Use the HINT as a starting point
-        %   - The HINT is quite similar to the MLST in many ways, so let's
-        %   use this as a starting point. 
-        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
-        
-        % Change the test ID
-        opts.specific.testID = testID;
-        
-        % Change root directory
-        opts.specific.root=fullfile(opts.general.root, 'playback', 'MLST (Adult)');
-        
-        % Change the wav_regexp
-        %   We are using MP3 format here.
-        
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.wav$'; 
-        
-        % Change list_regexp
-        %   MLST has an underscore in list directories.
-        opts.specific.list_regexp='List_[0-9]{2}'; 
-        
-        % Change sentence lookup information
-        %   This is used for scoring purposes
-        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult);0dB.xlsx');
-        opts.specific.hint_lookup.sheetnum=1;   
-        
-        % Change mod_mixer to work with single channel data
-        %   Scale speech track to full volume, assuming we calibrate to 65
-        %   dB SPL. 
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [1 0], 0);
-        
-        % Remove the modifier_dbBscale_mixer
-        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
-        mask = 1:length(opts.player.modifier);
-        mask = mask~=ind;
-        opts.player.modifier = {opts.player.modifier{mask}}; 
-        
-        % For plotting purposes, track the first channel
-        opts.player.modcheck.data_channels = 1; 
-        
-        % We aren't applying any changes. Just using the GUI for scoring. 
-        opts.player.modcheck.algo = {@algo_HINTnochange}; %
-        
-        % Use keyword scoring only
-        %   Keywords are denoted as capital letters. 
-        opts.player.modcheck.scored_items = 'keywords'; 
-        
-        %% SETUP TO USE WITH WINDOWS MEDIA PLAYER
-        % Set PlayerType to WMP (Windows Media Player)
-        opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
-        opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
-        opts.player.screennum = 0;     % screen to use for visual playback
-        opts.player.screenposition = [0 0]; % set screen position
-        tmp = Screen('Resolution', opts.player.screennum);
-        
-        opts.player.screensize = [tmp.width tmp.height]; 
-        clear tmp; % clear out screen information
-        
-        opts.player.WMPvol = 100; % windows media player volume
-        
-        % This way the player doesn't waste time loading the files into a
-        % matrix - we won't need these data in MATLAB since WMP will be
-        % handling playback. 
-        opts.player.preload = false; 
-        
-        %% CONTINUOUS NOISE INFORMATION
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR     
+    
         
     case 'ANL (BNL-Estimate)'
         
@@ -695,98 +851,7 @@ switch testID;
                 'nmask',    logical(fillPlaybackMixer(opts.player.playback.device, [0;1], 0)), ...   % get data chan 2/phys chan 1
                 'plot', true)); % generate plot
             
-    case 'Hagerman'
-        
-        %% SETUP FOR HAGERMAN STYLE RECORDINGS
-        %   This specific experiment has some basic needs. 
-        %       - Play back and record a specific set of files in
-        %       randomized order. 
-        %       - Create some plots/summary statistics after run time. 
-        %   That's it! Let's see how quickly that can be done ...
-        % ============================
-        % Get default information
-        % ============================
-        opts=SIN_TestSetup('Defaults', subjectID); 
-        
-        % ============================
-        % Test specific information. These arguments are used by
-        % test-specific auxiliary functions, like importHINT and the like. 
-        % ============================
-        
-        % set the testID (required)
-        opts.specific.testID = testID;
-        
-        % root directory for HINT stimuli and lookup list
-        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
-        
-        % set a regular expression to find available lists within the HINT
-        % root directory.
-        %   Look for all directories beginning with "List" and ending in
-        %   two digits. 
-        opts.specific.list_regexp=''; 
-                
-        % Set regular expression for wav files
-        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-        
-        % full path to HINT lookup list. Currently an XLSX file provided by
-        % Wu. Used by importHINT.m
-                
-        % The following set of subfields are required for playlist
-        % generation. They are used in a call to SIN_getPlaylist, which in
-        % turn invokes SIN_stiminfo and other supportive functions.         
-        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
-        opts.specific.genPlaylist.Randomize = 'any'; % randomize list order and stimuli within each list.
-        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
-        
-        % ============================
-        % Player configuration
-        %   The fields below are used by the designated player to configure
-        %   playback.
-        %
-        %   - Note: some of these are set in 'Project AD' above
-        % ============================
-        
-        % Function handle for designated player
-        opts.player.player_handle = @player_main; 
-        
-        opts.player = varargin2struct( ...
-            opts.player, ...
-            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        false, ...   % randomize trial order before playback
-            'append_files',     false, ...  % append files before playback (makes one long trial)
-            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
-            'window_dur',       0.005, ...  % window duration in seconds.
-            'playback_mode',    'standard', ... % play each file once and only once 
-            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 1] ], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
-            'startplaybackat',    0, ...  % start playback at beginning of files
-            'contnoise',    [], ... % no continuous noise to play (for this example) 
-            'state',    'run'); % Start in run state
-            
-        % ============================
-        % Modification check (modcheck) configuration        
-        % ============================
-        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
-        
-        % ============================
-        % Modifier configuration        
-        % ============================
-        %   No modifiers for playback
-        % Modifier to scale mixing information
-        opts.player.modifier{end+1} = struct();  % No modifier necessary
-        
-        % ============================
-        % Analysis        
-        % ============================
-        opts.analysis = struct( ...
-            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
-            'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
-            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
-                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
-                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
-                'plot', true)); % generate plot
+    
             
     otherwise
         
