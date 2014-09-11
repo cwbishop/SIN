@@ -709,7 +709,7 @@ for trial=1:length(playback_list)
     
                         % Call modifier
                         %   Only run premix modifiers
-                        if isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'premix')
+                        if ~isempty(fieldnames(d.player.modifier{modifier_num})) && isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'premix')
                             [data, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data, mod_code, d); 
                         end % if isequal
                             
@@ -769,7 +769,7 @@ for trial=1:length(playback_list)
 
                     % Call modifier
                     %   Only run premix modifiers
-                    if isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'postmix')
+                    if ~isempty(fieldnames(d.player.modifier{modifier_num})) && isequal(d.player.modifier{d.sandbox.modifier_num}.mod_stage, 'postmix')
                         [data2play_mixed, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(data2play_mixed, mod_code, d); 
                     end % if isequal
 
