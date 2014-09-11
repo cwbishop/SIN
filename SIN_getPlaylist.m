@@ -90,6 +90,10 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %   This way, the user can combine randomization schemes and create new
 %   functionality with less hassle. 
 %
+%   2. Note that randomization does not work properly for tests that do not
+%   have lists in them. If it's just a sequence of WAV files, then the list
+%   will be returned in the same order every time. Should work on this. 
+%
 % Christopher W. Bishop
 %   University of Washington
 %   6/14
@@ -116,7 +120,7 @@ playlist = {};
 %   If we don't (e.g., with ANL), then just return the wavfiles variable.
 if isempty(lists) 
     playlist = wavfiles; 
-    return
+%     return
 end % if isempty(lists)
 
 %% FIND THE NUMBER OF TIMES EACH LIST HAS BEEN USED
@@ -149,6 +153,7 @@ switch lower(d.Repeats)
         % list mask is a sorting array to order the lists based on how many
         % times the tests have been repeated. 
         [~, listmask] = sort(ntests, 'ascend'); 
+        
     otherwise
         
         % Throw an error if we encounter an unknown repeats parameter.

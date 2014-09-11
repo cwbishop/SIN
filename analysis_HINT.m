@@ -148,4 +148,7 @@ if d.plot
         'legend',   {{'Time Course', 'RTS Trials', 'RTS Est.'}}, ...
         'fignum',   h);
     
+    % Add Figure to results structure
+    results.analysis.results.figure = handle2struct(h); 
+    
 end % if d.plot

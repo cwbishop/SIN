@@ -1,4 +1,4 @@
-function [results, status]=portaudio_adaptiveplay(X, varargin)
+function [results, status]=player_main(X, varargin)
 %% DESCRIPTION:
 %
 %   This function is designed to allow adaptive audio playback. The

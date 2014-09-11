@@ -75,31 +75,38 @@ for t=1:length(testID)
                 % Launch ANL (at least part of it) 
                 %   We'll need to run this essentially 4 or 5 times and save
                 %   the values in different files. 
-                results(i) = portaudio_adaptiveplay(playlist, opts(i)); 
+                results(i) = opts(i).player.player_handle(playlist, opts(i));
                 
                 % Check for errors after every step of test. 
                 results(i) = errorCheck(results(i), playlist); 
                 
             end % for i=1:length(opts)
             
+%         case {'Reading Span'}
+%             
+%             % Run Reading Span at the commandline using SIN_runsyscmd
+%             results = SIN_runsyscmd(opts); 
+            
         otherwise
             
             % If we don't have any special instructions, run
             % portaudio_adaptiveplay. 
             
-            % Launch HINT (SNR-50)
-            results = portaudio_adaptiveplay(playlist, opts); 
+            % Launch whatever the specified player is
+            results = opts.player.player_handle(playlist, opts); 
             
     end % switch/otherwise    
-    
-    % Save to results file
-    SIN_saveResults(results); 
     
     % Run Analysis on the fly for spot checking??
     %   We'll generally want to do this, CWB thinks. 
     if results(1).RunTime.analysis.run
         results = results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
     end % if results(1).analysis.run
+    
+    % Save to results file
+    %   Results should have whatever data are explicitly stored in the
+    %   analysis phase as well. 
+    SIN_saveResults(results); 
         
 end % for t=1:length(testID)
 

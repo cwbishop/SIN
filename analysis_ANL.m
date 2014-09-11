@@ -82,14 +82,16 @@ results(1).RunTime.analysis.results = struct( ...
 %% CREATE SUMMARY PLOTS
 if d.plot
     
-    figure, hold on
+    % Save figure handle for saving purposes below
+    h = figure; 
+    hold on
     
     % Plot MCL/BNL
     plot(1, MCL, 'bs', 'linewidth', 3)
     plot(2, BNL, 'ks', 'linewidth', 3)
      
     % Plot "Too Loud" information
-    data = db([results(d.order(1)).RunTime.player.mod_mixer(d.tmask) results(d.order(6)).RunTime.player.mod_mixer(d.nmask)]);
+    data = db([results(d.order(1)).RunTime.player.mod_mixer(d.tmask) results(d.order(4)).RunTime.player.mod_mixer(d.nmask)]);
     plot(1:2, data, 'r^', 'linewidth', 1.5);
     
     % Plot too quiet information
@@ -110,5 +112,38 @@ if d.plot
     ylabel('dB SPL (re: reference)'); 
     set(gca, 'XTick', [1 2])
     set(gca, 'XTickLabel', {'Speech', 'Noise'})
+     
+    % Create a plot of all data channels
+    %   Useful for spotting issues with scaling values
+    
+    for i=1:numel(results)        
+        mmixer = results(i).RunTime.sandbox.mod_mixer; 
         
+        % X is the number of segements
+        x = 1:size(mmixer, 3); 
+        
+        % y is the scale factor
+        y = [];        
+        for c=1:size(mmixer,3)
+            y(c,:) = reshape(mmixer(:,:,c), 1, size(mmixer,1)*size(mmixer,2));
+        end % for i=1:size(mmixer)
+        
+        % Replace 0 values with NaN. Zeros will cannot be log transformed
+        % to dB space.
+        y(y==0) = NaN; 
+        
+        % Convert to dB
+        y = db(y); 
+        
+        % Create legend
+        L ={};
+        for c=1:size(mmixer,1)
+            for k=1:size(mmixer,2)
+                L{end+1} = ['DChan: ' num2str(c), ', PChan: ' num2str(k)];
+            end 
+        end 
+        lineplot2d(x, y, 'xlabel', 'Block #', 'ylabel', 're: dB SPL', 'title', results(i).RunTime.specific.testID, 'legend', {L}, 'grid', 'on', 'linewidth', 2, 'legend_position', 'best', 'marker', 'o', 'fignum', h+i);
+        
+    end % for i=1:numel(results)
+    
 end % if d.plot

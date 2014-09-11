@@ -55,38 +55,61 @@ elseif isa(opts, 'char')
     testID=opts;
 end % if isstruct(opts)
 
-switch testID
-    
-    case {'HINT (SNR-50, keywords, 1up1down)', 'PPT', 'HINT (SNR-50, NALadaptive)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'}
-        
-        % Return directories based on defaults.hint.list_filt
-        list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
-        
-        % Return file list for each directory
-        %   - Create a shorthand name for directory (e.g., 'List01').
-        %   - List all wav files within the directory.
-        wavfiles={};
-        list_name={};
-        for i=1:length(list_dir)            
-            list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.specific.list_regexp):end-1); 
-            wavfiles{i}= regexpdir(list_dir{i}, opts.specific.wav_regexp, false);
-        end % for i=1:length(list_id)
+% Return directories based on defaults.hint.list_filt
+list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
 
-    case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)', 'Hagerman' }
+% If we didn't find any list information, then assume stimuli are in the
+% root directory
+if isempty(list_dir)
+    list_dir{1} = opts.specific.root;
+end % 
 
-        wavfiles=regexpdir(opts.specific.root, opts.specific.wav_regexp, false);
-    
-    case {'noise'}
-        
-        % Return noise samples stored in noise directory
-        wavfiles=regexpdir(opts.general.noiseDir, opts.general.noise_regexp, false); 
-        
-    case {'Calibrate'}
-        
-        wavfiles=regexpdir(opts.specific.calstimDir, opts.specific.calstim_regexp, false); 
-        
-    otherwise 
-        
-        error(['No stimulus information available for ' testID]);        
-        
-end % switch testID
+% Return file list for each directory
+%   - Create a shorthand name for directory (e.g., 'List01').
+%   - List all wav files within the directory.
+wavfiles={};
+list_name={};
+% if ~isempty(list_dir)
+for i=1:length(list_dir)            
+    list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.specific.list_regexp):end-1); 
+    wavfiles{i}= regexpdir(list_dir{i}, opts.specific.wav_regexp, false);
+end % for i=1:length(list_id)
+% else 
+%     wavfiles{1}= regexpdir(, opts.specific.wav_regexp, false);
+% end % 
+
+% switch testID
+%     
+%     case {'HINT (SNR-50, keywords, 1up1down)', 'PPT', 'HINT (SNR-50, NALadaptive)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'}
+%         
+%         % Return directories based on defaults.hint.list_filt
+%         list_dir = regexpdir(opts.specific.root, opts.specific.list_regexp, false); 
+%         
+%         % Return file list for each directory
+%         %   - Create a shorthand name for directory (e.g., 'List01').
+%         %   - List all wav files within the directory.
+%         wavfiles={};
+%         list_name={};
+%         for i=1:length(list_dir)            
+%             list_name{i}=list_dir{i}(regexp(list_dir{i}, opts.specific.list_regexp):end-1); 
+%             wavfiles{i}= regexpdir(list_dir{i}, opts.specific.wav_regexp, false);
+%         end % for i=1:length(list_id)
+% 
+%     case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)','ANL (BNL-Estimate)', 'Hagerman' }
+% 
+%         wavfiles=regexpdir(opts.specific.root, opts.specific.wav_regexp, false);
+%     
+%     case {'noise'}
+%         
+%         % Return noise samples stored in noise directory
+%         wavfiles=regexpdir(opts.general.noiseDir, opts.general.noise_regexp, false); 
+%         
+%     case {'Calibrate'}
+%         
+%         wavfiles=regexpdir(opts.specific.calstimDir, opts.specific.calstim_regexp, false); 
+%         
+%     otherwise 
+%         
+%         error(['No stimulus information available for ' testID]);        
+%         
+% end % switch testID

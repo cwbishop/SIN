@@ -132,7 +132,7 @@ switch testID;
         % Do not return the test as "to be used" test by default. There are
         % many cases that should not (typically) be called by the user. So,
         % don't return those.
-        opts.specific.listtest = false; 
+%         opts.specific.listtest = false; 
         
         % Preload stimuli by default
         %   Generally do not want to preload AV stims, though, so look for
@@ -150,6 +150,35 @@ switch testID;
         
         % Return so we do not assign a UUID to defaults. 
         return
+        
+    case 'Reading Span'
+        % Launch and run the reading span test provided by Thomas Lunner
+        % and friends.
+        
+        % Get default structure
+        %   Much of this information is not useful, though. Not sure if we
+        %   should keep it.
+        opts = SIN_TestSetup('Defaults', subjectID); 
+        
+        opts.specific.testID = testID;
+        opts.specific.root = 'C:\\readingspan';
+        opts.specific.list_regexp = '';
+        opts.specific.wav_regexp = ''; 
+        
+        % Change the "player" to SIN_runsyscmd
+        %   This will execute arbitrary commands at the system terminal.
+        %   Useful when launching executables.
+        opts.player = struct( ...
+            'fhand',    @SIN_runsyscmd, ... % this is the "player" handle we'll use
+            'player_handle',    @SIN_runsyscmd, ...
+            'cmd',  '"C:\\Program Files (x86)\\Reading span\Reading span 131022.exe"'); % this is the only (required) input argument
+        
+        % Add fields to generate playlist field. 
+        %   Just placeholders since this isn't actually useful information.
+        opts.specific.genPlaylist.NLists = 1;
+        opts.specific.genPlaylist.Randomize = 'any';
+        opts.specific.genPlaylist.Repeats = 'any';
+        opts.specific.genPlaylist.Append2UsedList = false; % there's nothing to append to the used list mat file, so just tell it not to.             
         
     case 'PPT'
         
@@ -228,7 +257,7 @@ switch testID;
         % ============================
         
         % Function handle for designated player
-        opts.player.player_handle = @portaudio_adaptiveplay; 
+        opts.player.fhand = @portaudio_adaptiveplay; 
         
         opts.player = varargin2struct( ...
             opts.player, ...
@@ -341,7 +370,7 @@ switch testID;
             'Good. Using the down button, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you push the down button, I will turn the story down (use 5 dB steps)'};
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Estimate)' 
         
@@ -361,7 +390,7 @@ switch testID;
         clear ind; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0] [0; 0 ] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (BNL-Too Loud)'
         
@@ -393,7 +422,7 @@ switch testID;
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
     
     case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
         
@@ -436,7 +465,7 @@ switch testID;
         
         % Change the wav_regexp
         %   We are using MP3 format here.
-        warning('We might need to use MP4s instead of MP3s if we alter the timing and rewrite files for AV playback'); 
+        
         opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.wav$'; 
         
         % Change list_regexp
@@ -510,7 +539,7 @@ switch testID;
         clear ind; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0.5; 0.5] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
     
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a
@@ -569,14 +598,15 @@ switch testID;
         %   speaker. 
         %   
         %   This field is used in SIN_stiminfo.m. 
+        opts.specific.list_regexp = ''; 
         opts.specific.wav_regexp='ANL;0dB.wav'; 
         
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
         % turn invokes SIN_stiminfo and other supportive functions.         
-        opts.specific.genPlaylist.NLists = 0; % No lists to choose from
-        opts.specific.genPlaylist.Randomize = ''; % No stimuli to randomize
-        opts.specific.genPlaylist.Repeats = ''; % irrelevant since there aren't any lists        
+        opts.specific.genPlaylist.NLists = 1; % Has to be set to 1 in order to work with SIN_getPlaylist. We're just playing a single item "list"
+        opts.specific.genPlaylist.Randomize = 'any'; % No stimuli to randomize
+        opts.specific.genPlaylist.Repeats = 'any'; % irrelevant since there aren't any lists        
         opts.specific.genPlaylist.Append2UsedList = true; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
         
         % ============================
@@ -596,9 +626,7 @@ switch testID;
         % ============================
         
         % Function handle for designated player
-        opts.player.player_handle = @portaudio_adaptiveplay; 
-        
-        warning('Mixing weights are set to 0.5. Need to make sure this is what CWB wants'); 
+        opts.player.player_handle = @player_main; 
         
         opts.player = varargin2struct( ...
             opts.player, ...
@@ -706,9 +734,9 @@ switch testID;
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
         % turn invokes SIN_stiminfo and other supportive functions.         
-        opts.specific.genPlaylist.NLists = 0; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
-        opts.specific.genPlaylist.Randomize = ''; % randomize list order and stimuli within each list.
-        opts.specific.genPlaylist.Repeats = ''; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
+        opts.specific.genPlaylist.Randomize = 'any'; % randomize list order and stimuli within each list.
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
         opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
         
         % ============================
@@ -720,7 +748,7 @@ switch testID;
         % ============================
         
         % Function handle for designated player
-        opts.player.player_handle = @portaudio_adaptiveplay; 
+        opts.player.player_handle = @player_main; 
         
         opts.player = varargin2struct( ...
             opts.player, ...

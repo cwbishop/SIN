@@ -209,7 +209,7 @@ for t=1:numel(d.task)
                     l = load(UsedList);            
                     UsedList = l.UsedList;
                 catch
-                    warning('This might be a stupid try catch statement'); 
+%                     warning('This might be a stupid try catch statement'); 
                     UsedList = {};
                 end % try/catch
                 
