@@ -157,6 +157,7 @@ switch testID;
         
         % Return so we do not assign a UUID to defaults. 
         return
+        
     case 'Calibration (HINT)'
         
         % The calibration routine is pretty straightforward. All we need to

@@ -57,20 +57,15 @@ function [D, FS]=Hagerman_getsignal(X, Y, varargin)
 % Convert inputs to structure
 %   Users may also pass a parameter structure directly, which makes CWB's
 %   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GATHER KEY/VALUE PAIRS
+p=varargin2struct(varargin{:}); 
 
 %% INPUT CHECKS AND DEFAULTS
 
 %% LOAD DATA
 %   Limit to one data series for X and Y. 
 %   Allow WAV and single/double information. 
-t.maxts=1; 
+% t.maxts=1; 
 t.datatype=[1 2];
 if isfield(p, 'fsx') && ~isempty(p.fsx), t.fs=p.fsx; end 
 [X, fsx]=SIN_loaddata(X, t); 
@@ -116,9 +111,12 @@ D=(X+Y)/2;
 if p.pflag>0
     
     % Create time vector for plotting purposes
-    T=0:1/FS:(size(X,1)-1)/FS;
+    T = timestamps(size(D,1), FS); 
+        
+    % Get labels to use
+    [~, ~, LABELS]=SIN_loaddata(D, 'fs', 0); 
     
-    %% CREATE 2D LINE PLOT
-    lineplot2d(T, [X Y D], 'linewidth', 1, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Hagerman Estimated Signal', 'linestyle', '-', 'legend', {{'X (orig)' 'Y (orig)' 'Signal' }}, 'legend_position', 'EastOutside'); % opens a new figure 
+    % Create plots
+    lineplot2d(T, D, 'linewidth', 1, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Hagerman Estimated Signal', 'linestyle', '-', 'legend', {LABELS}, 'legend_position', 'EastOutside'); % opens a new figure 
     
 end % if p.pflag

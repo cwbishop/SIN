@@ -1062,6 +1062,9 @@ for trial=1:length(playback_list)
             % Add zeros to end 
             data2play_mixed = [data2play_mixed; zeros(lat, size(data2play_mixed,2))];  %#ok<AGROW>
             
+            % Append data to sandbox variable
+            d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
+            
             % Create a sound buffer for each trial 
             buffer = PsychPortAudio('CreateBuffer', [], data2play_mixed');
             
@@ -1118,6 +1121,10 @@ for trial=1:length(playback_list)
                 %% RESAMPLE NOISE TO SAMPLING RATE OF PLAYBACK DEVICE
                 data2play_mixed = resample(data2play_mixed, FS, nfs);
                 clear nfs
+                
+                % Save data2play_mixed to sandbox field
+                d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
+                
                 PsychPortAudio('FillBuffer', phand, data2play_mixed');
 
                 % This starts playback and recording if we're in duplex mode. 

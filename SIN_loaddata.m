@@ -95,6 +95,7 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 %               3:  ERP
 %               4:  EEG
 %               5:  CNT
+%               6:  mat files
 %
 %   LABELS: A cell array of labels for each time series corresponding the
 %           the N dimensions of X. Labels vary based on what type of data
