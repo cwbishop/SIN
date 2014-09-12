@@ -1096,19 +1096,30 @@ for trial=1:length(playback_list)
                 
                 %% OPEN FIGURE FOR ACTIVE X CONTROLLER
                 %   Maximize to fit screen
-                wmpactxfig = figure('Position', [d.player.screenposition d.player.screensize]); 
+%                 wmpactxfig = figure;
+                
+                %% SET TO NORMALIZED UNITS
+                %   This makes it substantially easier to maximize a figure
+                %   on a secondary screen.
+                %
+                %   Then set position
+%                 set(wmpactxfig, 'units', 'normalized', 'outerposition', d.player.screenpos);
                 
                 %% OPEN ACTIVE X CONTROL
-                %   Use Screen('Resolution', window number) to get screen resolution and
-                %   configure player size. Always open in a new figure. 
-                wmp = actxcontrol(d.player.activex, [d.player.screenposition d.player.screensize], wmpactxfig);
+                %   
+                %   ActiveX needs the screen resolution in pixels. So
+                %   switch to pixels, get figure position, feed to
+                %   activexcontrol call.
+%                 set(wmpactxfig, 'units', 'pixels');
+%                 d.player.screenpos = get(wmpactxfig, 'position'); 
+%                 wmp = actxcontrol(d.player.activex, [0 0 d.player.screenpos(3:4)], wmpactxfig);
 
                 % Set autostart to false
                 %   We need to get information about the movie first.
-                wmp.settings.autostart = false;
+%                 wmp.settings.autostart = false;
 
                 % Set volume to preset value
-                wmp.settings.volume=d.player.WMPvol;        
+%                 wmp.settings.volume=d.player.WMPvol;        
                 
                 %% LOAD NOISE
                 %   Load using SIN_loaddata
@@ -1147,18 +1158,21 @@ for trial=1:length(playback_list)
                 rec_block_start = GetSecs; 
             end % if trial == 1
             
+            cmd = ['wmplayer "' playback_list{trial} '"'];
+            SIN_runsyscmd([], 'cmd', cmd); % calls a slightly different player, SIN runsyscmd, to handle wmplayer.
+            
             %% BRING FIGURE TO FOREGROUND
             %   If scoring GUI is open, it might have covered up the video.
             %   This might not be a good fix if video and scoring are on
             %   the same screen ...
-            figure(wmpactxfig); 
+%             figure(wmpactxfig); 
             
             %% LOAD FILE INTO WMP
             % Set the current file
-            wmp.URL = playback_list{trial};            
+%             wmp.URL = playback_list{trial};            
             
             % Play movie
-            wmp.control.play();        
+%             wmp.control.play();        
 
         otherwise
             

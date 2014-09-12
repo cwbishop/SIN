@@ -110,14 +110,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(13), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(16), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(13), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(16), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -323,6 +323,9 @@ switch testID;
         %   dB SPL. 
         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [1 0], 0);
         
+        % Change to 'wmp' mode
+        opts.player.playertype = 'wmp';
+        
         % Remove the modifier_dbBscale_mixer
         ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
         mask = 1:length(opts.player.modifier);
@@ -341,16 +344,16 @@ switch testID;
         
         %% SETUP TO USE WITH WINDOWS MEDIA PLAYER
         % Set PlayerType to WMP (Windows Media Player)
-        opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
-        opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
-        opts.player.screennum = 0;     % screen to use for visual playback
-        opts.player.screenposition = [0 0]; % set screen position
-        tmp = Screen('Resolution', opts.player.screennum);
+        % Designed to setup WMP on a second monitor that is assumed to be
+        % used as an extended screen. If this is not the case, then you'll
+        % need to tweak parameters here.         
+%         opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
+%         opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
+%         opts.player.screennum = 0;     % screen to use for visual playback
+%         opts.player.screenpos = [0 -1 1 1]; % four element screen position vector in NORMALIZED units. This is where the screen is placed
+%         clear tmp; % clear out screen information
         
-        opts.player.screensize = [tmp.width tmp.height]; 
-        clear tmp; % clear out screen information
-        
-        opts.player.WMPvol = 100; % windows media player volume
+%         opts.player.WMPvol = 100; % windows media player volume
         
         % This way the player doesn't waste time loading the files into a
         % matrix - we won't need these data in MATLAB since WMP will be
@@ -437,7 +440,7 @@ switch testID;
         % ============================
         
         % Function handle for designated player
-        opts.player.fhand = @portaudio_adaptiveplay; 
+        opts.player.player_handle = @player_main; 
         
         opts.player = varargin2struct( ...
             opts.player, ...
