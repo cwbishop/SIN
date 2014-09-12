@@ -16,11 +16,11 @@ function createHINTlookup(suffix)
 %   8/14
 
 % Load HINT options
-opts = SIN_TestSetup('HINT (SNR-50, Sentence-Based)', '');
+opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', '');
 
 % Load original HINT lookup table 
 %   Relevant information is in sheet 2
-[~,t,r]=xlsread(fullfile(opts.specific.root, 'HINT.xlsx'), 2);
+[~,t,r]=xlsread(fullfile(opts.specific.root, 'HINT (corrected).xlsx'), 2);
 
 % Loop through all but the header and alter the file path column (2)
 for i=2:size(r,1)
