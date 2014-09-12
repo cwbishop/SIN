@@ -141,11 +141,19 @@ for i=1:numel(wavfiles)
         %   for scoring purposes.
         sentence = lower(r{ind, 6});
         
-        % Clean up the sentence. 
-        %   Periods and other punctuation cause problems, so remove these
-        %   items. 
+        % CWB encountered a special case with the word "grime-stained",
+        % "one-toothed", and "three-legged". These hyphenated words were
+        % not being flagged as "keywords" in the scoring GUI. This was
+        % because GRIME is the keyword while stained is not. So half of the
+        % word is a keyword ... odd. Anyway, CWB "fixed" this by replacing
+        % the hyphens with a space. This splits the hyphenated words into
+        % two words and the to-be-scored word should be flagged
+        % appropriately in the scoring GUI.
+        sentence = strrep(sentence, '-', ' '); 
         %       
-        sentence = strrep(sentence, '.', ''); 
+%         sentence = strrep(sentence, '.', ''); 
+    
+        sentence = SIN_removepunctuation(sentence); 
         
         % Make SentenceLegend (SentLeg)
         for k=1:numel(keywords)
@@ -157,8 +165,6 @@ for i=1:numel(wavfiles)
             sentence(ind:ind + numel(keywords{k})-1) = upper(keywords{k}); 
             
         end % for k=1:numel(keywords)
-
-        
         
         % Put all the information together into a format that's easy to
         % write to file 
@@ -172,6 +178,10 @@ for i=1:numel(wavfiles)
 %         FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), NAME); 
         FilePath{end+1, 1} = fullfile(PATHSTR(end-6:end), [NAME]); 
         Sentence{end+1, 1} = sentence; 
+        
+        % This is a sloppy line of code that led to CWB missing some
+        % keyword flagging issues. Silly CWB. Not sure the small payoff is
+        % worth the work it would take to do it differently ... backburner.
         ScoringUnits(end+1, 1) = numel(keywords); % this should always be 3 for MLST
 %         FilePath(end+1, 1
         
