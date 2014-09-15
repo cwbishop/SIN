@@ -230,8 +230,7 @@ switch testID;
         % Change the "player" to SIN_runsyscmd
         %   This will execute arbitrary commands at the system terminal.
         %   Useful when launching executables.
-        opts.player = struct( ...
-            'fhand',    @SIN_runsyscmd, ... % this is the "player" handle we'll use
+        opts.player = struct( ...            
             'player_handle',    @SIN_runsyscmd, ...
             'cmd',  '"C:\\Program Files (x86)\\Reading span\Reading span 131022.exe"'); % this is the only (required) input argument
         
@@ -635,7 +634,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level) (use 2 dB steps).'};           
+            'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level).'};           
         
         % Change step size to 2 dB
         %   First, find the dBscale mixer modifier
@@ -655,7 +654,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Now Iím going to leave the level of the story at this level (i.e., MCL) and turn on some background noise. Your up/down buttons will adjust the level of the background noise. Using the up button, turn the level of background noise up until you canít hear the story. Each time you push the up button, I will turn the background noise up (use 5 dB steps).'};           
+            'Now I am going to leave the level of the story at this level (i.e., MCL) and turn on some background noise. Your up/down buttons will adjust the level of the background noise. Using the up button, turn the level of background noise up until you canít hear the story. Each time you push the up button, I will turn the background noise up.'};           
         
         opts.player.modifier{2}.data_channels=2; 
         
@@ -671,7 +670,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Good. Using the down button, turn the level of the background noise down until the story is very clear (i.e., you can follow the story easily). Each time you push the down button, I will turn the level of the background noise down (use 5 dB steps).'};           
+            'Good. Using the down button, turn the level of the background noise down until the story is very clear (i.e., you can follow the story easily). Each time you push the down button, I will turn the level of the background noise down.'};           
         
         opts.player.modifier{2}.data_channels=2; 
         

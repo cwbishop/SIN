@@ -156,7 +156,7 @@ for i=1:numel(grps)
     %% DO ANALYSES
     
     % Find target signal
-    %   This is done two ways:    
-    OUT = [OUT Hagerman_getsignal(D(:,1:NCHANS), D(:,1+NCHANS:2*NCHANS), 'fsx', FS, 'fsy', FS, 'pflag', d.plot)];        
+    %   This is done two ways:  +1/+1 vs +1/-1 and -1/+1 vs -1/-1
+    OUT = [OUT Hagerman_getsignal(D(:,1:NCHANS), D(:,1+NCHANS:2*NCHANS), 'fsx', FS, 'fsy', FS, 'pflag', d.plot)];
     
 end % for i=1:numel(grps)

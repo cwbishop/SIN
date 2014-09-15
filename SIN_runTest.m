@@ -82,11 +82,6 @@ for t=1:length(testID)
                 
             end % for i=1:length(opts)
             
-%         case {'Reading Span'}
-%             
-%             % Run Reading Span at the commandline using SIN_runsyscmd
-%             results = SIN_runsyscmd(opts); 
-            
         otherwise
             
             % If we don't have any special instructions, run
@@ -146,7 +141,7 @@ function results = errorCheck(results, playlist)
 % Error checking
 %   - If the player encounters an error for any reason, then we need to
 %   give the user options on how to proceed. 
-if isequal(results.RunTime.player.state, 'error')
+if isfield(results.RunTime.player, 'state') && isequal(results.RunTime.player.state, 'error')
 
     % First, run error clearing routine
     SIN_ClearErrors; 
@@ -166,4 +161,6 @@ if isequal(results.RunTime.player.state, 'error')
         results = SIN_runTest(results.UserOptions, playlist);         
     end % resp == c
 
+elseif ~isfield(results.RunTime.player, 'state')
+    warning('Player state unknown. Assuming no errors occurred'); 
 end % if isequal ... error ...

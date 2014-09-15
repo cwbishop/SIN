@@ -1158,7 +1158,9 @@ for trial=1:length(playback_list)
                 rec_block_start = GetSecs; 
             end % if trial == 1
             
-            cmd = ['wmplayer "' playback_list{trial} '"'];
+            % Ampersand necessary to run as a background command. Otherwise
+            % the first call will hang if wmplayer is not already open. 
+            cmd = ['wmplayer "' playback_list{trial} '" &'];
             SIN_runsyscmd([], 'cmd', cmd); % calls a slightly different player, SIN runsyscmd, to handle wmplayer.
             
             %% BRING FIGURE TO FOREGROUND
