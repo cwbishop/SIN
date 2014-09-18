@@ -110,14 +110,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(16), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(18), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 1, ... % 200 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(16), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(18), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -232,7 +232,7 @@ switch testID;
         %   Useful when launching executables.
         opts.player = struct( ...            
             'player_handle',    @SIN_runsyscmd, ...
-            'cmd',  '"C:\\Program Files (x86)\\Reading span\Reading span 131022.exe"'); % this is the only (required) input argument
+            'cmd',  '"Reading span 131022.exe"'); % this is the only (required) input argument
         
         % Add fields to generate playlist field. 
         %   Just placeholders since this isn't actually useful information.
@@ -607,7 +607,9 @@ switch testID;
             'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
         
         % Set mixer
+%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(+10); 0 ] [0; 0]], 0); % just discourse in first channel 
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-15); 0 ] [0; 0]], 0); % just discourse in first channel 
+%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [0.2.*ones(2, 8)], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
@@ -758,7 +760,9 @@ switch testID;
         %   
         %   This field is used in SIN_stiminfo.m. 
         opts.specific.list_regexp = ''; 
+%         warning('Change ANL stimulus back to 0dB'); 
         opts.specific.wav_regexp='ANL;0dB.wav'; 
+%         opts.specific.wav_regexp='ANL.wav'; 
         
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
@@ -798,7 +802,8 @@ switch testID;
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'playertype',       'ptb (stream)', ... % use streaming playback mode 
             'startplaybackat',    0, ...  % start playback at beginning of sound 
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0;0] [0;0] [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
+            'contnoise',    '',     ... % no continuous noise playback. This option only relevent for MLST (usually)
             'state',    'pause'); % start in paused state
         
         % ============================

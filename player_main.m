@@ -932,6 +932,7 @@ for trial=1:length(playback_list)
                 % Empty recording buffer frequently
                 %   Only empty if the recording device is active and the
                 %   user wants us to gather recorded responses. 
+                rstatus = PsychPortAudio('GetStatus', rhand);
                 if d.player.record_mic && rstatus.Active
                     
                     % Check to make sure we are checking our buffer faster
@@ -1015,13 +1016,7 @@ for trial=1:length(playback_list)
                 end % if isequal ...             
             end % if ~isDuplex || ~d.player.record_mic
             
-            % Exit playback loop if the player is in exit state
-            %   This break must be AFTER rec transfer to
-            %   d.sandbox.mic_recording or the recordings do not
-            %   transfer. 
-            if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
-                break
-            end % isequal(d.player.state, 'exit'); 
+            
             
         case {'ptb (standard)'}
             
@@ -1250,6 +1245,15 @@ for trial=1:length(playback_list)
     if isDuplex && ~isfield(d.player, 'contnoise') && isempty(d.player.contnoise)
         PsychPortAudio('Stop', phand, 0);
     end % if isDuplex
+    
+    % Exit playback loop if the player is in exit state
+    %   This break must be AFTER rec transfer to
+    %   d.sandbox.mic_recording or the recordings do not
+    %   transfer. 
+    if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
+        break
+    end % isequal(d.player.state, 'exit'); 
+    
 end % for trial=1:length(X)
 
 % Close all open audio devices
