@@ -33,8 +33,7 @@ function results = SIN_runTest(opts, playlist)
 %   University of Washington
 %   5/14
 
-%% GET PLAYLIST
-if ~exist('playlist', 'var') || isempty(playlist), [playlist, lists] = SIN_getPlaylist(opts(1)); end 
+
 
 %% GET TESTID
 %   Base running decisions on the testID of the first options structure.
@@ -55,6 +54,12 @@ for t=1:length(testID)
         case {'ANL', 'ANL (MCL-Too Loud)', 'ANL (MCL-Too Quiet)', 'ANL (MCL-Estimate)', 'ANL (BNL-Too Loud)', 'ANL (BNL-Too Quiet)', 'ANL (BNL-Estimate)'}
             
             for i=1:length(opts)
+                
+                %% GET PLAYLIST
+                % Must get the playlist for each test in case individual
+                % tests require a different test list
+                [playlist, lists] = SIN_getPlaylist(opts(i));
+                
                 % Copy over relevant sections from previous tests.
                 if i > 1
                 
@@ -81,6 +86,29 @@ for t=1:length(testID)
                 results(i) = errorCheck(results(i), playlist); 
                 
             end % for i=1:length(opts)
+        
+        case {'HINT (First Correct)', 'HINT (Perceptual Test)', 'HINT (SNR-50, keywords, 1up1down)', 'HINT (SNR-80, keywords, 4down1up)'};
+            
+            % Run HINT for SIN
+            for i=1:numel(opts)
+                %% GET PLAYLIST
+                % Must get the playlist for each test in case individual
+                % tests require a different test list
+                [playlist, ~] = SIN_getPlaylist(opts(i));
+                
+                % Every other test should inherit the mod_mixer from the
+                % test before it
+                if mod(i, 2) == 0
+                    opts(i).player.mod_mixer = results(i-1).RunTime.player.mod_mixer;
+                end % if mod(i, 2) == 0
+                
+                % Run the stage
+                results(i) = opts(i).player.player_handle(playlist, opts(i)); 
+                
+                % Check for errors after every stage of test. 
+                results(i) = errorCheck(results(i), playlist); 
+                
+            end % end 
             
         otherwise
             
@@ -91,6 +119,10 @@ for t=1:length(testID)
             %   Need the loop in case we encounter multi-stage tests that
             %   do not have any special instructions. 
             for i=1:numel(opts)
+                
+                % Create playlist. Do this for each stage of the test
+                % separately. 
+                [playlist, ~] = SIN_getPlaylist(opts(i));
                 
                 % Run the stage
                 results(i) = opts(i).player.player_handle(playlist, opts(i)); 

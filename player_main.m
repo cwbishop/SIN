@@ -211,6 +211,11 @@ function [results, status]=player_main(X, varargin)
 %                       also be applied directly to the mixing matrix with
 %                       seamless tracking over trials/stimuli/loops. 
 %
+%   'checkaftermod':    bool, a flag to check player status after each
+%                       modifier. Useful if the user wants to exit before
+%                       modifications are complete or only after a subset
+%                       of modifiers have been run.
+%
 %   'state':    player state when first launched. States may change, but
 %               currently include :
 %                   'run':  run the test/playback
@@ -560,6 +565,16 @@ for trial=1:length(playback_list)
             % Initialize modifier
             if ~isempty(fieldnames(d.player.modifier{d.sandbox.modifier_num}))
                 [Y, d]=d.player.modifier{d.sandbox.modifier_num}.fhandle(X, mod_code, d); 
+                
+                % Check for for exit/error status after each modifier, if
+                % the user tells us to. CWB found this useful when trying
+                % to exit before certain modifications take place. 
+                if d.player.checkaftermod
+                    if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
+                        break
+                    end % isequal(d.player.state, 'exit');
+                end % if d.player.checkaftermodifier
+                
             end % if modifier
     
         end % for modifier_num                
@@ -567,7 +582,17 @@ for trial=1:length(playback_list)
     else
         % Assign X (raw data) to second variable for playback 
         Y=X; 
-    end % isequal(d.player.adaptive_mode, 'bytrial')   
+    end % isequal(d.player.adaptive_mode, 'bytrial')     
+    
+    % Exit playback loop if the player is in exit state
+    %   This break must be AFTER rec transfer to
+    %   d.sandbox.mic_recording or the recordings do not
+    %   transfer. 
+    %
+    %   The beginning of the next trial is "AFTER" rec transfer. 
+    if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
+        break
+    end % isequal(d.player.state, 'exit');
     
     % Global prep, indepdent of PlayerType
     % rhand is empty if record_mic == false. 
@@ -1246,13 +1271,7 @@ for trial=1:length(playback_list)
         PsychPortAudio('Stop', phand, 0);
     end % if isDuplex
     
-    % Exit playback loop if the player is in exit state
-    %   This break must be AFTER rec transfer to
-    %   d.sandbox.mic_recording or the recordings do not
-    %   transfer. 
-    if isequal(d.player.state, 'exit') || isequal(d.player.state, 'error')
-        break
-    end % isequal(d.player.state, 'exit'); 
+     
     
 end % for trial=1:length(X)
 

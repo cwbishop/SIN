@@ -380,16 +380,6 @@ switch testID;
         %% CONTINUOUS NOISE INFORMATION
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
         opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR         
-    
-    case 'HINT'
-        
-        % This is the full test sequence for the HINT
-        opts(1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
-        opts(end+1) = SIN_TestSetup('HINT (Perceptual Test)', subjectID); 
-        opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
-        opts(end+1) = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
-        opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
-        opts(end+1) = SIN_TestSetup('HINT (SNR-80, keywords, 4down1up)', subjectID); 
         
     case 'HINT (First Correct)'
         
@@ -403,40 +393,17 @@ switch testID;
         % Change testID
         opts.specific.testID = testID; 
         
-        % Store the existing modifiers, add in the modifier_exitAfter, then
-        % append the existing modifiers. 
-        oldmods = opts.player.modifier;
-        opts.player.modifier = {};
         % Add a modifier to stop playback after the first correct response
         % is recorded (that's 100% of scored words repeated correctly).
-        opts.player.modifier{1} = struct( ...
+        opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_exitAfter, ... % 
             'mod_stage',    'premix',  ...  % apply modifications prior to mixing
-            'expression',   'mod_code == -1');         
-        for i=1:numel(oldmods)
-            opts.player.modifier{end+1} = oldmods{i};
-        end % for i=1:numel(oldmods)
+            'expression',   'mod_code == 1'); 
         
-        % Get a file list
-        opts.specific.genPlaylist.NLists = 1;
-        opts.specific.genPlaylist.Randomize = '';
-        opts.specific.genPlaylist.Repeats = 'any';
-        opts.specific.genPlaylist.Append2UsedList = false;         
-        playlist = SIN_getPlaylist(opts); 
+        % Modify playlist generation
+        opts.specific.genPlaylist
         
-        % Always use the same sentence for the exploratory part
-        opts.specific.genPlaylist.files = repmat({playlist{1}}, 20,1);
-        
-        % Now add an aribtrarily large number of trials. This should be an
-        % upper bound on the number of trials that are presented during
-        % this test segment.
-        
-        
-        % Set NLists to 0 now or the next call to SIN_getPlaylist will
-        % crash
-        opts.specific.genPlaylist.NLists = 0;
-        
-    case 'HINT (Perceptual Test)'
+    case 'Perceptual Test'
         
         % Perceived Performance Test (PPT) is a subjective measure of
         % performance on a HINT-style test. This should be otherwise
@@ -526,9 +493,8 @@ switch testID;
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-20); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-15); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
-            'checkaftermod',    true, ... % check for exit after each modifier
             'state',    'run'); % Start in run state
             
         % ============================
@@ -879,7 +845,6 @@ switch testID;
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0;0] [0;0] [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
             'contnoise',    '',     ... % no continuous noise playback. This option only relevent for MLST (usually)
-            'checkaftermod',    false,  ... % don't need to check for exit after each modifier. 
             'state',    'pause'); % start in paused state
         
         % ============================

@@ -15,6 +15,10 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %
 % Parameters (for SIN_getPlaylist)
 %
+%   'files':        cell array, a list of file names (must be full paths).
+%                   If provided, then the function will use this as a file
+%                   list rather than the output from SIN_stiminfo
+%
 %   'NLists':   number of lists to concatenate for playbacklist. This
 %               proved useful when administering tests that require more
 %               than a single list (e.g., a 20 sentence HINT or the NAL
@@ -113,7 +117,17 @@ playlist = {};
 %   - call SIN_stiminfo
 %   - if lists exist (list dir isn't empty), move forward. Otherwise, just
 %   return the wavfiles (e.g., with ANL)
-[lists, wavfiles]=SIN_stiminfo(opts); 
+%   - Only call SIN_stiminfo if the user has not provided a specific file
+%   list to use
+if isfield(d, 'files') && ~isempty(d.files)
+    % If the user provides a specific stimulus set to use, then use those
+    % files. Otherwise, grab default information from SIN_stiminfo. 
+    lists = {};
+    wavfiles = d.files;
+    
+else
+    [lists, wavfiles]=SIN_stiminfo(opts); 
+end % if isfield ...
 
 %% RETURN WAVFILES
 %   We only need to do the following if we have lists to choose from.
@@ -176,7 +190,7 @@ ntests = ntests(listmask);
 % Find the unique number of tests in ntests
 nunique = unique(ntests);
 
-%% RANDOMIZE LIST ORDER
+%%  LIST ORDER
 %   This randomization approach is not "truly" random. The randomization
 %   approach differs based on the Repeats scheme above.
 %       - For 'any', lists selection is truly randomized.
