@@ -708,7 +708,7 @@ switch testID;
         %
         %   Stage 1: Establishing the most comfortable level (MCL)
         %
-        %       1. Start story at 30 dB HL. 
+        %       1. Start story at 30 dB HL (~50 dB SPL). 
         %       2. Subject adjusts speech until it is uncomfortable (5
         %       dB steps)
         %       3. Subject adjust speech until it is too quiet (5 dB
