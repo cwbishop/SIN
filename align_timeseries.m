@@ -183,9 +183,9 @@ end
 
 % Now, apply realignment to all data series.
 %   Preallocate X_align and Y_align
-warning('Should these be nan??'); 
-X_align=zeros(size(X,1)+abs(min(lags)),size(X,2));
-Y_align=zeros(size(Y,1)+abs(max(lags)),size(Y,2)); 
+% warning('Should these be nan??'); 
+X_align=nan(size(X,1)+abs(min(lags)),size(X,2));
+Y_align=nan(size(Y,1)+abs(max(lags)),size(Y,2)); 
 
 for i=1:size(Y,2)
     if lags(i,1)>0
