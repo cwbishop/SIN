@@ -41,8 +41,10 @@ function results = analysis_ANL(results, varargin)
 %   'nmask':    like tmask, but for noise track. Should also only contain a
 %               single true value
 %
-%   'plot':     bool, set to true to create summary plots. Set to false to
-%               suppress plotting. 
+%   'plot':     integer, level of plotting detail.
+%                   0: no plots
+%                   1: summary plots only
+%                   2: summary plots + time courses (lots of plots). 
 %
 % OUTPUT:
 %
@@ -80,7 +82,7 @@ results(1).RunTime.analysis.results = struct( ...
     'anl',  ANL); 
 
 %% CREATE SUMMARY PLOTS
-if d.plot
+if d.plot > 0
     
     % Save figure handle for saving purposes below
     h = figure; 
@@ -99,7 +101,15 @@ if d.plot
     plot(1:2, data, 'co', 'linewidth', 1.5);
     
     % Plot ANL
+    %   Also plot text string clearly showing the ANL value next to the
+    %   plotted point. Makes it easier to jot down the value.
     plot(1.5, ANL, 'r*', 'linewidth', 2)
+    txthand = text(1.5, ANL-1, ['ANL= ' num2str(ANL)], 'Color', color2colormap({'r'}), 'FontSize', 14, 'FontWeight', 'bold');
+    
+    % Make sure y-axis is set so we can see the text.
+    yrange = ylim; 
+    if yrange(1) > ANL-1, ylim([yrange(1) - 2, yrange(2)]); end
+    
     % Set axis limits
    	xlim([0.5 2.5]);     
      
@@ -115,35 +125,36 @@ if d.plot
      
     % Create a plot of all data channels
     %   Useful for spotting issues with scaling values
-    
-    for i=1:numel(results)        
-        mmixer = results(i).RunTime.sandbox.mod_mixer; 
-        
-        % X is the number of segements
-        x = 1:size(mmixer, 3); 
-        
-        % y is the scale factor
-        y = [];        
-        for c=1:size(mmixer,3)
-            y(c,:) = reshape(mmixer(:,:,c), 1, size(mmixer,1)*size(mmixer,2));
-        end % for i=1:size(mmixer)
-        
-        % Replace 0 values with NaN. Zeros will cannot be log transformed
-        % to dB space.
-        y(y==0) = NaN; 
-        
-        % Convert to dB
-        y = db(y); 
-        
-        % Create legend
-        L ={};
-        for c=1:size(mmixer,1)
-            for k=1:size(mmixer,2)
-                L{end+1} = ['DChan: ' num2str(c), ', PChan: ' num2str(k)];
+    if d.plot >= 2
+        for i=1:numel(results)        
+            mmixer = results(i).RunTime.sandbox.mod_mixer; 
+
+            % X is the number of segements
+            x = 1:size(mmixer, 3); 
+
+            % y is the scale factor
+            y = [];        
+            for c=1:size(mmixer,3)
+                y(c,:) = reshape(mmixer(:,:,c), 1, size(mmixer,1)*size(mmixer,2));
+            end % for i=1:size(mmixer)
+
+            % Replace 0 values with NaN. Zeros will cannot be log transformed
+            % to dB space.
+            y(y==0) = NaN; 
+
+            % Convert to dB
+            y = db(y); 
+
+            % Create legend
+            L ={};
+            for c=1:size(mmixer,1)
+                for k=1:size(mmixer,2)
+                    L{end+1} = ['DChan: ' num2str(c), ', PChan: ' num2str(k)];
+                end 
             end 
-        end 
-        lineplot2d(x, y, 'xlabel', 'Block #', 'ylabel', 're: dB SPL', 'title', results(i).RunTime.specific.testID, 'legend', {L}, 'grid', 'on', 'linewidth', 2, 'legend_position', 'best', 'marker', 'o', 'fignum', h+i);
-        
-    end % for i=1:numel(results)
+            lineplot2d(x, y, 'xlabel', 'Block #', 'ylabel', 're: dB SPL', 'title', results(i).RunTime.specific.testID, 'legend', {L}, 'grid', 'on', 'linewidth', 2, 'legend_position', 'best', 'marker', 'o', 'fignum', h+i);
+
+        end % for i=1:numel(results)
+    end % if ...
     
 end % if d.plot
