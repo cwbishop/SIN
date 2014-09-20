@@ -158,7 +158,7 @@ switch testID;
         % Return so we do not assign a UUID to defaults. 
         return
         
-    case 'Timing Test (10 Hz click train)'
+    case 'Audio Test (10 Hz click train)'
         
         % A test to perform a timing test of the playback/recording loop.
         % Eventually, this will playback a 10 Hz click train several times
@@ -240,11 +240,12 @@ switch testID;
         % Analysis        
         % ============================
         opts.analysis = struct( ...
-            'fhand',    @analysis_TimingTest, ...  % functioin handle to analysis function
+            'fhand',    @analysis_AudioTest, ...  % functioin handle to analysis function
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 'plot',     true, ... % generate plot
-                'chans',    [1 2])); % only perform analyses on channels 1 and 2
+                'chans',    [1 2], ...% only perform analyses on channels 1 and 2
+                'dBtol',    1)); % 1 dB tolerance is OK. 
         
     case 'Calibration (HINT)'
         
@@ -263,6 +264,11 @@ switch testID;
         % wav_regexp to choose correct calibration file
         opts.specific.root= fullfile(opts.general.root, 'playback', 'Noise');
         opts.specific.wav_regexp = 'HINT-Noise;0dB.wav';
+        
+        % Don't write noise file to UsedList
+        %   Not necessary since we're just using this for calibration
+        %   purposes. 
+        opts.specific.genPlaylist.Append2UsedList = false; 
         
         % Change the mixer to match the single channel calibration sound
         %   Initializes with zeros
@@ -716,6 +722,9 @@ switch testID;
         rove.player.modifier{ind}.dBstep = 4; 
         rove.player.modifier{ind}.change_step = 1; 
         
+        % Use a specific file for the roving portion of the test
+        rove.specific.genPlaylist.files = repmat({opts.specific.genPlaylist.files{1}}, 20,1); 
+        
         % Now put the two pieces together
         firstopts = opts;
         opts(1) = rove;
@@ -1088,9 +1097,7 @@ switch testID;
                 'order',    1:6, ...
                 'tmask',    logical(fillPlaybackMixer(opts.player.playback.device, [1;0], 0)), ...   % just get data/physical channel 1
                 'nmask',    logical(fillPlaybackMixer(opts.player.playback.device, [0;1], 0)), ...   % get data chan 2/phys chan 1
-                'plot', true)); % generate plot
-            
-    
+                'plot', 1)); % generate summary plots only
             
     otherwise
         
