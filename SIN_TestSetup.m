@@ -111,7 +111,7 @@ switch testID;
         % Set sound output paramters. 
         opts.player.playback = struct( ...
             'device', portaudio_GetDevice(22), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
-            'block_dur', 1, ... % 200 ms block duration.
+            'block_dur', 0.5, ... % 500 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
@@ -436,6 +436,14 @@ switch testID;
         opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult);0dB.xlsx');
         opts.specific.hint_lookup.sheetnum=1;   
         
+        % Now reset genPlaylist information so it won't buck when called
+        % from SIN_runTest.
+        opts.specific.genPlaylist.files = []; % we don't have any preset files we want to play (yet), so go with random list selection
+        opts.specific.genPlaylist.NLists = 2; % Set to 1, we'll just use the one "list"
+        opts.specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        
         % Change mod_mixer to work with single channel data
         %   Scale speech track to full volume, assuming we calibrate to 65
         %   dB SPL. 
@@ -479,10 +487,17 @@ switch testID;
         opts.player.preload = false; 
         
         %% CONTINUOUS NOISE INFORMATION
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR         
-    
-    
+        %   Loads a file containing a 4-channel noise sample and plays the
+        %   noise back from all 4 speakers. 
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped)4chan;0dB.wav'); % File name
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 - 6.05).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
+                                                                                                                  % -6.05 dB corrects for level gain due to playing noise from multiple speakers.
+                                                                                                                  % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
+                                                                                                                  % See the note link below here for details on how CWB estimated the 6.05 dB correction factor
+                                                                                                                  % http://www.evernote.com/shard/s353/sh/a51a39a6-4732-4dfe-9040-840ba98945fd/9e1c5846a09fe0e7e3e3297c8a220380
+        
+        % Don't run analysis (for now)
+        opts.analysis.run = false; 
         
     case 'HINT (First Correct)'
         
