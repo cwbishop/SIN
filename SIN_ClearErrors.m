@@ -1,4 +1,4 @@
-function SIN_ClearErrors(err)
+function SIN_ClearErrors(varargin)
 %% DESCRIPTION:
 %
 %   Function to assist in clearing and recovering from errors. This will
@@ -6,9 +6,12 @@ function SIN_ClearErrors(err)
 %   For now, though, SIN will simply clear PsychPortAudio, close figures,
 %   and close open 'Screens'
 %
+%   Note: SIN_ClearErrors 
+%
 % INPUT:
 %
-%   err:    error code (currently unused)
+%   'closerunSIN':  bool, close open runSIN window. If true, close.
+%                   (default = false)
 %
 % OUTPUT:
 %
@@ -17,6 +20,12 @@ function SIN_ClearErrors(err)
 % Christopher W. Bishop
 %   University of Washington
 %   8/14
+
+%% GET INPUT PARAMETERS
+d=varargin2struct(varargin{:});
+
+% PARAMETER CHECK
+if ~isfield(d, 'closerunSIN') || isempty(d.closerunSIN), d.closerunSIN = false; end 
 
 %% CLOSE PSYCHPORTAUDIO
 %   Running sounds will end
@@ -27,8 +36,20 @@ catch ME
 end % 
 
 %% CLOSE FIGURES
-%   
-close all 
+
+% Get all open figures
+figs = findobj('Type', 'figure'); 
+
+% If user specifies, close the runSIN window. 
+if ~d.closerunSIN
+    % Find runSIN window
+    rsin = findobj('Tag', 'runSIN');     
+    figs = figs(figs~=rsin);
+else
+    close(runSIN); 
+end 
+
+close(figs)
 
 %% CLOSE KEYBOARD QUEUES
 KbQueueStop;
