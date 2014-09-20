@@ -1225,7 +1225,12 @@ for trial=1:length(playback_list)
     
     % Only empty recording buffer if user tells us to
     %   Recording device does NOT need to be active in order to do this. 
-    if d.player.record_mic % && rstatus.Active
+    %
+    %   added in rec_start_time check to deal with instances when the
+    %   recording device has not been started. This replaced rstatus.Active
+    %   because rstatus.Active was an unreliable flag for duplex
+    %   recordings. 
+    if d.player.record_mic && exist('rec_start_time', 'var') % && rstatus.Active
 
         % Wait for a short time to compensate for differences in
         % relative start time of the recording and playback device.
@@ -1270,8 +1275,6 @@ for trial=1:length(playback_list)
     if isDuplex && ~isfield(d.player, 'contnoise') && isempty(d.player.contnoise)
         PsychPortAudio('Stop', phand, 0);
     end % if isDuplex
-    
-     
     
 end % for trial=1:length(X)
 
