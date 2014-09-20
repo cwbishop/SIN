@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 19-Sep-2014 09:04:28
+% Last Modified by GUIDE v2.5 20-Sep-2014 14:26:53
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -118,7 +118,7 @@ guidata(hObject, handles);
 refresh_popups(hObject, eventdata, handles); 
 
 % UIWAIT makes runSIN wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+% uiwait(handles.runSIN);
 
 
 % --- Outputs from this function are returned to the command line.
