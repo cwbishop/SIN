@@ -176,7 +176,9 @@ function results = errorCheck(results, playlist)
 if isfield(results.RunTime.player, 'state') && isequal(results.RunTime.player.state, 'error')
 
     % First, run error clearing routine
-    SIN_ClearErrors; 
+    %   But don't close runSIN. Leave that open so the user can still run
+    %   tests.
+    SIN_ClearErrors('closerunSIN', false); 
 
     % We can just continue with testing
     resp = [];
@@ -190,7 +192,12 @@ if isfield(results.RunTime.player, 'state') && isequal(results.RunTime.player.st
         return
     elseif resp == 'r'
         % Repeat the test
-        results = SIN_runTest(results.UserOptions, playlist);         
+        %   Set analyes to false, since we'll run it again when we return
+        %   results to SIN_runTest
+        opts = results.UserOptions;
+        opts.analysis.run = false; 
+        
+        results = SIN_runTest(opts, playlist);         
     end % resp == c
 
 elseif ~isfield(results.RunTime.player, 'state')
