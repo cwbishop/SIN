@@ -85,13 +85,8 @@ function [X_align, Y_align, lags]=align_timeseries(X, Y, routine, varargin)
 % Convert inputs to structure
 %   Users may also pass a parameter structure directly, which makes CWB's
 %   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GET INPUT PARAMETERS
+p=varargin2struct(varargin{:});
 
 % Place routine in the parameter structure.
 p.routine=routine; 
@@ -225,11 +220,16 @@ if p.pflag>0
     [~, ~, LABELS]=SIN_loaddata(ones(size(Y,2), 10), 'fs', p.fsx);
     
     % Generate a single plot for each realigned signal pair
+    
     for i=1:size(Y_align,2)
+        
+        % A different figure for each channel
+        figure
+        
         % Plot X data
         T=0:1/p.fsx:(size(X,1)-1)/p.fsx;     
         T=SIN_loaddata(T, 'fs', p.fsx);  % set correct dimensions
-        lineplot2d(T, X, 'linewidth', 3, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Aligned Time Series', 'linestyle', '--'); % opens a new figure 
+        lineplot2d(T, X, 'linewidth', 3, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', 'Aligned Time Series', 'linestyle', '--', 'fignum', gcf); % opens a new figure 
     
         % Plot Y (orig) data
         T=0:1/p.fsx:(size(Y,1)-1)/p.fsx;     
@@ -240,7 +240,7 @@ if p.pflag>0
                                         
         % Plot Y data
         T=0:1/p.fsx:(size(Y_align,1)-1)/p.fsx; 
-        lineplot2d(T, [X_align(:,i) Y_align(:,i)], 'legend', {{'X (orig)' 'Y (orig)' 'X (aligned)'  'Y (aligned)'}}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', LABELS{i}, 'fignum', gcf, 'grid', 'on', 'startat', 2, 'legend_position', 'EastOutside'); % opens a new figure         
+        lineplot2d(T, [X_align(:,1) Y_align(:,i)], 'legend', {{'X (orig)' 'Y (orig)' 'X (aligned)'  'Y (aligned)'}}, 'linewidth', 1.5, 'xlabel', 'Time (s)', 'ylabel', 'Units', 'title', LABELS{i}, 'fignum', gcf, 'grid', 'on', 'startat', 2, 'legend_position', 'EastOutside'); % opens a new figure         
         
     end % for i=1:size(Y_align, 2)
     

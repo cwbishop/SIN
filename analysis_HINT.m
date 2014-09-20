@@ -41,12 +41,26 @@ function results = analysis_HINT(results, varargin)
 %               may be expanded later if different estimation approaches
 %               are required.
 %
+%               
 %                   'traditional':  RTS is estimated by averaging signal
 %                                   level (assumed to be equivalent to SNR,
 %                                   see 'tmask' notes and notes in
 %                                   description) over trials 5:N+1, where N
 %                                   is the number of sentences used in the
 %                                   test.
+%
+%                   'startat':      user wants to specify the first trial
+%                                   to include in the average. This proved
+%                                   useful when the dynamic search at the
+%                                   beginning of the HINT takes up a number
+%                                   of trials. Requires the additional
+%                                   field 'startattrial' below. Average
+%                                   will be between X:N+1, where X is the
+%                                   value of 'startattrial' and N is the
+%                                   number of total trials in the test
+%                                   sequence. 
+%
+%   'startattrial': integer, trial to start average at. 
 %               
 %
 % Development:
@@ -104,7 +118,8 @@ switch d.RTSest
         % Implements a traditional scoring method as described in HINT
         % manual.
         RTSmask = 5:length(ts);
-        
+    case {'startat'}
+        RTSmask = d.startattrial:length(ts); 
     otherwise
         error('Unknown RTS estimation routine. Check RTSest field.');        
 end % switch d.RTSest

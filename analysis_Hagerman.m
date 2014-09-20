@@ -1,4 +1,4 @@
-function results = analysis_Hagerman(results, varargin)
+function OUT = analysis_Hagerman(results, varargin)
 %% DESCRIPTION:
 %
 %   This function analyzes Hagerman-style (that is, phase inversion
@@ -133,30 +133,33 @@ for i=1:numel(grps)
     ind = findcell(fnames, [d.tstr d.origstr d.nstr d.origstr]);
     % Quick check to make sure we only found one
     if numel(ind)~=1, error(['Found ' num2str(numel(ind)) ' instead of 1 and only 1']); end
-    D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
+    oo = data{mask(ind), 2};
+%     D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
     
     % Find +1/-1
     ind = findcell(fnames, [d.tstr d.origstr d.nstr d.invstr]);
     % Quick check to make sure we only found one
     if numel(ind)~=1, error(['Found ' num2str(numel(ind)) ' instead of 1 and only 1']); end
-    D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
+    oi = data{mask(ind), 2};
+%     D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
+    OUT = Hagerman_getsignal(oo, oi, 'fsx', FS, 'fsy', FS, 'pflag', d.plot);
     
     % Find -1/-1
     ind = findcell(fnames, [d.tstr d.invstr d.nstr d.invstr]);
     % Quick check to make sure we only found one
     if numel(ind)~=1, error(['Found ' num2str(numel(ind)) ' instead of 1 and only 1']); end
-    D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
+%     D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
     
     % Find -1/+1
     ind = findcell(fnames, [d.tstr d.invstr d.nstr d.origstr]);
     % Quick check to make sure we only found one
     if numel(ind)~=1, error(['Found ' num2str(numel(ind)) ' instead of 1 and only 1']); end
-    D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
+%     D = [D data{mask(ind) ,2}]; % this is the original/original data trace. Rinse and repeat for other combinations.
     
     %% DO ANALYSES
     
     % Find target signal
     %   This is done two ways:  +1/+1 vs +1/-1 and -1/+1 vs -1/-1
-    OUT = [OUT Hagerman_getsignal(D(:,1:NCHANS), D(:,1+NCHANS:2*NCHANS), 'fsx', FS, 'fsy', FS, 'pflag', d.plot)];
+%     OUT = [OUT Hagerman_getsignal(D(:,1:NCHANS), D(:,1+NCHANS:2*NCHANS), 'fsx', FS, 'fsy', FS, 'pflag', d.plot)];
     
 end % for i=1:numel(grps)

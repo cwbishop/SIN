@@ -119,6 +119,8 @@ function createHagerman(varargin)
 %% MASSAGE INPUTS
 d=varargin2struct(varargin{:}); 
 
+error('This code does not work properly. Needs attention from CWB. CWB, SNR is calculated at a single speaker. Need to estimate based on multiple speaker playback.');
+
 %% CHECK MIXERS
 %   Mixers must only have zeros and positive numbers. Negative numbers will
 %   throw off the (rather stupid) naming scheme CWB came up with at the

@@ -158,6 +158,98 @@ switch testID;
         % Return so we do not assign a UUID to defaults. 
         return
         
+    case 'Timing Test (10 Hz click train)'
+        
+        % A test to perform a timing test of the playback/recording loop.
+        % Eventually, this will playback a 10 Hz click train several times
+        % and record it. The recordings will then be compared and
+        % "realigned" to assess how stable the timing is.
+        
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults', subjectID); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions, like importHINT and the like. 
+        % ============================
+        
+        % set the testID (required)
+        opts.specific.testID = testID;
+        
+        % root directory for HINT stimuli and lookup list
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'calibration');        
+        
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp=''; 
+                
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = '.wav'; % Use calibrated noise files (calibrated to 0 dB)
+                
+        % Now reset genPlaylist information so it won't buck when called
+        % from SIN_runTest.
+        opts.specific.genPlaylist.NLists = 1; % Set to 1, we'll just use the one "list"
+        opts.specific.genPlaylist.Randomize = ''; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        
+        % Get playlist so we can repeat the same recording many times
+        playlist = SIN_getPlaylist(opts); 
+        
+        opts.specific.genPlaylist.files = repmat({playlist{1}}, 10, 1); 
+        
+        % Now alter genPlaylist struct so it won't break in SIN_runTest
+        opts.specific.genPlaylist.NLists = 0; 
+        
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        
+        % Function handle for designated player
+        opts.player.player_handle = @player_main; 
+        
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        false, ...   % randomize trial order before playback
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
+            'startplaybackat',    0, ...  % start playback at beginning of files
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [1], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'state',    'run'); % Start in run state
+            
+        % ============================
+        % Modification check (modcheck) configuration        
+        % ============================
+        opts.player.modcheck=struct();               
+                
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_TimingTest, ...  % functioin handle to analysis function
+            'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'RTSest',   'startat',  ... % specify first trial to include in average. Requires 'trial' field as well
+                'startattrial', 4,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
+                'plot', true)); % generate plot
+    
+        
+        
     case 'Calibration (HINT)'
         
         % The calibration routine is pretty straightforward. All we need to
@@ -268,20 +360,29 @@ switch testID;
         
         % Same as practice run.
         opts = SIN_TestSetup('ANL (Practice)', subjectID);
-        opts.specific.testID = testID; 
+%         opts.specific.testID = testID; 
         
     case 'ANL (Session Two)'    
         
         % Same as practice run.
         opts = SIN_TestSetup('ANL (Practice)', subjectID);
-        opts.specific.testID = testID; 
+%         opts.specific.testID = testID; 
     
     case 'ANL (Session Three)'
         
        % Same as practice run.
        opts = SIN_TestSetup('ANL (Practice)', subjectID);
-       opts.specific.testID = testID; 
+%        opts.specific.testID = testID; 
        
+    case 'HINT'
+        
+        % This is the full test sequence for the HINT
+%         opts(1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
+        opts(1:2) = SIN_TestSetup('HINT (Perceptual Test)', subjectID); 
+%         opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
+        opts(end+1:end+2) = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+%         opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
+        opts(end+1:end+2) = SIN_TestSetup('HINT (SNR-80, keywords, 4down1up)', subjectID);    
     case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
         
         % Start with the AV aided condition. same test, different subject
@@ -314,6 +415,10 @@ switch testID;
         %   - The HINT is quite similar to the MLST in many ways, so let's
         %   use this as a starting point. 
         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
+        opts = opts(2); % we don't need the first bit of the HINT (searching) 
+        
+        % Clear playlist
+        opts.specific.genPlaylist.files =[]; 
         
         % Change the test ID
         opts.specific.testID = testID;
@@ -380,6 +485,8 @@ switch testID;
         %% CONTINUOUS NOISE INFORMATION
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped);0dB.wav'); % File name
         opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, [db2amp(-8) 0], 0); % reduce noise levels to reach -8 dB SNR         
+    
+    
         
     case 'HINT (First Correct)'
         
@@ -395,15 +502,36 @@ switch testID;
         
         % Add a modifier to stop playback after the first correct response
         % is recorded (that's 100% of scored words repeated correctly).
-        opts.player.modifier{end+1} = struct( ...
+        opts.player.modifier{end + 1} = struct( ...
             'fhandle',  @modifier_exitAfter, ... % 
             'mod_stage',    'premix',  ...  % apply modifications prior to mixing
-            'expression',   'mod_code == 1'); 
+            'expression',   'mod_code == -1');         
+
+        % Find scaling modifier. Once found, fix dBsteps to 4 dB
+        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        opts.player.modifier{ind}.dBstep = 4; 
+        opts.player.modifier{ind}.change_step = 1; 
         
-        % Modify playlist generation
-        opts.specific.genPlaylist
+        % Get a file list
+        opts.specific.genPlaylist.NLists = 1;
+        opts.specific.genPlaylist.Randomize = '';
+        opts.specific.genPlaylist.Repeats = 'any';
+        opts.specific.genPlaylist.Append2UsedList = false;         
+        playlist = SIN_getPlaylist(opts); 
         
-    case 'Perceptual Test'
+        % Always use the same sentence for the exploratory part
+        opts.specific.genPlaylist.files = repmat({playlist{1}}, 20,1);
+        
+        % Now add an aribtrarily large number of trials. This should be an
+        % upper bound on the number of trials that are presented during
+        % this test segment.
+        
+        
+        % Set NLists to 0 now or the next call to SIN_getPlaylist will
+        % crash
+        opts.specific.genPlaylist.NLists = 0;
+        
+    case 'HINT (Perceptual Test)'
         
         % Perceived Performance Test (PPT) is a subjective measure of
         % performance on a HINT-style test. This should be otherwise
@@ -411,10 +539,11 @@ switch testID;
         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
         
         % Change the test ID to PPT so the correct scoring scheme is used.
-        opts.specific.testID = testID; 
+%         opts(1).specific.testID = testID; 
+        opts(2).specific.testID = testID; 
         
         % Change scoring method to PPT based scoring
-        opts.player.modcheck.scored_items = 'sentences';
+        opts(2).player.modcheck.scored_items = 'sentences';
         
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
@@ -427,8 +556,8 @@ switch testID;
         
         % Change algorithm tracking
         %   Start with 1up1down, then switch to 4down1up after trial 4
-        opts.player.modcheck.algo = {@algo_HINT1up1down @algo_HINT4down1up}; 
-        opts.player.modcheck.startalgoat=[1 5]; 
+        opts(2).player.modcheck.algo = {@algo_HINT1up1down @algo_HINT4down1up}; 
+        opts(2).player.modcheck.startalgoat=[1 5]; 
         
     case 'HINT (SNR-50, keywords, 1up1down)'
         
@@ -467,9 +596,21 @@ switch testID;
         % generation. They are used in a call to SIN_getPlaylist, which in
         % turn invokes SIN_stiminfo and other supportive functions.         
         opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
-        opts.specific.genPlaylist.Randomize = 'lists&within'; % randomize list order and stimuli within each list.
+        opts.specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
         opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        
+        % Get the stimulus list that we need. We need to populate this
+        % field here so we know which stimulus will be FIRST for the roving
+        % part.
+        opts.specific.genPlaylist.files = SIN_getPlaylist(opts); 
+        
+        % Now reset genPlaylist information so it won't buck when called
+        % from SIN_runTest.
+        opts.specific.genPlaylist.NLists = 0; % Set to 0 so SIN_getPlaylist won't buck later.
+        opts.specific.genPlaylist.Randomize = ''; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % ============================
         % Player configuration
@@ -493,7 +634,7 @@ switch testID;
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-15); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-20); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
@@ -518,7 +659,7 @@ switch testID;
             'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
             'mod_stage',    'premix',  ...  % apply modifications prior to mixing
             'dBstep',   [4 2], ...  % use variable step size. This matches HINT as normally administered
-            'change_step', [1 5], ...   % This matches HINT as normally administered. 
+            'change_step', [1 4], ...   % Switched to 4 because we lost a trial by doing the search sweep. 
             'data_channels', 1, ... % HINT speech coming out of data channel 1 (now) 
             'physical_channels', 1);  % apply decibel step to discourse stream in first output channel 
         
@@ -535,9 +676,47 @@ switch testID;
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
-                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
+                'RTSest',   'startat',  ... % specify first trial to include in average. Requires 'trial' field as well
+                'startattrial', 4,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
                 'plot', true)); % generate plot
     
+        % ============================
+        % Initial search code
+        % ============================
+        % This will be the first segment in HINT testing during which we present
+        % the same stimulus repeatedly until the listener understands it
+        % completely. 
+        rove = opts;
+        % Start with HINT (SNR-50 ... for starters
+%         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+        
+        % Change testID
+        rove.specific.testID = testID; 
+        
+        % Add a modifier to stop playback after the first correct response
+        % is recorded (that's 100% of scored words repeated correctly).
+        rove.player.modifier{end + 1} = struct( ...
+            'fhandle',  @modifier_exitAfter, ... % 
+            'mod_stage',    'premix',  ...  % apply modifications prior to mixing
+            'expression',   'mod_code == -1');         
+
+        % Find scaling modifier. Once found, fix dBsteps to 4 dB
+        ind = getMatchingStruct(rove.player.modifier, 'fhandle', @modifier_dBscale_mixer);
+        rove.player.modifier{ind}.dBstep = 4; 
+        rove.player.modifier{ind}.change_step = 1; 
+        
+        % Now put the two pieces together
+        firstopts = opts;
+        opts(1) = rove;
+        opts(2) = firstopts; 
+        
+        % Don't need to run analysis after roving phase
+        opts(1).analysis.run = false; 
+        
+        % Now remove first stimulus from playback list. HINT manual says we
+        % should move onto second stimulus
+        opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }; 
+        
     case 'Hagerman'
         
         %% SETUP FOR HAGERMAN STYLE RECORDINGS
@@ -844,7 +1023,7 @@ switch testID;
             'playertype',       'ptb (stream)', ... % use streaming playback mode 
             'startplaybackat',    0, ...  % start playback at beginning of sound 
             'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0;0] [0;0] [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
-            'contnoise',    '',     ... % no continuous noise playback. This option only relevent for MLST (usually)
+            'contnoise',    '',     ... % no continuous noise playback. This option only relevent for MLST (usually)            
             'state',    'pause'); % start in paused state
         
         % ============================
