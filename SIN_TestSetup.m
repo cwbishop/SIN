@@ -110,14 +110,14 @@ switch testID;
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(22), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(18), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 0.5, ... % 500 ms block duration.
             'fs', 44100, ... % sampling rate            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(22), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
+            'device', portaudio_GetDevice(18), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
             'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
@@ -378,40 +378,16 @@ switch testID;
        
     case 'HINT'
         
-        % This is the full test sequence for the HINT
-%         opts(1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
+        % Full HINT sequence, including initial exploration.
         opts(1:2) = SIN_TestSetup('HINT (Perceptual Test)', subjectID); 
-%         opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
         opts(end+1:end+2) = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
-%         opts(end+1) = SIN_TestSetup('HINT (First Correct)', subjectID); 
-        opts(end+1:end+2) = SIN_TestSetup('HINT (SNR-80, keywords, 4down1up)', subjectID);    
-    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Start with the AV aided condition. same test, different subject
-        % state. 
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        opts.specific.testID = testID;         
-                
-    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Start with the audio condition
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        opts.specific.testID = testID; 
-        
-        % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';    
-        
-    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
-        
-        % Same test, different subject state
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        
-        opts.specific.testID = testID;     
+        opts(end+1:end+2) = SIN_TestSetup('HINT (SNR-80, keywords, 4down1up)', subjectID);
         
     case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
-        % Configured to administer the (audio only) MLST. Different
-        % parameters required for the audiovisual version
+        % Configured to administer the (audio only) MLST. This serves as
+        % the basic setup file for all MLST files, so changes here will
+        % (generally) be inherited by all other versions of MLST testing. 
         
         % Use the HINT as a starting point
         %   - The HINT is quite similar to the MLST in many ways, so let's
@@ -474,19 +450,6 @@ switch testID;
         %   Keywords are denoted as capital letters. 
         opts.player.modcheck.scored_items = 'keywords'; 
         
-        %% SETUP TO USE WITH WINDOWS MEDIA PLAYER
-        % Set PlayerType to WMP (Windows Media Player)
-        % Designed to setup WMP on a second monitor that is assumed to be
-        % used as an extended screen. If this is not the case, then you'll
-        % need to tweak parameters here.         
-%         opts.player.playertype = 'WMP'; % used by portaudio_adaptiveplay to use windows media player (WMP)
-%         opts.player.activex = 'WMPlayer.OCX.7'; % name of ActiveX controller for WMP. see info = actxcontrollist; to find specifics on your system.
-%         opts.player.screennum = 0;     % screen to use for visual playback
-%         opts.player.screenpos = [0 -1 1 1]; % four element screen position vector in NORMALIZED units. This is where the screen is placed
-%         clear tmp; % clear out screen information
-        
-%         opts.player.WMPvol = 100; % windows media player volume
-        
         % This way the player doesn't waste time loading the files into a
         % matrix - we won't need these data in MATLAB since WMP will be
         % handling playback. 
@@ -505,6 +468,222 @@ switch testID;
         % Don't run analysis (for now)
         opts.analysis.run = false; 
         
+    case 'MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)'
+        
+        % Just like aided 65 dB SPL test, but with different wav_regexp and
+        % lookup
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        
+        opts.specific.testID = testID; 
+        
+        % Change Speech levels by selecting different speech files for
+        % playback that have a +15 dB gain relative to our calibration file
+        %   Note the brackets around the "+" sign to distinguish it from
+        %   the + operator in regexp.
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, ';0dB', ';[+]15dB');
+        
+        % Change lookup table 
+        %   We have to have slightly different versions of the lookup table
+        %   for 0dB and +15dB files since the lookup code (importHINT,
+        %   specifically) does some basic string matching. 
+        %  
+        %   Note: Unlike wav_regexp below, we don't have to out the "+" in
+        %   brackets since this is a simple string and not a regular
+        %   expression. 
+        opts.specific.hint_lookup.filename = strrep(opts.specific.hint_lookup.filename, ';0dB', ';+15dB');
+        
+        % Add 15 dB to account for the louder speech levels, then add 8 dB
+        % to compensate for the -8 dB gain applied to noise in scaffold to
+        % create +8 dB SNR.
+        opts.player.noise_mixer = opts.player.noise_mixer.*db2amp(15 + 8); % multiply to apply dB change
+        
+    case 'MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
+        
+        % Just swapping out the masker type.
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        
+        % Swap out continuous noise with ISTS
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit (4chan4MLST);0dB.wav'); % File name
+    
+    case 'MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
+        
+         % Just swapping out the masker type.
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
+        
+        % Swap out continuous noise with ISTS
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit (4chan4MLST);0dB.wav'); % File name
+        
+    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$'; 
+     
+    case 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)'
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];[+]15dB.mp4$'; 
+        
+    case 'MLST (AV, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';
+        
+    case 'MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to pull in MP4s
+        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];[+]15dB.mp4$';
+        
+    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'    
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        opts.specific.testID; 
+        
+    case 'MLST (Audio, Unaided, SSN, 80 dB SPL, +0 dB SNR)'    
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts.specific.testID;     
+        
+    case 'MLST (Audio, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'    
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID);
+        opts.specific.testID;
+        
+    case 'MLST (Audio, Unaided, ISTS, 80 dB SPL, +0 dB SNR)'    
+        
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts.specific.testID;  
+        
+    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+    case 'MLST (AV, Unaided, SSN, 80 dB SPL, +0 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+    case 'MLST (AV, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts.specific.testID = testID;  
+        
+    case 'MLST (AV, Unaided, ISTS, 80 dB SPL, +0 dB SNR)'
+        
+        % Start with the audio condition
+        opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts.specific.testID = testID; 
+        
+    case 'Hagerman'
+        
+        %% SETUP FOR HAGERMAN STYLE RECORDINGS
+        %   This specific experiment has some basic needs. 
+        %       - Play back and record a specific set of files in
+        %       randomized order. 
+        %       - Create some plots/summary statistics after run time. 
+        %   That's it! Let's see how quickly that can be done ...
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults', subjectID); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions, like importHINT and the like. 
+        % ============================
+        
+        % set the testID (required)
+        opts.specific.testID = testID;
+        
+        % root directory for HINT stimuli and lookup list
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
+        
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp=''; 
+                
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        
+        % full path to HINT lookup list. Currently an XLSX file provided by
+        % Wu. Used by importHINT.m
+                
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
+        opts.specific.genPlaylist.Randomize = 'within'; % randomize playback order. 
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
+        
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        
+        % Function handle for designated player
+        opts.player.player_handle = @player_main; 
+        
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'randomize',        false, ...   % randomize trial order before playback
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [[1; 0;0;0] [0;1;0;0] [0;0;1;0] [0;0;0;1]], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'startplaybackat',    0, ...  % start playback at beginning of files
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'state',    'run'); % Start in run state
+            
+        % ============================
+        % Modification check (modcheck) configuration        
+        % ============================
+        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
+        
+        % ============================
+        % Modifier configuration        
+        % ============================
+        %   No modifiers for playback
+        % Modifier to scale mixing information
+        opts.player.modifier{end+1} = struct();  % No modifier necessary
+        
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
+                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
+                'plot', true)); % generate plot
+            
     case 'HINT (First Correct)'
         
         % This is the first segment in HINT testing during which we present
@@ -737,98 +916,7 @@ switch testID;
         % should move onto second stimulus
         opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }; 
         
-    case 'Hagerman'
-        
-        %% SETUP FOR HAGERMAN STYLE RECORDINGS
-        %   This specific experiment has some basic needs. 
-        %       - Play back and record a specific set of files in
-        %       randomized order. 
-        %       - Create some plots/summary statistics after run time. 
-        %   That's it! Let's see how quickly that can be done ...
-        % ============================
-        % Get default information
-        % ============================
-        opts=SIN_TestSetup('Defaults', subjectID); 
-        
-        % ============================
-        % Test specific information. These arguments are used by
-        % test-specific auxiliary functions, like importHINT and the like. 
-        % ============================
-        
-        % set the testID (required)
-        opts.specific.testID = testID;
-        
-        % root directory for HINT stimuli and lookup list
-        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
-        
-        % set a regular expression to find available lists within the HINT
-        % root directory.
-        %   Look for all directories beginning with "List" and ending in
-        %   two digits. 
-        opts.specific.list_regexp=''; 
-                
-        % Set regular expression for wav files
-        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-        
-        % full path to HINT lookup list. Currently an XLSX file provided by
-        % Wu. Used by importHINT.m
-                
-        % The following set of subfields are required for playlist
-        % generation. They are used in a call to SIN_getPlaylist, which in
-        % turn invokes SIN_stiminfo and other supportive functions.         
-        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
-        opts.specific.genPlaylist.Randomize = 'within'; % randomize playback order. 
-        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
-        
-        % ============================
-        % Player configuration
-        %   The fields below are used by the designated player to configure
-        %   playback.
-        %
-        %   - Note: some of these are set in 'Project AD' above
-        % ============================
-        
-        % Function handle for designated player
-        opts.player.player_handle = @player_main; 
-        
-        opts.player = varargin2struct( ...
-            opts.player, ...
-            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
-            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        false, ...   % randomize trial order before playback
-            'append_files',     false, ...  % append files before playback (makes one long trial)
-            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
-            'window_dur',       0.005, ...  % window duration in seconds.
-            'playback_mode',    'standard', ... % play each file once and only once 
-            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [[1; 0;0;0] [0;1;0;0] [0;0;1;0] [0;0;0;1]], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
-            'startplaybackat',    0, ...  % start playback at beginning of files
-            'contnoise',    [], ... % no continuous noise to play (for this example) 
-            'state',    'run'); % Start in run state
-            
-        % ============================
-        % Modification check (modcheck) configuration        
-        % ============================
-        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
-        
-        % ============================
-        % Modifier configuration        
-        % ============================
-        %   No modifiers for playback
-        % Modifier to scale mixing information
-        opts.player.modifier{end+1} = struct();  % No modifier necessary
-        
-        % ============================
-        % Analysis        
-        % ============================
-        opts.analysis = struct( ...
-            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
-            'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
-            'params',   struct(...  % parameter list for analysis function (analysis_HINT)
-                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
-                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
-                'plot', true)); % generate plot
+    
             
     case 'ANL (MCL-Too Loud)'
         % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
@@ -843,8 +931,8 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'You will listen to a story through the loudspeaker. These hand held buttons will allow you to make adjustments (Show the subject the buttons). When you want to turn the volume up - push this button (point to the up button), and when you want to turn the volume down - push this button (point to the down button). I will instruct you throughout the experiment. ' ...
-            'Now I will turn the story on. Using the up button, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you push the up button, I will turn the story up.' };
+            'You will listen to a story through the loudspeaker. When you want to turn the volume up, point your thumb up. When you want to turn the volume down, point your thumb down. I will instruct you throughout the experiment. ' ...
+            'Now I will turn the story on. By pointing your thumb, turn the level of the story up until it is too loud (i.e., louder than most comfortable). Each time you point your thumb up, I will turn the story up.' };
         
         % Set mixer
 %         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(+10); 0 ] [0; 0]], 0); % just discourse in first channel 
@@ -862,7 +950,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Good. Using the down button, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you push the down button, I will turn the story down (use 5 dB steps)'};
+            'Good. By point your thumb, turn the level of the story down until it is too soft (i.e., softer than most comfortable). Each time you point your thumb down, I will turn the story down'};
         
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
@@ -876,7 +964,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your prefect listening level).'};           
+            'Good. Now turn the level of the story back up to until the story is at your most comfortable listening level (i.e., or your perfect listening level).'};           
         
         % Change step size to 2 dB
         %   First, find the dBscale mixer modifier
@@ -896,7 +984,7 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Now I am going to leave the level of the story at this level (i.e., MCL) and turn on some background noise. Your up/down buttons will adjust the level of the background noise. Using the up button, turn the level of background noise up until you canít hear the story. Each time you push the up button, I will turn the background noise up.'};           
+            'Now I am going to leave the level of the story at this level and turn on some background noise. Point your thumb up/down to adjust the level of the background noise. Using your thumbs, turn the level of background noise up until you canít hear the story. Each time you point your thumb up, I will turn the background noise up.'};           
         
         opts.player.modifier{2}.data_channels=2; 
         
@@ -912,14 +1000,12 @@ switch testID;
         
         % Change instructions
         opts.player.modcheck.instructions={...
-            'Good. Using the down button, turn the level of the background noise down until the story is very clear (i.e., you can follow the story easily). Each time you push the down button, I will turn the level of the background noise down.'};           
+            'Good. By pointing your thumb down, turn the level of the background noise down until the story is very clear (i.e., you can follow the story easily). Each time you point your thumb down, I will turn the level of the background noise down.'};           
         
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
-    
-    
         
     case 'ANL (BNL-Estimate)'
         
@@ -1055,9 +1141,7 @@ switch testID;
             'keys',     [KbName('i') KbName('j') KbName('p') KbName('q') KbName('r')], ...  % first key makes sounds louder, second makes sounds quieter, third for pause, fourth for quit, fifth for run             
             'map',      zeros(256,1), ...
             'title', 'Acceptable Noise Level (ANL)');
-%             'fhandle', @modcheck_ANLGUI, ...
-         
-        
+
         % Assign keys in map
         opts.player.modcheck.map(opts.player.modcheck.keys)=1; 
         

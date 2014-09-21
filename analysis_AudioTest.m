@@ -96,7 +96,7 @@ end % if max ...
 % maxrmsdiff = max(abs(diff(db(rmslevels,1,2))));
 maxrmsdiff = db(max(max(rmslevels))) - db(min(min(rmslevels)));
 if maxrmsdiff > d.dBtol
-    warning(['Channel RMS differ by ' num2str(maxrmsdiff) ' dB. This exceeds the specified tolerance of ' num2str d.dBtol ' dB.'])
+    warning(['Channel RMS differ by ' num2str(maxrmsdiff) ' dB. This exceeds the specified tolerance of ' num2str(d.dBtol) ' dB.'])
 end % maxrmsdiff
 
 maxpeakdiff = db(max(max(peaklevels))) - db(min(min(peaklevels)));
