@@ -144,7 +144,10 @@ for t=1:length(testID)
     %   Results should have whatever data are explicitly stored in the
     %   analysis phase as well. 
     SIN_saveResults(results); 
-        
+    
+    % Assign results to the top-level workspace
+    assignin('base', 'results', results); 
+    
 end % for t=1:length(testID)
 
 % Save allresults structure instead??
