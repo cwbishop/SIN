@@ -118,7 +118,7 @@ switch testID;
         % Recording device
         opts.player.record = struct( ...
             'device', portaudio_GetDevice(18), ... % device structure. Use the MME recording device. Windows Sound introduces a lot of crackle in recording on CWB's machine.
-            'buffer_dur', 120, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
+            'buffer_dur', 60*60, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
             'fs', 44100); % recording sampling rate
         
         % Stop playback if we encounter an error
@@ -733,6 +733,10 @@ switch testID;
         % performance on a HINT-style test. This should be otherwise
         % identical to 'HINT (SNR-50, keywords, 1up1down) algorithm.
         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+        
+        % Change scoring for explorative phase so it's based on sentences,
+        % not keywords.
+        opts(1).player.modcheck.scored_items = 'sentences';
         
         % Change the test ID to PPT so the correct scoring scheme is used.
 %         opts(1).specific.testID = testID; 

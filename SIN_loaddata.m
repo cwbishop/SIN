@@ -132,7 +132,7 @@ try FS=p.fs; catch FS=[]; p.fs=[]; end
 %   supported. 
 if ~isfield(p, 'datatype') || isempty(p.datatype)
     
-    p.datatype=1:5;
+    p.datatype=1:6;
     
 end % ~isfield
 
@@ -211,7 +211,7 @@ elseif isa(X, 'cell')
                 [tx, FS]=audioread(X{n}); 
                 x=[x tx]; % multichannel support                
                
-            case {'.mat', '.erp', '.set'}
+            case {'.erp', '.set'}
                 % If the data are either an ERP structure (stored as a .mat
                 % or .erp file extension) or an EEG struture (stored as a
                 % .mat or .set file)
@@ -242,7 +242,25 @@ elseif isa(X, 'cell')
                 % If it's a CNT file
                 x(n)=loadcnt(X{n}, 'lddur', p.lddur, 't1', p.t1);
                 FS=x(n).header.rate;                
-                                            
+                
+            case {'.mat'}    
+                
+                % Load (and return) a mat file
+                DTYPE = 6; 
+                
+                % Load the mat file
+                tx = load(X{n}); 
+                
+                % Gets around an assignment issue since x is intialized as
+                % a double matrix.
+                if n==1
+                    x = tx.results; 
+                else
+                    x(n) = tx.results;
+                end % 
+                
+                % Assign dummy sampling rate so SIN_loaddata doesn't  buck
+                FS = -1; 
             otherwise
                 error('File extension not recognized');         
         end % switch 
@@ -253,46 +271,22 @@ elseif isa(X, 'cell')
     ODAT=X; % save original data structures
     
     % Sommersault to check data size and dimensions. Also load label
-    % information
-    
-    % If we know the sampling rate, then pass hold it constant in
-    % sommersault. 
-    if ~isempty(FS), p.fs=FS; end 
-    dtype=p.datatype;
-    p.datatype=[];
-    [X, FS, LABELS]=SIN_loaddata(X, p); 
-    p.datatype=dtype;
-    
-    % Special check for MP4 loading
-    %   - MP4s return auditory and visual tracks. So we need to return a
-    %   structure with aud and vid fields. Can be exanded for other video
-    %   formats, CWB thinks.
-    %   
-    %   - Changed this check from DTYPE==6 to exist('var', 'vobj') since
-    %   mixed loading of different data types would cause this check to
-    %   fail, depending on the order of files. 
-    if exist('vobj', 'var') 
-        X = xs; 
-%         % Temporary Structure
-%         xs.aud = X; 
-%         xs.vid = v; 
-%         
-%         % Also need sampling rate information for auditory data.
-%         %   Note: we don't assign visual sampling rate a field since this
-%         %   information is available in the video object, assigned below.
-%         xs.FS = FS;
-%                 
-%         % Also return visual object, in case the user needs other
-%         % information about the video
-%         xs.vobj = vobj;
-%         
-%         % Reassign structure to X. 
-%         clear X;
-        
-        
-    end % if DTYPE == 6
-    
-    clear dtype; 
+    % information. Only do this if it's a time series. At present, data
+    % here will either be a time series or a structure. So a simple check
+    % is possible. If SIN_loaddata continues to grow, this may no longer
+    % work.     
+    if ~isstruct(X)
+        % If we know the sampling rate, then pass hold it constant in
+        % sommersault. 
+        if ~isempty(FS), p.fs=FS; end 
+        dtype=p.datatype;
+        p.datatype=[];   
+
+        [X, FS, LABELS]=SIN_loaddata(X, p); 
+        p.datatype=dtype;
+
+        clear dtype; 
+    end % if isstruct 
     
 elseif iscntstruct(X)
     DTYPE=5; 
