@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 20-Sep-2014 14:26:53
+% Last Modified by GUIDE v2.5 30-Sep-2014 14:54:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -231,6 +231,13 @@ function subject_popup_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns subject_popup contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from subject_popup
 
+% Need to populate Subject Tests field
+% [tests, dtimes] = SIN_gettests('subjectID', contents{get(hObject,'Value')}); 
+% set(handles.subjecttests, tests);
+% set(handles.subjecttesttimes, dtimes); 
+
+% Refresh popups
+refresh_popups(hObject, eventdata, handles);
 
 % --- Executes during object creation, after setting all properties.
 function subject_popup_CreateFcn(hObject, eventdata, handles)
@@ -243,7 +250,6 @@ function subject_popup_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 % --- Executes on button press in register_subject_button.
 function register_subject_button_Callback(hObject, eventdata, handles)
@@ -284,8 +290,30 @@ handles.subjectID = SIN_getsubjects;
 % Get available tests
 handles.testlist = SIN_TestSetup('testlist'); 
 
+% Attach updated information to figure
+guidata(hObject, handles);
+
+% Get tests for subject
+% handles.subjecttests = SIN_gettests(
 % Populate subject popup
 set(handles.subject_popup, 'String', [{'Select Subject'} handles.subjectID])
+
+% Get selected subjectID
+contents = cellstr(get(handles.subject_popup,'String'));
+subjectID = contents{get(handles.subject_popup,'Value')};
+
+% Use subjectID to populate subject tests field
+if ~isequal(subjectID, 'Select Subject'); 
+    [tests, dtimes] = SIN_gettests('subjectID', subjectID); 
+    
+    % Assign values to handles
+    handles.subject_tests = tests;
+    handles.test_times = dtimes; 
+    
+    % Populate popup
+    set(handles.review_popup, 'String', {'Select Test' [char(tests)]});
+    
+end % if ~isequal ...
 
 % Populate test list
 set(handles.test_popup, 'String', [{'Select Test' handles.testlist{:}}]); 
@@ -388,3 +416,60 @@ function button_clearerrors_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 SIN_ClearErrors; 
+
+
+% --- Executes on selection change in review_popup.
+function review_popup_Callback(hObject, eventdata, handles)
+% hObject    handle to review_popup (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns review_popup contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from review_popup
+
+% Set review test
+contents = cellstr(get(handles.review_popup,'String'));
+test2review = contents{get(handles.review_popup,'Value')};
+
+% Assign to handles
+handles.test2review = test2review;
+
+% Attach to GUI
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function review_popup_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to review_popup (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% Get list of completed tests for given subject
+
+
+% --- Executes on button press in review_results_button.
+function review_results_button_Callback(hObject, eventdata, handles)
+% hObject    handle to review_results_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get test2review
+test2review = handles.test2review;
+
+% Post to terminal
+post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
+
+% Load the test
+results = load(test2review);
+results = results.results;
+
+% Load the corresponding test results
+post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
+
+% Replot results
+results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
