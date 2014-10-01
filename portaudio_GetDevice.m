@@ -2,11 +2,7 @@ function [D]=portaudio_GetDevice(X, varargin)
 %% DESCRIPTION:
 %
 %   Function to find and return device based on input information. Input
-%   information can currently only be a string. 
-%
-%   String matching is not always successful since often times a single
-%   physical device will have multiple methods interfaces (e.g., ASIO, MME,
-%   etc.). For more information, see 
+%   information can 
 %
 %           http://docs.psychtoolbox.org/GetDevices
 %
@@ -25,21 +21,23 @@ function [D]=portaudio_GetDevice(X, varargin)
 %
 % Parameters:
 %   
-%       'devicetype':   integer, specifying the preferred device type. This
-%                       is often useful if the user wants to select a
-%                       single physical device and soud playback
-%                       driver/API. Here are the Windows specific flags.
-%                       Values in brackets specify order of quality and
-%                       latency (1=best, 4=worst). 
-%                      
-%                           1: Windows/DirectSound [3]
-%                           2: Windows/MME [4]
-%                           3: Windows/ASIO [1]
-%                           11: Windows/WDMKS [2]
-%                           13: Windows/WASAPI [2] 
+% These parameters are only used in the event a file path is provided to a
+% MAT file that (presumably) contains the device information in a variable
+% called 'device' and that file does *not* exist *or* the appropriate
+% variable (device) is not found in the MAT file. Otherwise, these fields
+% are unnecessary. These are typically only called during initial setup of
+% SIN on a new machine or if the device configuration has changed. 
 %
-%                       For more information and additional device types,
-%                       see http://docs.psychtoolbox.org/GetDevices
+% Note: If mat_file is specified and the device must be "recovered" (e.g.,
+% if the device index has changed), then the device will be saved to the
+% provided mat file. 
+%
+%   'title':    string, title for SIN_select if it's called. 
+%
+%   'prompt':   string, prompt for SIN_select if it's called.
+%
+%   'mat_file': string, path to mat-file to save device in (e.g., a default
+%               file)
 %
 % OUTPUT:
 %
@@ -50,29 +48,20 @@ function [D]=portaudio_GetDevice(X, varargin)
 %   4/14
 
 %% DEAL WITH ADDITIONAL PARAMETERS
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+opts = varargin2struct(varargin{:});
 
 %% DEFAULT PARAMTERS
-if ~isfield(p, 'devicetype'), p.devicetype=[]; end;
+if ~isfield(opts, 'devicetype'), opts.devicetype=[]; end;
 
 %% INITIALIZE PSYCHSOUND
 %   Only initialize psych sound if we can't get the devices. 
 try
     % Get devices
-    d=PsychPortAudio('GetDevices', p.devicetype);
+    available_devices = PsychPortAudio('GetDevices', opts.devicetype);
 catch
     InitializePsychSound;
-    d=PsychPortAudio('GetDevices', p.devicetype);
+    available_devices = PsychPortAudio('GetDevices', opts.devicetype);
 end % try/catch
-
-% Get devices
-d=PsychPortAudio('GetDevices', p.devicetype);
 
 % If an index is provided, then just spit back the device structure and
 % device index. 
@@ -83,13 +72,50 @@ if isempty(X)
     %   We don't want to return any devices if the user isn't specific. 
     D=struct();
     return
+
+elseif isa(X, 'char')
+    
+    % Assumes we are trying to load a MAT-file with saved device
+    % information in it. 
+    
+    % First, see if the file exists. If it does not, then let's assume we
+    % are setting this up for the first time and need to manually select a
+    % device.
+    if ~exist(X, 'file')
+        
+        % Print information to console
+        display([X ' does not exist. Running initial setup.']);
+        
+        % Select the device
+        device = SIN_select(available_devices, opts);
+        
+        % Run check on selection
+        device = portaudio_GetDevice(device, opts);
+        
+        % Save the device to file
+        save(X, 'device');
+        
+        clear device; 
+        
+    end % if ~exist(X, 'file'); 
+    
+    % Now load what we just wrote (or was previously written) to file. 
+    D = load(X); 
+    
+    % Device stored in device field
+    D = D.device; 
+    
+    % Run check on device
+    D = portaudio_GetDevice(D, opts); 
+    
 elseif isa(X, 'numeric') 
     D=PsychPortAudio('GetDevices', [], X); 
     return
+    
 elseif isstruct(X)
     
     % Grab the device structure
-    td=portaudio_GetDevice(X.DeviceIndex); 
+    td=portaudio_GetDevice(X.DeviceIndex, opts); 
     
     % Compare with what was provided
     %   Suppress the feedback and plotting 
@@ -97,34 +123,50 @@ elseif isstruct(X)
 
     % If the device has changed in some way, then throw an error
     if ~isempty(df)
-        error('Device has changed'); 
+        
+        warning('Device has changed! Attempting to recover!');
+        
+        % Attempt recovery
+        X = SIN_recoverDevice(X);
+        
+        % Rerun check to make sure nothing wonky(ier) is happening
+        X = portaudio_GetDevice(X, opts); 
+        
+        % Write recovered file to disk
+        if isfield(opts, 'mat_file')
+            device = X; 
+            save(opts.mat_file, 'device');
+            clear device;
+        end % if isfield
+        
     end % if ~isempty(df) 
     
     % Return the structure. 
     D=X;
     return
+    
 end % if isempty(X) ...
 
-% If X is not a string, kick it back
-if ~isa(X, 'char') 
-    error(['I cannot deal with a ' class(X)] ); 
-end % if ~isa(X, 'char'); 
-
-%% FIND DEVICE
-% Gather names
-dnames={d(:).DeviceName};
-
-% String match
-Y=strmatch(X, dnames, 'exact'); 
-D=d(Y);
-
-%% ERROR CHECKING
-%   Throw an error if we find multiple hits
-if numel(Y) > 1
-    error('Multiple devices found. Try specifying the devicetype parameter.');
-elseif numel(Y)==0
-    error('Device not found');
-end % numel(Y)
-
-%% GET DEVICE ID
-Y=d(Y).DeviceIndex;
+% % If X is not a string, kick it back
+% if ~isa(X, 'char') 
+%     error(['I cannot deal with a ' class(X)] ); 
+% end % if ~isa(X, 'char'); 
+% 
+% %% FIND DEVICE
+% % Gather names
+% dnames={d(:).DeviceName};
+% 
+% % String match
+% Y=strmatch(X, dnames, 'exact'); 
+% D=d(Y);
+% 
+% %% ERROR CHECKING
+% %   Throw an error if we find multiple hits
+% if numel(Y) > 1
+%     error('Multiple devices found. Try specifying the devicetype parameter.');
+% elseif numel(Y)==0
+%     error('Device not found');
+% end % numel(Y)
+% 
+% %% GET DEVICE ID
+% Y=d(Y).DeviceIndex;
