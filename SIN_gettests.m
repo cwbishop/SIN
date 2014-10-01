@@ -38,9 +38,20 @@ tests = regexpdir(d.subject.subjectDir, '.mat', false);
 %% GET RID OF "USEDLIST"
 %   This will also return the "UsedList" since that's stored in the subject
 %   directory, but this is not a test. So remove it. 
+mask = true(numel(tests), 1); 
 if ~isempty(tests)
-    tests = {tests{1:numel(tests) ~= findcell(tests, 'UsedList')}}'; 
+    
+    % Find and remove the "used lists"
+    ind = findcell(tests, 'UsedList'); 
+    
+    if ~isempty(ind)
+        mask(ind) = false;
+    end % if ~isempty(ind)
+    
 end % if ~isempty(tests)
+
+% Separate wheat from chaff. 
+tests = {tests{mask}};
 
 %% SORT TESTS BY DATE, WITH NEWEST FIRST
 

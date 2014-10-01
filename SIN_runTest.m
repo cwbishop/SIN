@@ -33,8 +33,6 @@ function results = SIN_runTest(opts, playlist)
 %   University of Washington
 %   5/14
 
-
-
 %% GET TESTID
 %   Base running decisions on the testID of the first options structure.
 %   Necessary for ANL and other multipart tests. Could be dangerous,

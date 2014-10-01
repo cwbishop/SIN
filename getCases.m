@@ -298,6 +298,8 @@ function varargout = getCases(varargin)
     
     % Find the corresponding non-matched 'end' after the callsite. 
     % Also detect any nested control structures in the process
+    %
+    % This chunk of code is truncating my cases for some reason 
     opened = 0;   
     nestRange = {};
     for line = find([code{:,2}])+1 : size(code,1)
@@ -321,8 +323,8 @@ function varargout = getCases(varargin)
                 continue;
                 
             % If this is not the case, we've found the correct 'end'
-            else
-                break; 
+%             else
+%                 break; 
             end   
         end
     end

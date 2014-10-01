@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 30-Sep-2014 14:54:29
+% Last Modified by GUIDE v2.5 01-Oct-2014 14:35:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
