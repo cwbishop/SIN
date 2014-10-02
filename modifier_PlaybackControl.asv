@@ -37,8 +37,6 @@ modifier_num=d.sandbox.modifier_num;
 %% INITIALIZATION
 if ~isfield(d.player.modifier{modifier_num}, 'initialized') || isempty(d.player.modifier{modifier_num}.initialized), d.player.modifier{modifier_num}.initialized=false; end
 
-% If we are initializing the modifier, kick back the (unmodified) data and
-% set the modifier initialized flag.
 if ~d.player.modifier{modifier_num}.initialized
     
     % Set the initialization flag
@@ -46,14 +44,11 @@ if ~d.player.modifier{modifier_num}.initialized
     
     % To be safe, assign input to output. 
     Y=X; 
-    
     return
-    
 end % if ~d.player.modifier{modifier_num}.initialized
 
 % Switch to change state of player
 switch mod_code
-    
     case {86}
         d.player.state='exit';
     case {99}
@@ -67,14 +62,11 @@ end % switch
 
 % State actions
 %   For 'pause' or 'exit' states, we want sound playback to stop, so zero
-%   out the playback data. 
-%
-%   While in 'run' state, kick back the (unaltered) data
+%   out the playback data. Otherwise, the state
 switch d.player.state
     case {'pause' 'exit'}
         Y = zeros(size(X)); 
-    case 'run'
-        Y = X; 
+        
     otherwise
         error('Unknown state')
 %         Y = X;

@@ -46,63 +46,32 @@ function [mod_code, d]=modcheck_HINT_GUI(varargin)
 %                                          approach is applicable for the
 %                                          PPT. 
 %
-%   'algo': cell array, each element is the name of an algorithm to apply.
-%           Which algo is applied on a specific trial is decided by
-%           startalgoat parameter below. 
-%
-%               '1up1down':   a one-up-one-down staircase algorithm based on
-%                           whether or not all scored items were "correct".
-%
-%               '4down1up': four consecutive correct answers results in a
-%                           decrease mod_code. 1 incorrect response results
-%                           in an increase mod_code. 
-%
-%               'NALadaptive': implements the NAL adaptive algorithm 
-%                           described in algo_NALadaptive.m.
-%                               Note: NALadaptive is not well-tested. 
+%   'algo': cell array, each element is a function handle pointing to an 
+%           algorithm (e.g., algo_HINT1up1down, algo_HINT3down1up, etc.).
+%           These functions must interpret the data in a meaningful way and
+%           return a compatible mod_code to this modcheck for further use. 
 %
 %   'startalgoat': integer vector, specifies the first trial overwhich the
 %                   corresponding algorithm should be applied.
 %                       
-%
-%   Note: Additional parameters are necessary for the NALadaptive
-%   algorithm. These parameters should be placed in a field called
-%   "algoParams" with the following subfields. These are subject to
-%   change; see a full list of input arguments in algo_NALadaptive.
-%   Essentially, these inputs have to provide all necessary information to
-%   algo_NALadaptive.
-%
-%       'target':   target percentage for algorithm
-%       'correction_factor':    correction factor for SEM calculation.
-%       'min_trials':   minimum number of trials in phase 2 + phase 3. 
-%           
-%       
 % OUTPUT:
 %
 %   'mod_code':     modification code. The returned modification code
-%                   depends on the algorithm implemented.
-%
-%       '1up1down', '4down1up':
+%                   depends on the algorithm implemented. 
 %                       0:  no modification necessary.
 %                       -1: make target quieter
 %                       1:  make target louder
 %
-%       'NALadaptive':
-%                       0:  This is a dummy code, meaning "don't do
-%                           anything". Typically, however, this algorithm
-%                           is paired with edit modifier_NALscale_mixer,
-%                           which queries the algorithm and dynamically
-%                           sets the mixer values. 
+%                   NOTE: The algorithmic helper functions provided by the
+%                   user must supply the correct codes. There's no check in
+%                   place to make sure we're getting the correct codes
+%                   back. 
 %
 %   d:  updated data structure used by portaudio_adaptiveplay.m
 %
 % Development:
 %
-%   1. Need to store word information for quick access later. See variable
-%   'w' below. 
-%
-%   2. Reconfigure call to HINT_GUI so HINT_GUI just refreshes the plot.
-%   The modifier should populate the data in the axis. 
+%   Complete (so far) 
 %
 % Christopher W. Bishop
 %   University of Washington
