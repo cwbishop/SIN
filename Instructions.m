@@ -22,7 +22,7 @@ function varargout = Instructions(varargin)
 
 % Edit the above text to modify the response to help Instructions
 
-% Last Modified by GUIDE v2.5 01-Oct-2014 14:35:58
+% Last Modified by GUIDE v2.5 02-Oct-2014 15:07:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -79,7 +79,7 @@ function varargout = Instructions_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 % Close the figure
-close(handles.figure1);
+% close(handles.figure1);
 
 % --- Executes on button press in button_continue.
 function button_continue_Callback(hObject, eventdata, handles)

@@ -396,25 +396,13 @@ switch testID
         opts(2).player.modcheck.scored_items = 'sentences';
         
         % Change instructions for both parts of test
-        % Also change scoring labels        
         for i=1:numel(opts)
             
             % Find the instructions modifier
             ind = getMatchingStruct(opts(i).player.modifier, 'fhandle', @modifier_ShowInstructions);
             
-            opts(i).player.modifier{ind}.body = sprintf([...
-                'Subject: After each sentence, indicate if you *felt* you understood ' ...
-                '"ALL" or "NOT ALL" of the sentence. This is just your opinion.\n\n' ...
-                'Experimenter: Score each sentence as "ALL" or "NOT ALL". ' ...
-                'Press "Next" to continue to the next trial.']);
-            
-            opts(i).player.modifier{ind}.header = ['Instructions: ' testID];
-            
-            % Change scoring labels
-            opts(i).player.modcheck.score_labels = {'all', 'not_all'}; % scoring labels for GUI
-            
+            opts(i).player.modifier{ind}.body = [
         end % for i=1:numel(opts)
-        
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
 

@@ -112,6 +112,10 @@ global max_options;  % the maximum number of options for each word.
 max_words=10;
 max_options=2; 
 
+% Set scoring labels
+for i=1:max_words
+    
+end % for i=1:max_words
 % Error check for p.words. GUI is designed to support 6 words, so throw an
 % error if we have more than that
 if length(p.words) > max_words, error('Too many words'); end

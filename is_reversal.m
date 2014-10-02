@@ -75,11 +75,11 @@ while start_index < numel(step_direction)
     % Find first zero (no change)
     first_zero = find(tstep_direction == 0, 1, 'first'); 
     
-    % If there are NOT any zeros repeats, then set first_zero to the end of
-    % the vector + 1. This will force the indexing below to behave properly
+    % If there are NOT any repeats (i.e., no changes of 0), then take the
+    % whole time series and break out of the loop. No cleaning necessary. 
     if isempty(first_zero)
 %         first_zero = numel(data) + 1; 
-        clean2orig = [clean2orig; [start_index : numel(data)]];
+        clean2orig = [clean2orig; [start_index : numel(data)]'];
         break
     end % 
     
@@ -126,101 +126,3 @@ if d.plot
     legend({'Data Trace', 'Reversals'}, 'location', 'best')
     
 end % if d.plot 
-% Are these points actually a reversal?
-
-%
-% while ~isempty(step_direction)
-%     
-%     % Find the first instance when the step direction is 0. We'll trim the
-%     % data up to that point, then figure out if there are consecutive
-%     % zeros.
-%     first_repeat = find(step_direction == 0, 1, 'first');   
-%     
-%     % Crop data.
-%     step_direction = step_direction(first_repeat:end);     
-%     
-%     % See if this is a string of repeated values
-%     last_repeat = find(step_direction ~= 0, 1, 'first') + first_repeat - 1; 
-%     
-%     % If this is not a string of repeated values, then assume the first
-%     % element is the first and last repeat. 
-%     if isempty(last_repeat)
-%         last_repeat = first_repeat; 
-%     end % if isempty(last_repeat); 
-%     
-%     % Add the data we're about to crop out as potential reversal points.
-%     % Intuitively, these are non-repeated values.
-%     if isempty(clean2orig)
-%         clean2orig = [clean2orig; [1:first_repeat - 1]'];
-%     elseif ~isempty(last_repeat) && last_repeat ~= 1 
-%         clean2orig = [clean2orig; [clean2orig(end)+1:clean2orig(end)+ first_repeat ]'];    
-%     end % if isempty(clean2orig)
-%     
-%     % Break out of while loop if there aren't any zeros to begin with (or
-%     % remaining.
-%     if isempty(first_repeat)
-%         break;
-%     end % if isempty(ind)
-%     
-%     
-%     
-%     % This is the data point we want to flag as a reversal if there's a
-%     % sign change after this block of repeated values.
-% %     data_clean(end+1,1) = data(last_repeat + numel(data) - numel(step_direction)); 
-% %     
-%     % Update clean2orig. This will help us map the clean data back to the
-%     % original data trace for labeling purposes later. 
-% %     if ~exist('clean2orig', 'var')
-% %         clean2orig = [clean2orig; first_repeat + last_repeat];
-% %     else
-%     if n == 1
-%         clean2orig = [clean2orig; first_repeat + last_repeat];
-%     elseif first_repeat == 1 && last_repeat == 1
-%         clean2orig = [clean2orig; clean2orig(end) + 1];
-%     else
-%         clean2orig = [clean2orig; clean2orig(end) + first_repeat + last_repeat + 1];
-%     end %
-% 
-%    % Truncate step_direction
-%     step_direction = step_direction(last_repeat:end); 
-%     
-%     % Increment counter
-%     n = n + 1;
-% end % while 
-
-% We are only interested in non-zero changes, so create a mask. The mask
-% will later help us identify precisely which trials are reversals and
-% which are not. Without this mask, we could not reference the data
-% correctly.
-% mask = step_direction ~= 0;
-
-
-% The reversal mask flags the reversals in the data, but they do not align
-% properly with the original time series. Data are reprojected to the
-% original time series below. The indices here tell us which non-zero step
-% in the original time series is a reversal. We removed zero step sized
-% changes, however, so the indices don't align correctly. We will use the
-% "mask" variable above to remap rev_mask below. 
-% rev_mask = find(diff(step_direction ~= 0)); 
-% 
-% % Reproject back into original data space
-% for i=1:numel(rev_mask)
-%     
-%     % Find the first Nth trues in mask. 
-%     % mask2data stores the data point in the original time series that
-%     % is a reversal
-%     mask2data = find(mask, rev_mask(i), 'first');
-%     
-%     % The last true is all we're interested in. 
-%     mask2data = mask2data(end); 
-%     
-%     % Must increment mask2data by one since we did a double diff above.
-%     mask2data = mask2data + 1;
-%     
-%     % Set reversal as true for this trial
-%     is_rev(mask2data) = true;
-%     
-% end % for i=1:nume(rev_mask)
-% 
-% %% COUNT THE NUMBER OF REVERSALS
-% nrev = numel(find(is_rev)); 
