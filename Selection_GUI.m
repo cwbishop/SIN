@@ -88,6 +88,7 @@ function varargout = Selection_GUI_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.selection; 
+varargout{2} = handles.output; 
 
 % varargout{1} = handles.output;
 % varargout{1} = handles; % return full handles structure

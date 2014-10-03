@@ -53,7 +53,7 @@ function varargout = HINT_GUI(varargin)
 
 % Edit the above text to modify the response to help HINT_GUI
 
-% Last Modified by GUIDE v2.5 03-Oct-2014 11:38:19
+% Last Modified by GUIDE v2.5 03-Oct-2014 15:00:31
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;

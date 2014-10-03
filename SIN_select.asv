@@ -36,10 +36,9 @@ description = class2txt(options);
 
 %% OPEN GUI
 %   Pass description to Selection_GUI
-[selection_index, h] = Selection_GUI('description', {description}, 'title', d.title, 'prompt', d.prompt); 
+selection_index = Selection_GUI('description', {description}, 'title', d.title, 'prompt', d.prompt); 
 
 %% NOW RETURN THE OPTION
 selection_text = options(selection_index); 
 
 % Close the figure
-close(h)

@@ -597,7 +597,9 @@ switch testID
 %         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
         
         % Change testID
-        rove.specific.testID = testID; 
+        %   This is hard-coded since it's the roving test at the beginning
+        %   of the HINT.
+        rove.specific.testID = 'Search for First Correct'; 
         
         % Add a modifier to stop playback after the first correct response
         % is recorded (that's 100% of scored words repeated correctly).

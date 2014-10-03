@@ -146,6 +146,8 @@ for t=1:length(testID)
     % Assign results to the top-level workspace
     assignin('base', 'results', results); 
     
+    % Close remaining GUIs and make sure all errors are cleared
+    SIN_ClearErrors; 
 end % for t=1:length(testID)
 
 % Save allresults structure instead??

@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 01-Oct-2014 14:35:54
+% Last Modified by GUIDE v2.5 03-Oct-2014 15:46:03
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -191,6 +191,10 @@ else
 
     post_feedback(hObject, eventdata, handles, [testID ' complete'], true);    
 end % if isequal(subjectID ...
+
+% Repopulate fields after test is complete.
+%   This will ensure that the subject's completed test list is up to date.
+refresh_popups(hObject, eventdata, handles);
 
 % --- Executes on selection change in calibration_popup.
 function calibration_popup_Callback(hObject, eventdata, handles)
@@ -473,3 +477,36 @@ post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post erro
 
 % Replot results
 results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
+
+
+% --- Executes on button press in review_recordings_button.
+function review_recordings_button_Callback(hObject, eventdata, handles)
+% hObject    handle to review_recordings_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Load test to review
+
+test2review = handles.test2review;
+
+% Post to terminal
+post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
+
+% Load the test
+results = load(test2review);
+results = results.results;
+
+% Load the corresponding test results
+post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
+
+% Now review the recordings
+SIN_review_recordings(results); 
+
+
+% --- Executes on button press in button_stop.
+function button_stop_Callback(hObject, eventdata, handles)
+% hObject    handle to button_stop (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+SIN_ClearErrors; 
