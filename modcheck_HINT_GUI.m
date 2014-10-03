@@ -260,12 +260,16 @@ d.player.modcheck.trial_info{trial} = o; % save over sentence information. All o
 %   In special cases, it may be necessary to combine algorithms for testing
 %   purposes (e.g., 1up1down for N trials, followed by 4down1up). This can
 %   be done using this algo selection criteria.
-algo = HINT_chooseAlgo(d.player.modcheck.algo, d.player.modcheck.startalgoat, trial); 
+[algo, algo_index] = HINT_chooseAlgo(d.player.modcheck.algo, d.player.modcheck.startalgoat, trial); 
 
 %% APPLY ALGORITHM
 %   Get a mod_code back from the algorithm after passing it in the scoring
 %   history. 
-mod_code = algo(d.player.modcheck.score); 
+%
+%   Note: we only want the algorithm making decisions based on the trials
+%   controlled by that specific algorithm. So, crop score to only include
+%   the values that should be considered by the algorithm.
+mod_code = algo({d.player.modcheck.score{d.player.modcheck.startalgoat(algo_index):end}}); 
 
 %% CLOSE GUI
 %   Only close it down if we're done. We are "done" if:

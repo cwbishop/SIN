@@ -53,7 +53,7 @@ function varargout = HINT_GUI(varargin)
 
 % Edit the above text to modify the response to help HINT_GUI
 
-% Last Modified by GUIDE v2.5 03-Oct-2014 11:38:19
+% Last Modified by GUIDE v2.5 03-Oct-2014 11:28:48
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -360,48 +360,13 @@ function button_allcorrect_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set_radio_buttons(hObject, eventdata, handles, 1);
-
-% --- Executes on button press in button_allincorrect.
-function button_allincorrect_Callback(hObject, eventdata, handles)
-% hObject    handle to button_allincorrect (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-set_radio_buttons(hObject, eventdata, handles, 2);
-
-function set_radio_buttons(hObject, eventdata, handles, button_number)
-%% DESCRIPTION:
-%
-%   Function to set radio buttons a radio button in a scoring box. Values for
-%   this scoring GUI range from [1 - 2].
-%
-% INPUT:
-%
-%   hObject ...
-%   eventadata ...
-%   handles ...
-%
-%   button_number:  which radio button in the word scoring panel to set. 
-%
-% OUTPUT:
-%
-%   None
-%
-% Christopher W Bishop
-%   University of Washington
-%   10/14
-
 % Get global
-global max_words;
+global max_words
 
 % When this button is clicked, we'll set all radio buttons to the first
 % option (typically "correct").
 for i=1:max_words
     
     % Set first option to true in all visible scoring boxes
-    if isequal(get(handles.(['word' num2str(i) '_scoring']), 'Visible'), 'on')
-        set(handles.(['word' num2str(i) '_opt' num2str(button_number)]), 'Value', 1)
-    end % 
-        
+    
 end % for i=1:max_words

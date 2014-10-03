@@ -1,4 +1,4 @@
-function fhand = HINT_chooseAlgo(algos, startalgoat, trial, varargin)
+function [algo_handle, algo_index] = HINT_chooseAlgo(algos, startalgoat, trial, varargin)
 %% DESCRIPTION:
 %
 %   Function to select the current algorithm being used for spech in noise
@@ -15,10 +15,14 @@ function fhand = HINT_chooseAlgo(algos, startalgoat, trial, varargin)
 %
 % OUTPUT:
 %
-%   fhand:  function handle to algorithm to use on the specified trial.
+%   algo_handle:  function handle to algorithm to use on the specified trial.
+%
+%   algo_index:    integer, index of the algorithm selected.
 %
 % Christopher W Bishop
 %   University of Washington
 %   9/14
 
-fhand = algos{find(trial>=startalgoat, 1, 'last')};
+% Which algo should we be using?
+algo_index = find(trial>=startalgoat, 1, 'last');
+algo_handle = algos{algo_index};
