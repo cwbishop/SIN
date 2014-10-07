@@ -291,6 +291,15 @@ mic_recording = {}; % empty cell array for voice recordings (if specified) XXX n
 %   Will help keep track of information later.
 d.sandbox.start_time=now; 
 
+%% SET TRIAL_COMPLETE FLAG
+%   In instances when the player exits prematurely due to an error, exit
+%   state, or some other modifier forcing it to end before all trials have
+%   been presented, it's a good idea to keep track of which trials have
+%   actually "completed" vs. those that have not.
+%
+%   Not quite game ready. 
+% trial_complete = false(numel(playback_list)); 
+
 % Get sampling rate for playback and recording
 playback_fs = d.player.playback.device.DefaultSampleRate;
 record_fs = d.player.record.device.DefaultSampleRate;
@@ -1067,8 +1076,6 @@ for trial=1:length(playback_list)
                 end % if isequal ...             
             end % if ~isDuplex || ~d.player.record_mic
             
-            
-            
         case {'ptb (standard)'}
             
             % Use PsychToolBox (PTB) to present sounds. Unlike PTB
@@ -1302,7 +1309,7 @@ for trial=1:length(playback_list)
     if isDuplex && ~isfield(d.player, 'contnoise') && isempty(d.player.contnoise)
         PsychPortAudio('Stop', phand, 0);
     end % if isDuplex
-    
+        
 end % for trial=1:length(X)
 
 % Close all open audio devices

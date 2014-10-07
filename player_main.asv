@@ -291,8 +291,20 @@ mic_recording = {}; % empty cell array for voice recordings (if specified) XXX n
 %   Will help keep track of information later.
 d.sandbox.start_time=now; 
 
-% Get sampling rate for playback
-playback_fs = d.player.playback.fs;
+%% SET TRIAL_COMPLETE FLAG
+%   In instances when the player exits prematurely due to an error, exit
+%   state, or some other modifier forcing it to end before all trials have
+%   been presented, it's a good idea to keep track of which trials have
+%   actually "completed" vs. those that have not. 
+trial_complete = false(numel(playback_list)); 
+
+% Get sampling rate for playback and recording
+playback_fs = d.player.playback.device.DefaultSampleRate;
+record_fs = d.player.record.device.DefaultSampleRate;
+
+% Assign sampling rates to sandbox
+d.sandbox.playback_fs = playback_fs; 
+d.sandbox.record_fs = record_fs; 
 
 %% SET PLAYER STATE 
 %
@@ -421,7 +433,7 @@ if d.player.record_mic && ~isDuplex
     % then we're done. If not, then we have work to do.
 
     % Open recording device
-    rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, playback_fs, rstruct.NrInputChannels); 
+    rhand = PsychPortAudio('Open', rstruct.DeviceIndex, 2, 0, record_fs, rstruct.NrInputChannels); 
 
     % Allocate Recording Buffer
     PsychPortAudio('GetAudioData', rhand, d.player.record.buffer_dur); 
@@ -1320,6 +1332,5 @@ d.sandbox.end_time=now;
 %   This is returned to the user. 
 results.RunTime = d; 
 
-%
 % Assign status variable
 status = d.player.state; 
