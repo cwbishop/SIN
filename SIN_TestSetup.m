@@ -727,9 +727,14 @@ switch testID
                                                                                                                   % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
                                                                                                                   % See the note link below here for details on how CWB estimated the 6.05 dB correction factor
                                                                                                                   % http://www.evernote.com/shard/s353/sh/a51a39a6-4732-4dfe-9040-840ba98945fd/9e1c5846a09fe0e7e3e3297c8a220380
-        
-        % Don't run analysis (for now)
-        opts.analysis.run = false; 
+        % ============================
+        % Analysis        
+        % ============================
+        opts.analysis = struct( ...
+            'fhand',    @analysis_MLST, ...  % functioin handle to analysis function
+            'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct(...  % parameter list for analysis function (analysis_HINT)                
+                'plot', true)); % generate plot      
         
     case 'MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)'
         
@@ -940,12 +945,10 @@ switch testID
         % Analysis        
         % ============================
         opts.analysis = struct( ...
-            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'fhand',    @analysis_Hagerman, ...  % functioin handle to analysis function
             'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
-                'tmask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
-                'RTSest',   'traditional',  ... % use traditional RTS estimation (average over trials 5:N+1
-                'plot', true)); % generate plot
+                )); 
             
     case 'HINT (First Correct)'
         
