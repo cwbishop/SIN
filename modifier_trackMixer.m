@@ -38,7 +38,8 @@ end % if
 % Assign output data
 Y=X; 
 
-% Get modifier_num
+% Get modifier_num and trial number
+trial = d.sandbox.trial;
 modifier_num=d.sandbox.modifier_num; 
 
 % Set initialization to false by default
@@ -63,5 +64,10 @@ end % if ~d.player.mod ...
 if isempty(d.sandbox.mod_mixer)
     d.sandbox.mod_mixer(:,:,1) = d.player.mod_mixer; 
 else
-    d.sandbox.mod_mixer(:,:,end+1) = d.player.mod_mixer;
+    d.sandbox.mod_mixer(:,:,trial) = d.player.mod_mixer;
 end % 
+
+% Error checking to make sure we aren't mismatching the number of trials
+if size(d.sandbox.mod_mixer, 3) ~= trial
+    error('Inappropriate tracking'); 
+end 

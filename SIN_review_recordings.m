@@ -10,7 +10,9 @@ function [rec, fs] = SIN_review_recordings(results, varargin)
 %
 % Parameters:
 %
-%   ...
+%   assign_to_workspace:    bool, if true, assigns the "rec" and "fs"
+%                           variables in the base workspace. (default =
+%                           false)
 %
 % OUTPUT:
 %
@@ -26,6 +28,9 @@ function [rec, fs] = SIN_review_recordings(results, varargin)
 
 %% GET INPUT PARAMETERS
 d=varargin2struct(varargin{:});
+
+%% DEFAULT
+if ~isfield(d, 'assign_to_workspace') || isempty(d.assign_to_workspace), d.assign_to_workspace = false; end
 
 %% SELECT TEST STAGE
 % Determine which level of results we want to look into
@@ -63,3 +68,8 @@ fs = results(test_index).RunTime.player.record.fs;
 
 %% PLOTTING FUNCTION
 plot_waveform(rec, fs, [], 2); 
+
+if d.assign_to_workspace
+    assignin('base', 'recording', rec);
+    assignin('base', 'recording_fs', fs); 
+end % if d.assign_to_workspace

@@ -104,11 +104,7 @@ if d.plot > 0
     %   Also plot text string clearly showing the ANL value next to the
     %   plotted point. Makes it easier to jot down the value.
     plot(1.5, ANL, 'r*', 'linewidth', 2)
-    txthand = text(1.5, ANL-1, ['ANL= ' num2str(ANL)], 'Color', color2colormap({'r'}), 'FontSize', 14, 'FontWeight', 'bold');
-    
-    % Make sure y-axis is set so we can see the text.
-    yrange = ylim; 
-    if yrange(1) > ANL-1, ylim([yrange(1) - 2, yrange(2)]); end
+    label_datapoint(1.5, ANL-1, 'text', ['ANL= ' num2str(ANL)], 'color', 'r', 'fontsize', 14, 'fontweight', 'bold');
     
     % Set axis limits
    	xlim([0.5 2.5]);     

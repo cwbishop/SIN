@@ -122,7 +122,7 @@ if (numel(runtime.sandbox.mic_recording) == size(runtime.sandbox.mod_mixer,3)) &
     [algo_handle, algo_index] = HINT_chooseAlgo(runtime.player.modcheck.algo, runtime.player.modcheck.startalgoat, runtime.sandbox.trial);
 
     % Get mod_code
-    mod_code = algo_handle({runtime.player.modcheck.score{runtime.player.modcheck.startalgoat(algo_index):end}});
+    mod_code = algo_handle({runtime.player.modcheck.score{d.player.modcheck.startalgoat(algo_index):end}});
 
     % Run modifiers to see if the mod_mixer changes
     for i=1:length(runtime.player.modifier)
@@ -211,6 +211,12 @@ if d.plot
     % Plot points used in RTS
     plot(d.start_at_trial + rts_mask -1, time_series_trim(rts_mask), ...
         'ro', 'linewidth', 2); 
+%     lineplot2d(d.start_at_trial + rts_mask, time_series_trim(rts_mask), ...
+%         'color',    'r', ...
+%         'grid', 'on', ...
+%         'linewidth', 2, ...
+%         'marker',   'o', ...
+%         'fignum',   h); 
     
     % Plot RTS
     lineplot2d(1, rts, ...
@@ -226,9 +232,9 @@ if d.plot
         'fignum',   h);
     
     % Label the rts point
-    label_datapoint(-10, rts-3, 'text', ['RTS= ', num2str(rts)], 'color', 'b', 'fontsize', 12, 'fontweight', 'bold');
+    label_datapoint(0, rts-5, 'text', ['RTS= ', num2str(rts)], 'color', 'b', 'fontsize', 12, 'fontweight', 'bold');
     
     % Add Figure to results structure
-    results(end).analysis.results.figure = handle2struct(h); 
+    results.analysis.results.figure = handle2struct(h); 
     
 end % if d.plot

@@ -256,6 +256,11 @@ o.score = score;
 % Append sentence information to structure as well
 d.player.modcheck.trial_info{trial} = o; % save over sentence information. All of it. 
 
+% Error check for debugging
+if numel(d.player.modcheck.score) ~= numel(d.player.modcheck.trial_info)
+    error('Something not making sense'); 
+end % if ...
+
 %% CHOOSE CORRECT ALGO
 %   In special cases, it may be necessary to combine algorithms for testing
 %   purposes (e.g., 1up1down for N trials, followed by 4down1up). This can

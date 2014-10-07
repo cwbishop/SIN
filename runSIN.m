@@ -463,7 +463,13 @@ function review_results_button_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get test2review
-test2review = handles.test2review;
+%   test2review only populated if a test has been selected from the drop
+%   down menu. If one is not selected, then just return control. 
+try
+    test2review = handles.test2review;
+catch
+    return
+end 
 
 % Post to terminal
 post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
@@ -486,8 +492,13 @@ function review_recordings_button_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Load test to review
-
-test2review = handles.test2review;
+%   Field will only be populated if a test is selected in the review panel.
+%   If not, then just return without doing anything
+try
+    test2review = handles.test2review;
+catch
+    return
+end 
 
 % Post to terminal
 post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
@@ -500,7 +511,7 @@ results = results.results;
 post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
 
 % Now review the recordings
-SIN_review_recordings(results); 
+SIN_review_recordings(results, 'assign_to_workspace', true); 
 
 
 % --- Executes on button press in button_stop.
