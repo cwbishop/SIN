@@ -181,7 +181,6 @@ testID = contents{get(handles.test_popup,'Value')};
 %   User must select a valid test before we can run it.
 if isequal(testID, 'Select Test')
     post_feedback(hObject, eventdata, handles, ['Invalid Test ID: ' testID ], 0); % post error message to terminal    
-    return
 end % 
 
 % Error check for subject ID
@@ -193,7 +192,6 @@ else
     % Get test options from SIN_TestSetup
     opts = SIN_TestSetup(testID, subjectID); 
 
-    post_feedback(hObject, eventdata, handles, ['Running: ' testID ], 1); % post error message to terminal
     % Run the test
     %   - Playlist automatically handled by SIN_getPlaylist (Called from
     %   SIN_runTest). 

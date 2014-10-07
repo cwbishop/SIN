@@ -10,7 +10,7 @@ function SIN_ClearErrors(varargin)
 %
 % INPUT:
 %
-%   'closerunSIN':  bool, close open runSIN window. If true, close.
+%   'close_runSIN':  bool, close open runSIN window. If true, close.
 %                   (default = false)
 %
 % OUTPUT:
@@ -25,7 +25,7 @@ function SIN_ClearErrors(varargin)
 d=varargin2struct(varargin{:});
 
 % PARAMETER CHECK
-if ~isfield(d, 'closerunSIN') || isempty(d.closerunSIN), d.closerunSIN = false; end 
+if ~isfield(d, 'close_runSIN') || isempty(d.close_runSIN), d.close_runSIN = false; end 
 
 %% CLOSE PSYCHPORTAUDIO
 %   Running sounds will end
@@ -41,7 +41,7 @@ end %
 figs = findobj('Type', 'figure'); 
 
 % If user specifies, close the runSIN window. 
-if ~d.closerunSIN
+if ~d.close_runSIN
     % Find runSIN window
     rsin = findobj('Tag', 'runSIN');  
     

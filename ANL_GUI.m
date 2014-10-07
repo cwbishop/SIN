@@ -62,13 +62,13 @@ handles.output = hObject;
 %
 % Here's where CWB got the idea
 %   http://www.mathworks.com/matlabcentral/answers/5259-how-to-simulate-keyboard-key-inputs
-import java.awt.Robot; 
-import java.awt.event.*; 
-SimKey=Robot; 
-assignin('base', 'SimKey', SimKey); 
+% import java.awt.Robot; 
+% import java.awt.event.*; 
+% SimKey=Robot; 
+% assignin('base', 'SimKey', SimKey); 
 
-handles.SimKey=SimKey;
-clear SimKey; 
+% handles.SimKey=SimKey;
+% clear SimKey; 
 
 % Assign test configuration
 handles.opts=varargin{1}; 
@@ -196,5 +196,5 @@ function VK_Press(handles, key)
 %   University of Washington
 %   5/14
 
-eval(['handles.SimKey.keyPress(java.awt.event.KeyEvent.VK_' upper(KbName(handles.opts.player.modcheck.keys(key))) ')']);
-eval(['handles.SimKey.keyRelease(java.awt.event.KeyEvent.VK_' upper(KbName(handles.opts.player.modcheck.keys(key))) ')']);
+% eval(['handles.SimKey.keyPress(java.awt.event.KeyEvent.VK_' upper(KbName(handles.opts.player.modcheck.keys(key))) ')']);
+% eval(['handles.SimKey.keyRelease(java.awt.event.KeyEvent.VK_' upper(KbName(handles.opts.player.modcheck.keys(key))) ')']);

@@ -113,7 +113,7 @@ if d.plot > 0
     grid
     
     % Markup
-    title(results(1).RunTime.specific.testID); 
+    title('ANL Results'); 
     legend('MCL', 'BNL', 'Loud', 'Quiet', 'ANL', 'location', 'best');    
     ylabel('dB SPL (re: reference)'); 
     set(gca, 'XTick', [1 2])

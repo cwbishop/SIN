@@ -1,4 +1,4 @@
-function [rec, fs] = SIN_review_recordings(results, varargin)
+function [recording, record_fs] = SIN_review_recordings(results, varargin)
 %% DESCRIPTION:
 %
 %   This routine uses a GUI to select and plot out recordings acquired
@@ -10,13 +10,15 @@ function [rec, fs] = SIN_review_recordings(results, varargin)
 %
 % Parameters:
 %
-%   assign_to_workspace:    bool, if true, assigns the "rec" and "fs"
+%   assign_to_workspace:    bool, if true, assigns the "recording" and "record_fs"
 %                           variables in the base workspace. (default =
 %                           false)
 %
 % OUTPUT:
 %
-%   rec:    matrix, recording for commandline plotting routines.
+%   recording:  matrix, recording for commandline plotting routines.
+%
+%   record_fs:  sampling rate of recording     
 %
 % Development:
 %
@@ -61,15 +63,15 @@ else
 end % 
 
 % Get the recording
-rec = results(test_index).RunTime.sandbox.mic_recording{rec_index}; 
+recording = results(test_index).RunTime.sandbox.mic_recording{rec_index}; 
 
 % Get the sampling rate
-fs = results(test_index).RunTime.player.record.fs;
+record_fs = results(test_index).RunTime.sandbox.record_fs;
 
 %% PLOTTING FUNCTION
-plot_waveform(rec, fs, [], 2); 
+plot_waveform(recording, record_fs, [], 2); 
 
 if d.assign_to_workspace
-    assignin('base', 'recording', rec);
-    assignin('base', 'recording_fs', fs); 
+    assignin('base', 'recording', recording);
+    assignin('base', 'recording_fs', record_fs); 
 end % if d.assign_to_workspace

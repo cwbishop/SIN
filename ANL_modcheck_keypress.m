@@ -63,8 +63,6 @@ function [mod_code, d]=ANL_modcheck_keypress(varargin)
 %
 % Development:
 %
-%   1. incorporate codes for pausing, stopping, and recording values. 
-%
 %   2. Must only allow volume changing if the player is in the "run" state.
 %   If it's paused or stopped, don't change anything.    
 %

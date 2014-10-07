@@ -111,15 +111,13 @@ switch testID
         % Set sound output paramters. 
         opts.player.playback = struct( ...
             'device', portaudio_GetDevice(fullfile(opts.general.root, 'playback_device.mat'), 'title', 'Playback Device Selection', 'prompt', 'Select ONE playback Device', 'mat_file', fullfile(opts.general.root, 'playback_device.mat')), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
-            'block_dur', 0.5, ... % 500 ms block duration.
-            'fs', 44100, ... % sampling rate           
+            'block_dur', 0.5, ... % 500 ms block duration.            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
             'device', portaudio_GetDevice(fullfile(opts.general.root, 'recording_device.mat'), 'title', 'recording Device Selection', 'prompt', 'Select ONE recording Device', 'mat_file', fullfile(opts.general.root, 'recording_device.mat')), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
-            'buffer_dur', 60*60, ... recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
-            'fs', 44100); % recording sampling rate
+            'buffer_dur', 60*60); % recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
         
         % Stop playback if we encounter an error
         opts.player.stop_if_error = true; 
@@ -1222,7 +1220,7 @@ switch testID
         % Modification check (modcheck) configuration        
         % ============================
         opts.player.modcheck=struct(...
-            'fhandle',  @ANL_modcheck_keypress, ...     % check for specific key presses
+            'fhandle',  @modcheck_ANLGUI, ...     % check for specific key presses
             'instructions', {{['You will listen to a story through the loudspeaker. ' ...
                 ' You can adjust the volume using your thumbs. ' ...
                 ' When you want to turn the volume up, point your thumb up. ' ...

@@ -63,7 +63,7 @@ for t=1:length(testID)
                 
                     % Buffer Position
                     opts(i).player.startplaybackat = ...
-                        results(i-1).RunTime.sandbox.buffer_pos./results(i-1).RunTime.player.playback.fs; 
+                        results(i-1).RunTime.sandbox.buffer_pos./results(i-1).RunTime.sandbox.playback_fs; 
                 
                     % mod_mixer
                     %   Only want to copy over non-zero values. 

@@ -56,20 +56,11 @@ results.RunTime.analysis.results = struct(...
 if d.plot
     
     % Bar plot
-    figure
     bar(1, percentage_correct); 
     
     % Set axis limits
     xlim([0 2]);
     ylim([0 100]); 
     
-    % Markup
-    title(results.RunTime.specific.testID); 
-    ylabel(sprintf(['Percentage Correct\n(out of ' num2str(scored_items)])); 
-    label_datapoint(1, percentage_correct + 5, ...
-        'text', [num2str(percentage_correct) '%'], ...
-        'color', 'b', ...
-        'fontsize', 12, ...
-        'fontweight', 'bold');
-    
+    ylabel(sprintf(['Percentage Correct\n(out of ' num2str( 
 end % if d.play
