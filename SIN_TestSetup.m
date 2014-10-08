@@ -426,14 +426,14 @@ switch testID
         % will serve as a hard cap for the number of trials. So just make a
         % new "test" and grab the files. Easiest way to do it since it will
         % also automatically append the lists used to the "UsedList" file. 
-        tmp = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
-        
-        playlist = {tmp(1).specific.genPlaylist.files{1} tmp(2).specific.genPlaylist.files{:}}';
-        
-        % Append to existing playlist
-        opts(2).specific.genPlaylist.files = {opts(2).specific.genPlaylist.files{:} playlist{:}}';
-        
-        clear playlist
+%         tmp = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
+%         
+%         playlist = {tmp(1).specific.genPlaylist.files{1} tmp(2).specific.genPlaylist.files{:}}';
+%         
+%         % Append to existing playlist
+%         opts(2).specific.genPlaylist.files = {opts(2).specific.genPlaylist.files{:} playlist{:}}';
+%         
+%         clear playlist
         
         % Change algorithm tracking
         %   Start with 1up1down, then switch to 4down1up after trial 4
@@ -451,9 +451,23 @@ switch testID
             'fhandle',  @modifier_exit_after_nreversals, ...
             'data_channels',    opts(2).player.modcheck.data_channels, ...
             'physical_channels',    opts(2).player.modcheck.physical_channels, ...
-            'max_revs', 3, ...
+            'max_revs', 7, ...
             'start_trial', opts(2).player.modcheck.startalgoat(2)); 
         
+        % Allow dynamic updating up the playlist if we reach the end.        
+        %   Start by copying the specific.genPlaylist field over here
+        opts(2).player.modifier{end+1} = opts(2).specific.genPlaylist;
+        
+        % Add function handle
+        opts(2).player.modifier{end}.fhandle = @modifier_append2playlist; 
+        
+        % Modify genPlaylist settings
+        %   - Append a single list at a time. 
+        opts(2).player.modifier{end}.NLists = 1; 
+        opts(2).player.modifier{end}.Randomize = 'lists';
+        opts(2).player.modifier{end}.Repeats = 'allbefore'; 
+        opts(2).player.modifier{end}.Append2UsedList = true; 
+        opts(2).player.modifier{end}.files = {};             
         % Add analysis
         opts(1).analysis = struct();
         opts(1).analysis = struct( ...
@@ -469,6 +483,7 @@ switch testID
         
         opts(2).analysis = opts(1).analysis;
         
+       
     case 'HINT (SNR-50, keywords, 1up1down)'
         
         % ============================
@@ -508,7 +523,7 @@ switch testID
         opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
         opts.specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
         opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % Get the stimulus list that we need. We need to populate this
         % field here so we know which stimulus will be FIRST for the roving

@@ -132,11 +132,11 @@ for t=1:length(testID)
             
     end % switch/otherwise    
     
-    % Run Analysis on the fly for spot checking??
-    %   We'll generally want to do this, CWB thinks. 
-    if results(1).RunTime.analysis.run
-        results = results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
-    end % if results(1).analysis.run
+%     % Run Analysis on the fly for spot checking??
+%     %   We'll generally want to do this, CWB thinks. 
+%     if results(1).RunTime.analysis.run
+%         results = results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
+%     end % if results(1).analysis.run
     
     % Save to results file
     %   Results should have whatever data are explicitly stored in the

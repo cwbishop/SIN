@@ -11,13 +11,13 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %   
 %   opts:   SIN options structure, which must contain the parameters listed
 %           below in the "specific" field. Specific must contain the
-%           'genPlaylist' subfield as well. 
+%           'genPlaylist' subfield as well with the parameters listed below
 %
-% Parameters (for SIN_getPlaylist)
+% Parameters (in opts.specific.genPlaylist field ...)
 %
 %   'files':        cell array, a list of file names (must be full paths).
 %                   If provided, then the function will use this as a file
-%                   list rather than the output from SIN_stiminfo
+%                   list rather than the output from SIN_stiminfo.
 %
 %   'NLists':   number of lists to concatenate for playbacklist. This
 %               proved useful when administering tests that require more

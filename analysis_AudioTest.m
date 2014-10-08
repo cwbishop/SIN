@@ -51,6 +51,22 @@ d=varargin2struct(varargin{:});
 recs = results.RunTime.sandbox.mic_recording; 
 FS = results.RunTime.player.record.device.DefaultSampleRate;
 
+%% FIND MAXIMUM RECORDING LENGTH
+%   This is designed to address the following issue ...
+%   https://github.com/cwbishop/SIN/issues/28
+% max_recording_length = 0;
+% for c=1:numel(d.chans) % loop through all channels
+%     
+%     for i=1:numel(recs)
+%         
+%         if size(recs{i}(:,d.chans(c)), 1) > max_recording_length
+%             max_recording_length = size(recs{i}(:,d.chans(c)), 1);
+%         end 
+%         
+%     end % for i=1:numel(recs)
+%     
+% end % c=1:numel(d.chans) ...
+
 %% For each channel, realign all signals to first data trace
 lags = nan(numel(recs)-1, numel(d.chans)); 
 rmslevels = nan(numel(recs), numel(d.chans));
@@ -59,7 +75,7 @@ peaklevels = nan(numel(recs), numel(d.chans));
 for c=1:numel(d.chans) % loop through all channels
     
     % Massage data into a sensible matrix for easier analysis
-    data = [];
+%     data = nan(max_recording_length, numel(recs)); 
     for i=1:numel(recs)
         data(:,i) = recs{i}(:,d.chans(c));        
     end % for i=1:numel(recs)
@@ -123,7 +139,8 @@ if d.plot
     
     legend([repmat('Chan ', 2, 1) num2str([1:2]')], 'location', 'best');
 end % d.plot
-% PLOT ALIGNMENT HISTOGRAM
+
+% PLOT INTRAaural ALIGNMENT HISTOGRAM
 %   Create a histogram of lags, if user asks us to. 
 if d.plot
     
@@ -133,6 +150,7 @@ if d.plot
     hist(lags, 100); 
     
     % Markup 
+    title('INTRAaural Temporal Alignment'); 
     xlabel('Lags (s)')
     ylabel('Frequency'); 
     
