@@ -247,12 +247,6 @@ if p.pflag>0
 end % p.pflag
 
 % Create cross_correlation plots
-if p.pflag > 1 && isequal(p.routine, 'xcorr')
-    figure
-    plot([1:numel(corr_xy)] - (length(corr_xy)+1)/2, corr_xy);
-    
-    title('Cross-correlation'); 
-    xlabel('Lag (samples)');
-    
+if p.pflag > 1 
 end % 
 

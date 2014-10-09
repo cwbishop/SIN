@@ -192,14 +192,9 @@ for i=1:numel(number_of_groups)
     end % for i=1:numel(group_filenames
     
     % Check to make sure there's only ONE SNR in this file group
-    if numel(uniqe(temp_snr)) ~= 1
-        error('Multiple SNRs found in this file group');
-    else
-        % Assign the SNR value to our SNR array. We'll use this below for
-        % plotting/analysis purposes. 
-        snr(i) = unique(temp_str); 
-    end % if numel(unique ...
-    
+    if un
+%     while 
+        
     % Create a variable to store data traces
     %   Col 1 = +1/+1
     %   Col 2 =  +1/-1
