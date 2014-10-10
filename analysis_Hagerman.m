@@ -156,7 +156,7 @@ number_of_groups = unique(file_group(~isnan(file_group)));
 % below using some simple string matching. Granted, it assumes the filename
 % structure (which is a little silly), but making this more flexible would
 % probably take a lot of time to do. CWB isn't up for it at the moment. 
-snr = nan(numel(number_of_groups), 1);
+snr_theoretical = nan(numel(number_of_groups), 1);
 
 for i=1:numel(number_of_groups)
     
@@ -197,7 +197,7 @@ for i=1:numel(number_of_groups)
     else
         % Assign the SNR value to our SNR array. We'll use this below for
         % plotting/analysis purposes. 
-        snr(i) = unique(temp_str); 
+        snr_theoretical(i) = unique(temp_str); 
     end % if numel(unique ...
     
     % Create a variable to store data traces
@@ -266,6 +266,13 @@ end % for i=1:numel(grps)
 % By now, we have an extracted noise and target signal for each SNR level
 % (group) and each recording channel. The following code will do additional
 % calcuations (e.g., SNR estimates).
+
+% Calculate empirical SNR
+%   - This should ultimately use James Lewis's code to calculate wide- and
+%   narrow-band SNR in pascals and dB SNR all while incorporating
+%   individual audiograms. 
+%   - But, as a first pass, we'll do some simple RMS calculations for SNR
+%   estimates. 
 
 % function signal = extract_data(x, y, varargin)
 % %% DESCRIPTION:

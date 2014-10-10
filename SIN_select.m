@@ -19,6 +19,12 @@ function [selection_text, selection_index] = SIN_select(options, varargin)
 %
 %   'prompt':   string, user prompt (e.g., 'Select the playback device')
 %
+%   'max_selections':   maximum number of selections the user can make in
+%                       the dropdown box. 
+%
+%                       Note: if set to -1, the user will be able to select
+%                       all options. 
+%
 % OUTPUT:
 %
 %   selection_text:  the selection made
@@ -36,7 +42,7 @@ description = class2txt(options);
 
 %% OPEN GUI
 %   Pass description to Selection_GUI
-[selection_index, h] = Selection_GUI('description', {description}, 'title', d.title, 'prompt', d.prompt); 
+[selection_index, h] = Selection_GUI('description', {description}, 'title', d.title, 'prompt', d.prompt, 'max_selections', d.max_selections); 
 
 %% NOW RETURN THE OPTION
 selection_text = options(selection_index); 

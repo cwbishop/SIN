@@ -505,6 +505,9 @@ d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single m
 % Call modcheck
 if ~isempty(fieldnames(d.player.modcheck))
     [mod_code, d]=d.player.modcheck.fhandle(d);
+else
+    % Catch in case we don't have a modcheck, but we do have modifiers.
+    mod_code = [];
 end
 
 % Initialized modifiers

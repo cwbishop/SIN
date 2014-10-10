@@ -64,6 +64,18 @@ end % if isfield
 if isfield(d, 'prompt')
     set(handles.prompt_text, 'String', d.prompt);    
 end % if prompt
+
+% Set the maximum number of selections
+if isfield(d, 'max_selections')
+    
+    if d.max_selections == -1
+        set(handles.options_listbox, 'Max', numel(d.description))
+    else
+        set(handles.options_listbox, 'Max', d.max_selections)
+    end % if d.max_selections == -1
+    
+end % 
+
 % Choose default command line output for Selection_GUI
 handles.output = hObject;
 
@@ -150,7 +162,10 @@ selection = get(handles.options_listbox,'Value');
 % selection = contents{get(handles.options_listbox,'Value')};
 
 % Update description based on selection
-set(handles.description_text, 'String', handles.description{selection}); 
+% set(handles.description_text, 'String', handles.description{selection}); 
+description = vertcat({handles.description{selection}}');
+description = vertcat(description{:});
+set(handles.description_text, 'String', description); 
 
 % Place selection in handles structure
 handles.selection = selection;

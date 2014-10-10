@@ -44,7 +44,7 @@ for i=1:numel(results)
 end % for i=1:numel
 
 % Gather selection
-[~, test_index] = SIN_select(description, 'title', 'Stage Selection', 'prompt', 'Select Test Stage');
+[~, test_index] = SIN_select(description, 'title', 'Stage Selection', 'prompt', 'Select Test Stage', 'max_selections', 1);
 
 %% GET RECORDING NUMBER
 %   There's gotta be a way to vectorize this, but I can't figure out how.
@@ -57,19 +57,21 @@ end % for i=1:number ...
 
 % Will only work if there are recordings 
 if ~isempty(description)
-    [~, rec_index] = SIN_select(description, 'title', 'Recording Selection', 'prompt', 'Select the Recording Number'); 
+    [~, rec_index] = SIN_select(description, 'title', 'Recording Selection', 'prompt', 'Select the Recording Number', 'max_selections', -1); 
 else
     error('No recordings found');
 end % 
 
 % Get the recording
-recording = results(test_index).RunTime.sandbox.mic_recording{rec_index}; 
+recording = {results(test_index).RunTime.sandbox.mic_recording{rec_index}}; 
 
 % Get the sampling rate
 record_fs = results(test_index).RunTime.sandbox.record_fs;
 
 %% PLOTTING FUNCTION
-plot_waveform(recording, record_fs, [], 2); 
+% for i=1:numel(recording)
+    
+plot_waveform(recording, record_fs, [], 2, [], 'grid', true); 
 
 if d.assign_to_workspace
     assignin('base', 'recording', recording);

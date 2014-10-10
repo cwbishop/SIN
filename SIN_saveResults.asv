@@ -50,20 +50,9 @@ opts = results(1).RunTime;
 fname = opts.specific.saveData2mat; 
 
 % Check to see if the file exists. If it does, ask the user if he wants to
-% overwrite it. If yes, proceed. If not, then return control without
-% writing file. 
-if logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))
-    
-    response = '';
-    while ~isequal(response, 'y') && ~isequal(response, 'n')
-        response = lower(input(['File "' fname '" exists. Overwrite? (y/n)'], 's'));
-    end % while
-    
-    if isequal(response, 'n')
-        return
-    end
-end % if logical(exist(fname ...
-    
+% overwrite it.
+if logical(exist(fname, 'file'))
+    input(['File "' fname '" exists. Overwrite? (y/n)
     
 %% SAVE RESULTS
 save(fname, 'results');

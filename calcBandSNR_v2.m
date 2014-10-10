@@ -1,4 +1,4 @@
-function [wbSNR,nbSNR,f,SIIData] = calcBandSNR_v2(data,fs,audiogram)
+function [wbSNR,nbSNR,f,SIIData] = calcBandSNR_v2(data,fs,audiogram, varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % [wbSNR,nbSNR,f,SIIData] = calcBandSNR(data,fs,audiogram);
 % Function calculates the narrowband and wideband SNR for speech, noise,
@@ -23,6 +23,8 @@ function [wbSNR,nbSNR,f,SIIData] = calcBandSNR_v2(data,fs,audiogram)
 % Author: James D. Lewis
 % Date: April 12, 2104
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% GET INPUT PARAMETERS
+d=varargin2struct(varargin{:});
 
 % Determine whether an audiogram was entered
 if nargin < 3

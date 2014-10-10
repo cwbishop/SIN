@@ -23,14 +23,6 @@ function opts=SIN_TestSetup(testID, subjectID)
 %   University of Washington
 %   5/14
 
-%% GLOBAL VALUES
-
-% This is the correction factor that should be applied when uncorrelated
-% noise sources are presented from 4, equidistant speakers. This was
-% theoretically calculated and empirically verified in Christi Miller's Lab
-% at UW by CWB. 
-db_correction_4speakers = 6.05;
-
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
 end 
@@ -223,16 +215,11 @@ switch testID
             cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback.device.NrOutputChannels)]; 
             
         end % for i=1:opts ...        
-
-        % Add a calibration routine for windows mediaplayer at the end.
-        % This will ensure that WMP is setup correctly.
-%         cal(end+1) = opts;
-%         cal(end).player.modcheck.title = [testID ': Calibrate Windows Media Player']; 
-        
+            
         % Assign cal to opts
         opts = cal;
         
-        clear cal;    
+        clear cal; 
         
     case 'Audio Test (10 Hz click train)'
         
@@ -323,10 +310,9 @@ switch testID
         % Instructions "modifier"
         opts.player.modifier{end+1} = struct( ...
             'fhandle', @modifier_ShowInstructions, ...
-            'body', fileread(fullfile(opts.general.instruction_dir, 'audio_level_timing_test.txt')), ...
-            'header', sprintf(['Instructions: ' testID]), ... % header
-            'mod_stage', '');     
-        
+            'body', fileread(fullfile(opts.general.instruction_dir, '), ...
+            'header', sprintf('Instructions'), ... % header
+            'mod_stage', '');         
         % ============================
         % Analysis        
         % ============================
@@ -769,7 +755,7 @@ switch testID
         %   Loads a file containing a 4-channel noise sample and plays the
         %   noise back from all 4 speakers. 
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped)4chan;0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 - db_correction_4speakers).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 - 6.05).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
                                                                                                                   % -6.05 dB corrects for level gain due to playing noise from multiple speakers.
                                                                                                                   % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
                                                                                                                   % See the note link below here for details on how CWB estimated the 6.05 dB correction factor

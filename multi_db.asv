@@ -1,0 +1,39 @@
+function multi_db(data, varargin)
+%% DESCRIPTION:
+%
+%   This function estimates the effective decibel level of a multichannel
+%   sound in sound field. To do this, we sum the data over channels
+%   (columns) and apply an estimated correction factor to the rms estimate
+%   of the sound.
+%
+%   This proved useful when estimating the effective SNR between target and
+%   noise with single-channel target and multi-channel noise.
+%
+% INPUT:
+%
+%   data:   TxC matrix, where T is the number of time points and C is the
+%           number of channels. 
+%
+% Parameters
+%
+%   None (yet)
+%
+% Development:
+%
+%   None (yet)
+%
+% Christopher W Bishop
+%   University of Washington
+%   10/14
+
+%% GET INPUT PARAMETERS
+d=varargin2struct(varargin{:});
+
+% Get RMS for each channel
+channel_rms = rms(data); 
+
+% Sum over channels
+channel_sum = sum(data, 2); 
+
+% Estimate summed RMS
+

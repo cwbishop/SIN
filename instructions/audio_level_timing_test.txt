@@ -1,0 +1,7 @@
+This test will present a series of “clicks” from speaker 1. 
+
+- Place KEMAR on the center position (X) and face him directly towards speaker 1.
+- Click “Begin/Resume” and wait for the test to complete (check SIN terminal).
+- Review test results (use drop-down list in Review Results panel)
+- Verify that the maximum level differences (RMS and Peak) do not exceed ±1 dB
+- Verify that INTRAaural lag does not exceed 0. 

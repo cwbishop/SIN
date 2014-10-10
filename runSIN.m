@@ -193,13 +193,13 @@ else
     % Get test options from SIN_TestSetup
     opts = SIN_TestSetup(testID, subjectID); 
 
-    post_feedback(hObject, eventdata, handles, ['Running: ' testID ], 1); % post error message to terminal
+    post_feedback(hObject, eventdata, handles, ['Running: ' testID ], -1); % post error message to terminal
     % Run the test
     %   - Playlist automatically handled by SIN_getPlaylist (Called from
     %   SIN_runTest). 
     SIN_runTest(opts); 
 
-    post_feedback(hObject, eventdata, handles, [testID ' complete'], true);    
+    post_feedback(hObject, eventdata, handles, [testID ' complete!'], true);    
 end % if isequal(subjectID ...
 
 % Repopulate fields after test is complete.

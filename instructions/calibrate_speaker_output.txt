@@ -1,0 +1,15 @@
+A sound will play from each speaker in turn. 
+
+- Set the SLM dial to 60, response to “Slow”, and weighting to “A”. 
+
+- Click on the “Begin/Resume” button to begin the first speaker.
+
+- Enter the testing booth
+
+- Place the SPL meter at the location of the listener’s head with the sensor facing the active speaker. 
+
+- Meter should read 65 dB (±1 dB). If not, see Troubleshooting
+
+- Click “Complete Phase”
+
+- Repeat for speakers 2 - 4
