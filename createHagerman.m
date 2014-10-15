@@ -98,6 +98,10 @@ function createHagerman(varargin)
 %                           the periods during which a signal is actually
 %                           present. 
 %
+%   'write_concatenated':   bool, if true, then the concatenated file used
+%                           for RMS estimation is written to the
+%                           calibration directory. (NOT IMPLEMENTED)
+%
 %   Noise Floor Estimation:
 %
 %   Hagerman recordings can be affected by the noise floor of our
@@ -208,6 +212,11 @@ if ~isempty(nstim)
     nstim = nstim.*scale; % scale the noise stimulus. 
     
 end % ~isempty(nstim)
+
+%% WRITE CONCATENATED FILE?
+%   If the user suggests it, then we need to write the concatenated file
+%   used for scaling estimate to file. This may be useful when playing
+%   stimuli back in sound field for SPL measurement.
 
 % Clear potentially confusing variables
 clear concat noiseref noise
