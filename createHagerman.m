@@ -300,8 +300,10 @@ for i=1:numel(d.snrs)
     
     for n=1:size(invmixer,1)
         % Scale noise, mix to create output track
-        if ~isempty(nstim)
-            out = tout.*invmixer(n,1) + nout.*db2amp(d.snrs(i)).*invmixer(n,2);
+        if ~isempty(nstim)     
+            % We have to multiply the SNR by -1 since we are holding th
+            % speech track constant, but changing the noise. 
+            out = tout.*invmixer(n,1) + nout.*db2amp(d.snrs(i).*-1).*invmixer(n,2);
         else
             out = tout.*invmixer(n,1);
         end % out
