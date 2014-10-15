@@ -53,7 +53,7 @@ end % if ~exist('FHAND', 'var') || isempty(FHAND)
 %% PLOT DATA
 if iscell(DATA)
     
-    figure, hold on
+    hold on
     [colorDef, styleDef]=erplab_linespec(numel(DATA));
     
     for i=1:numel(DATA)

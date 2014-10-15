@@ -18,10 +18,15 @@ function [target, noise] = analysis_Hagerman(results, varargin)
 %
 %   Parameters for Hagerman Labeling:
 %
-%   'target_string': 
-%   'noise_string': 
-%   'inverted_string':
-%   'original_string':
+%   'target_string': string used to name the target (e.g., 'T')
+%
+%   'noise_string':     string used to name the noise (e.g., 'N')
+%
+%   'inverted_string':  string used to flag phase inverted target/noise
+%                       (e.g., 'inv')
+%
+%   'original_string':  string used to flag non-phase inverted target/noise
+%                       (e.g., 'orig')
 %   
 %   'pflag':     integer, sets plotting level. This parameter is inherited
 %                by secondary functions as well. At time of writing, 2 is
@@ -39,6 +44,24 @@ function [target, noise] = analysis_Hagerman(results, varargin)
 %                           done by recording "silence" for some period of
 %                           time. 
 %
+%   'average_estimates':   bool, if set then the target waveforms are
+%                          collapsed (temporally averaged) to create a
+%                          single target waveform. Recall that the target
+%                          can be estimated in two was ( (oo - oi)/2 and
+%                          (io - ii)/2 ). The same is done for the noise
+%                          waveform.
+%
+%                           Note: only "true" supported at time this was
+%                           written. See development section for more
+%                           notes. 
+%
+%   'channels': integer array, contains channel numbers to include in
+%               Hagerman analysis. Note that the user should EXCLUDE all
+%               channels that have no data (all zeros). On the Amp Lab PC,
+%               that means only including channels 1 and 2. 
+%
+%   'masker_file':  string, path to binary masker file (not used, yet). 
+%
 % OUTPUT:
 %
 %   results:    modified results structure with analysis results field
@@ -50,6 +73,17 @@ function [target, noise] = analysis_Hagerman(results, varargin)
 %   %%target_string%% to denote where labels should be in the file name. A
 %   regular expression, perhaps? Currently, this is hard-coded. Could cause
 %   some issues down the road if we decide to change the file name format. 
+%
+%   2) Allow users to break down SNR estimates by channel AND estimate
+%   (recall that signal and noise can be estimated in two ways, each). The
+%   code currently temporally averages these two estimates to get a concise
+%   picture of what the SNR looks like.
+%
+%   3) Add in a binary masker for use in RMS calculations. This should
+%   improve the accuracy of RMS calculations. 
+%
+%   4) Add in option for RMS estimation routine (e.g., unweighted,
+%   A-weighted, etc.) 
 %
 % Christopher W Bishop
 %   University of Washington
@@ -63,7 +97,7 @@ filenames = results.RunTime.sandbox.playback_list;
 recordings = results.RunTime.sandbox.mic_recording; 
 
 %% GET SAMPLING RATE/NUMBER OF CHANNELS
-sampling_rate = results.RunTime.player.record.device.DefaultSampleRate;
+fs = results.RunTime.player.record.device.DefaultSampleRate;
 number_of_channels = size(recordings{1}, 2); % assumes all recordings have the same number of channels 
 
 %% QUICK SAFETY CHECK
@@ -92,7 +126,8 @@ if numel(noise_floor_mask(noise_floor_mask)) > 1
 end 
 
 % Save the noise floor recording for further analysis below
-noise_floor_recording = recordings{noise_floor_mask}; 
+noise_floor_recording = recordings{noise_floor_mask}(:,d.channels); 
+noise_floor_rms = rms(noise_floor_recording); 
 
 %% CLEAN FILENAMES FOR MATCHING
 %   We want to strip the filenames of the target/noise inversion
@@ -137,11 +172,11 @@ end % for i=1:numel(fnames)
 %% NOW TOSS OUT GROUPS WITH FEWER THAN 4 SAMPLES
 %   - Fewer than 4 samples will be found for noise floor matching. 
 %   - This will implicitly remove the noise floor estimate, if it's here. 
-number_of_groups = unique(file_group);
-for i=1:numel(number_of_groups)
+group_numbers = unique(file_group);
+for i=1:numel(group_numbers)
     
-    if numel(file_group(file_group == number_of_groups(i))) < 4
-        file_group(file_group==number_of_groups(i)) = NaN;
+    if numel(file_group(file_group == group_numbers(i))) < 4
+        file_group(file_group==group_numbers(i)) = NaN;
     end % if numel ...
     
 end  % for i=1:numel(grps)
@@ -150,19 +185,19 @@ end  % for i=1:numel(grps)
 
 % Number of groups tells us how many file groupings we have. This should
 % correspond to the number of SNRs we have recorded. 
-number_of_groups = unique(file_group(~isnan(file_group))); 
+group_numbers = unique(file_group(~isnan(file_group))); 
 
 % snr will tell us the SNR corresponding to each group. This is discovered
 % below using some simple string matching. Granted, it assumes the filename
 % structure (which is a little silly), but making this more flexible would
 % probably take a lot of time to do. CWB isn't up for it at the moment. 
-snr_theoretical = nan(numel(number_of_groups), 1);
+snr_theoretical = nan(numel(group_numbers), 1);
 
-for i=1:numel(number_of_groups)
+for i=1:numel(group_numbers)
     
     % Create logical mask
     mask = false(numel(file_group),1);
-    mask(file_group == number_of_groups(i)) = true; 
+    mask(file_group == group_numbers(i)) = true; 
     mask = find(mask); % convert to indices.
     
     % Get the filenames from the data variable. Will use this to figure out
@@ -186,18 +221,19 @@ for i=1:numel(number_of_groups)
         snr_string = filename_sections(~cell2mat(cellfun(@isempty, strfind(cellfun(@lower, filename_sections, 'uniformoutput', false), 'snr'), 'uniformoutput', false))');
         
         % Get the leading digit. This should be our SNR value
-        snr_string = regexp(snr_string,['\d+\.?\d*'],'match');
-        temp_snr(k) = str2double(snr_string); 
+        
+        snr_string = regexp(snr_string,['[-]{0,1}\d+\.?\d*'],'match');
+        temp_snr(k,1) = str2double(snr_string{1}); 
         
     end % for i=1:numel(group_filenames
     
     % Check to make sure there's only ONE SNR in this file group
-    if numel(uniqe(temp_snr)) ~= 1
+    if numel(unique(temp_snr)) ~= 1
         error('Multiple SNRs found in this file group');
     else
         % Assign the SNR value to our SNR array. We'll use this below for
         % plotting/analysis purposes. 
-        snr_theoretical(i) = unique(temp_str); 
+        snr_theoretical(i) = unique(temp_snr); 
     end % if numel(unique ...
     
     % Create a variable to store data traces
@@ -222,84 +258,128 @@ for i=1:numel(number_of_groups)
     ind = findcell(group_filenames, [d.target_string d.inverted_string d.noise_string d.original_string]);
     io = data{mask(ind), 2};     
     
-    % Calculate the target two ways
-    target{i} = [Hagerman_getsignal(oo, oi, 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', logical(d.pflag)) Hagerman_getsignal(io, ii, 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', logical(d.pflag)).*-1]; 
-    
-    % Rinse and repeat for noise estimates
-    noise{i} = [Hagerman_getsignal(oo, io, 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', logical(d.pflag)) Hagerman_getsignal(oi, ii, 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', logical(d.pflag)).*-1]; 
-    
-    if d.align
-        % Check temporal alignment of the two target estimates
-        [aligned_noise1, aligned_noise2, noise_lag] = ...
-            align_timeseries(noise{i}(:,1), noise{i}(:,2), 'xcorr', 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', d.pflag);
-
-        % Check temporal alignment of the two target estimates
-        [aligned_target1, aligned_target2, target_lag] = ...
-            align_timeseries(target{i}(:,1), target{i}(:,2), 'xcorr', 'fsx', sampling_rate, 'fsy', sampling_rate, 'pflag', d.pflag);
-
-        if target_lag ~= 0
-
-            % If the signals are misaligned, make the user aware that there's
-            % some jitter in his/her system, then kick back the realigned time
-            % series.
-            warning(['Target signals temporally misaligned by ' abs(num2str(target_lag)) ' sample. Returning realigned data.'])
-
-            target{i} = [aligned_target1 aligned_target2];
-
-        end % if target_lag ~= 0
-
-        if noise_lag ~= 0
-
-            % If the signals are misaligned, make the user aware that there's
-            % some jitter in his/her system, then kick back the realigned time
-            % series.
-            warning(['Noise signals temporally misaligned by ' abs(num2str(target_lag)) ' sample. Returning realigned data.'])
-
-            noise{i} = [aligned_noise1 aligned_noise2];
-
-        end % if noise_lag ~= 0
+    % Calculate the target signal by averaging over the two ways we can
+    % solve for the target. These will be averaged below
+    if d.average_estimates
+      
+        % Compute target and noise samples in two ways each. These
+        % estimates will be checked for temporal alignment below. 
+        %
+        % Note that the second estimate's polarity is inverted (multiplied
+        % by -1) so the polarities match. 
+        target{i}   = [Hagerman_getsignal(oo, oi, 'fsx', fs, 'fsy', fs, 'pflag', d.pflag>=2) Hagerman_getsignal(io, ii, 'fsx', fs, 'fsy', fs, 'pflag', false).*-1 ]; 
+        noise{i}    = [Hagerman_getsignal(oo, io, 'fsx', fs, 'fsy', fs, 'pflag', d.pflag>=2) Hagerman_getsignal(oi, ii, 'fsx', fs, 'fsy', fs, 'pflag', false).*-1 ]; 
         
-    end % if d.align
+        % Check alignment of each channel
+        target_lag = [];
+        noise_lag = [];
+        aligned_noise1 = {};
+        aligned_noise2 = {};        
+        aligned_target1 = {};
+        aligned_target2 = {}; 
+        for c=1:numel(d.channels)
+            
+            % Check noise alignment
+            [aligned_noise1{c}, aligned_noise2{c}, noise_lag(c,1)] = ...
+                align_timeseries(noise{i}(:,d.channels(c)), noise{i}(:,d.channels(c) + number_of_channels), 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
+            
+            % Check target alignment
+            [aligned_target1{c}, aligned_target2{c}, target_lag(c,1)] = ...
+                align_timeseries(target{i}(:,c), target{i}(:,c + number_of_channels), 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag>=2);
+        
+        end % for c=1:number_of_channels
+        
+        % Error checking for temporal alignment. If we plan to temporally
+        % average over the two target/noise estimates, then they need to be
+        % *perfectly* aligned. Verify that empirically with
+        % align_timeseries.
+        
+        % Verify that the targets and noise estimates are well-aligned
+        if any(noise_lag ~= 0) 
+
+            error('Temporal misalignment in noise estimates. No recovery coded, but it can be.')                
+
+        else
+            % Average over noise estimates
+            noise{i} = (noise{i}(:,d.channels) + noise{i}(:,d.channels + number_of_channels)) ./ 2;
+        end % if noise_lag ~= 0
+
+        if any(target_lag ~= 0)
+
+            error('Temporal misalignment in target estimates. No recovery coded, but it can be.')
+
+        else
+            % Average over target estimates
+            target{i} = (target{i}(:,d.channels) + target{i}(:,d.channels + number_of_channels)) ./ 2;
+        end % if target_lag ~= 0
+        
+    else
+        error('Unsupported option ... see development'); 
+    end 
     
 end % for i=1:numel(grps)
 
-% By now, we have an extracted noise and target signal for each SNR level
-% (group) and each recording channel. The following code will do additional
-% calcuations (e.g., SNR estimates).
+% By this point, we should have an N-element cell array, where N is the
+% number of SNRs tested. Each element should by a Txnumel(d.channels) array, where
+% T is the number of samples and numel(d.channels) is the number of
+% channels the user specifies in the analysis.
 
-% Calculate empirical SNR
-%   - This should ultimately use James Lewis's code to calculate wide- and
-%   narrow-band SNR in pascals and dB SNR all while incorporating
-%   individual audiograms. 
-%   - But, as a first pass, we'll do some simple RMS calculations for SNR
-%   estimates. 
+%% SORT TARGET/NOISE
+%   Want the target/noise traces to be in ascending order of SNR.
 
-% function signal = extract_data(x, y, varargin)
-% %% DESCRIPTION:
-% %
-% %   Function to do basic data extraction using Hagerman style phase
-% %   inversion calculations.
-% %
-% % INPUT:
-% %
-% %   x:  input series 1
-% %   y:  input series 2 
-% %
-% % Paramters:
-% %
-% %   'fsx':  sampling rate of input series 1
-% %   'fsy':  sampling rate of input series 2
-% %   'pflag':    integer, plotting level (1 = make plots, 0 = no plots)
-% %
-% % OUTPUT:
-% %
-% %   signal: signal time series.
-% %
-% % Christopher W Bishop
-% %   University of Washington
-% %   10/14
-% 
-% %% GET INPUT PARAMETERS
-% d = varargin2struct(varargin{:});
-% 
-% % Extract time series
+% Get sorting index (I)
+[~, I] = sort(snr_theoretical);
+
+% Apply sorting index to target and noise tracks
+target = {target{I}}';
+noise = {noise{I}}';
+
+% Create a column of SNRs for each channel in target/noise. This will be
+% useful for plotting purposes below.
+snr_theoretical = snr_theoretical(I)*ones(size(snr_theoretical,2), size(target{1},2));
+
+%% ESTIMATE EMPIRICAL SNR
+%   The code below estimates the signal-to-noise ratio (SNR) in various
+%   ways. This relies (primarily) on a call to James Lewis's SNR estimation
+%   code provided to CWB by Wu and Christi. 
+snr_empirical = nan(size(snr_theoretical)); 
+
+% Loop through each theoretical SNR
+for i=1:size(snr_theoretical,1)
+    
+    % Calculate SNR 
+    %   RMS estimate here as a place holder - need to wrap in James's code.
+    target_db = db(rms(target{i}));
+    noise_db = db(rms(noise{i}));
+    snr_empirical(i,:) = target_db - noise_db; 
+%     snr_empirical(i,:) = db(rms(target{i})) - db(rms(noise{i}));
+    
+end % for i=1: ...
+
+%% GENERATE PLOTS
+
+% Empirical vs. Theoretical SNR plot
+if d.pflag > 0
+    
+    figure, hold on
+    
+    % Plot unity line
+    x = [min(min(snr_theoretical)):0.01:max(max(snr_theoretical))]';
+    plot(x, x, 'k--', 'linewidth', 2)
+    
+    % Plot channel estimates
+    plot(snr_theoretical, snr_empirical, '*', 'linewidth', 1, 'markersize', 10)
+    
+    % Plot mean(across channel) estimates
+    plot(mean(snr_theoretical, 2), mean(snr_empirical,2), 'sk', 'linewidth', 2); 
+    
+    % Plot the absolute noise floor
+    plot(x*ones(1, numel(d.channels)), repmat(db(noise_floor_rms), length(x), 1), '--', 'linewidth', 1); 
+    
+    % Markup
+    xlabel('Theoretical SNR (dB)');
+    ylabel('Empirical SNR (dB)'); 
+    legend(strvcat('Unity', [repmat('SNR: Channel ', numel(d.channels)+1, 1) strvcat(num2str(d.channels'), 'Mean')], strvcat([repmat('Channel ', numel(d.channels), 1) num2str(d.channels') repmat(' Noise Floor', numel(d.channels), 1)])), 'location', 'eastoutside')    
+    grid on
+    
+end % if d.pflag

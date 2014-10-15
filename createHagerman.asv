@@ -253,10 +253,14 @@ for i=1:numel(tstim)
 %         tout = [tout; signal_mask];
 %     end % if d.write_signal_mask
     
-    clear zpad
+    clear zpad signal_mask
     
 end % for i=1:numel(tstim)
 
+% Append signal mask as the last channel in audio file
+if d.write_signal_mask
+    toout = [tout; signal_mask];
+end 
 % Mix tout with tmixerout
 tout = tout * d.tmixerout; 
 
@@ -297,11 +301,6 @@ for i=1:numel(d.snrs)
             out = tout.*invmixer(n,1);
         end % out
         
-        % Append signal mask as the last channel in audio file
-        if d.write_signal_mask
-            out = [out signal_mask];
-        end % if d.write_signal_mask
-        
         % Generate target description string
         if sign(invmixer(n,1))==1
             tstr = 'Torig';
@@ -325,8 +324,6 @@ for i=1:numel(d.snrs)
         
         % Write file
         audiowrite(fname, out, d.fsout, 'BitsperSample', d.bitdepth); 
-        
-        clear out
     end % 
     
 end % for i=1:d.snrs 

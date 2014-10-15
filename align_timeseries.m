@@ -188,7 +188,11 @@ X_align=nan(size(X,1)+abs(min(lags)),size(X,2));
 Y_align=nan(size(Y,1)+abs(max(lags)),size(Y,2)); 
 
 for i=1:size(Y,2)
-    if lags(i,1)>0
+    
+    if lags(i,1) == 0
+        Y_align(:,i) = Y(:,i);
+        X_align(:,i) = X; 
+    elseif lags(i,1)>0
         % Positive lag means Y happens BEFORE X. 
         ypad=zeros(size(Y_align,1) - (abs(lags(i,1)) + size(Y,1)), 1);
         xpad=zeros(size(X_align,1) - size(X,1), 1);
@@ -201,6 +205,7 @@ for i=1:size(Y,2)
         X_align(:,i)=[zeros(abs(lags(i,1)), 1); X; xpad]; 
         Y_align(:,i)=[Y(:,i); ypad];
     end % if lags
+    
 end % for i=1:size(Y,2)
 
 %% RESIZE MATRICES

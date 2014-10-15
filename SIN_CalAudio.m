@@ -76,6 +76,14 @@ function scale = SIN_CalAudio(REF, varargin)
 %                   user is prompted for each overwrite. False is safer,
 %                   but time consuming. 
 %
+%   'rms_function': function handle, the RMS function to use for power
+%                   estimates (e.g., @aw_rms, @rms, etc.). If the user
+%                   wants to A-weight the rms estimates for level matching,
+%                   then provide a function handle to aw_rms. For
+%                   unweighted rms estimates, provide a handle to rms.
+%                   Provided function must conform to the outputs of
+%                   MATLAB's rms function.                    
+%
 % AV Alignment Options (only applies to MP4s presently)
 %
 %   Note that these procedures circularly shift the data to account for
@@ -124,6 +132,9 @@ function scale = SIN_CalAudio(REF, varargin)
 %% GATHER PARAMETERS
 d=varargin2struct(varargin{:}); 
 
+%% SET THE RMS ESTIMATOR
+rms_func = d.rms_function;
+
 %% GET TEST INFORMATION
 %   The general field also has information we'll need regarding the
 %   location of noise files. 
@@ -131,6 +142,7 @@ opts = SIN_TestSetup(d.testID, '');
 
 %% OVERWRITE FILE FILTER IF NECESSARY
 if isfield(d, 'wav_regexp')
+    
     input(['Overwriting ' opts.specific.wav_regexp ' with ' d.wav_regexp '. Press enter to continue']);
     
     % Error check to make sure we haven't changed the field name to
@@ -210,7 +222,7 @@ end % for i=1:length(files)
 %% CALCULATE SCALING FACTOR
 %   Identical scaling factor should be applied to all stimuli from the same
 %   test. 
-scale = db2amp(db(rms(ref_data)) - db(rms(concat)) + d.targetdB);
+scale = db2amp(db(rms_function(ref_data)) - db(rms_function(concat)) + d.targetdB);
 
 %% APPLY SCALING FACTOR, WRITE STIMULI
 %   Now, load/scale each stimulu, write to file. 
