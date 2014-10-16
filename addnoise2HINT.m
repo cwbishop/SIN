@@ -66,6 +66,7 @@ d=varargin2struct(varargin{:});
 
 % Get HINT information
 opts = SIN_TestSetup(d.testID, ''); 
+opts = opts(1); 
 
 %% OVERWRITE FILE FILTER IF NECESSARY
 if isfield(d, 'wav_regexp')

@@ -262,7 +262,7 @@ pow(fmask)=pow(fmask)+dPyy(fmask);
 
 %% CONVERT TO MAGNITUDE
 %   Convert back to magnitude
-pow=db2amp(pow); % XXX CWB SHOULD CHECK XXX
+pow=db2amp(pow); 
 
 %% RECONSTRUCT FFT
 %   Put together (unchanged) phase and (potentially changed) magnitudes

@@ -1,4 +1,4 @@
-function [YtoX] = concatandmatchspectra(X, Y, varargin)
+function [YtoX] = concat_and_match_spectra(X, Y, varargin)
 %% DESCRIPTION:
 %
 %   This is essentially a wrapper function for SIN_matchspectra. While

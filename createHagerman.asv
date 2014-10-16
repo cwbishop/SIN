@@ -111,10 +111,6 @@ function createHagerman(varargin)
 %                       upper bounds of the frequency range over which
 %                       stimuli should be spectrally matched.
 %
-% Visualization Parameters:
-%
-%   'pflag':    plot level setting. 0 = no plots, 1 = summary plots
-%
 %   Noise Floor Estimation:
 %
 %   Hagerman recordings can be affected by the noise floor of our
@@ -215,21 +211,7 @@ end % if ~isempty(d.noisetrack ...
 
 %% SPECTRAL MATCHING
 %   If the user specifies spectral matching, then match the spectral
-%   between concat and noiseref. 
-if d.match_spectra
-    
-    [Pxx, Pyy, Pyyo, Y, Yo, FS, dPyy]=SIN_matchspectra(concat, noiseref, ...        
-        'fsx', d.fsout, ...
-        'fsy', d.fsout, ...
-        'frange', d.frequency_range, ...
-        'mtype', 'power', ...
-        'plev', d.pflag>=1, ...
-        'window', [], ...
-        'noverlap', [], ...
-        'nfft', [], ...
-        'write', false);
-end % if d.match_spectra
-
+%   between concat and noise
 % Should we remove silence from noise as well?
 if ~isempty(nstim)    
     

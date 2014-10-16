@@ -16,7 +16,7 @@ function scale = SIN_CalAudio(REF, varargin)
 %
 %   REF:    path to reference file. (e.g., fullfile('playback', 'Noise', 'HINT-Noise.wav'))
 %
-% Parameters:
+% General Parameters:
 %
 %   'testID':   string, testID used in call to SIN_TestSetup that is then
 %               used to gather stimulus information 
@@ -76,13 +76,33 @@ function scale = SIN_CalAudio(REF, varargin)
 %                   user is prompted for each overwrite. False is safer,
 %                   but time consuming. 
 %
-%   'rms_function': function handle, the RMS function to use for power
-%                   estimates (e.g., @aw_rms, @rms, etc.). If the user
-%                   wants to A-weight the rms estimates for level matching,
-%                   then provide a function handle to aw_rms. For
-%                   unweighted rms estimates, provide a handle to rms.
-%                   Provided function must conform to the outputs of
-%                   MATLAB's rms function.                    
+% Filtering Parameters:
+%
+%   Parameters below allow the user to specify filtering settings for
+%   sound files. Typically, filter settings are applied to both the
+%   reference sound AND the to-be-calibrated sounds. 
+%
+%   Note that filtering is achieved using MATLAB's butter and filtfilt
+%   functions.
+%
+%   'apply_filter': bool, if set, then all sounds are filtered using the
+%                   filter specifications below. If false, then no
+%                   filtering applied. 
+%
+%   'filter_type':  string, filter type supported by butter. 
+%
+%                   These include the following. See doc butter for
+%                   details.
+%
+%                   'low':
+%                   'high':
+%                   'stop:
+%                   'bandpass': 
+%
+%   'frequency_cutoff': equivalent to butter's Wn argument. Specifies the 
+%                       cutoff frequency(ies). 
+%
+%   'filter_order': filter order
 %
 % AV Alignment Options (only applies to MP4s presently)
 %
@@ -95,35 +115,16 @@ function scale = SIN_CalAudio(REF, varargin)
 %   this is the case, then try fading sounds in/out prior to applying a
 %   shift. 
 %
-%   Transcoding Correction:
+% Transcoding Correction:
 %
-%   'talign':   bool, implements a two-step calibration process for MP4
-%               files to improve audiovisual temporal alignment (talign).
-%               If this is set to true, then 'alignto' must also be
-%               defined. 
-%
-%   'alignto':  integer, which channel of MP4 files to use for temporal
-%               correction.
-%
-%   Manual Timing Adjustments:
-%
-%   'tadjust':  double, a manual temporal offset of the audio track in
-%               seconds. A negative value advances the audio in time (moves
-%               to left). A positive value delays the audio in time (moves
-%               to the right). This argument may be useful if the
-%               experimenter notices consistent temporal AV misalignments
-%               that the playback system is not correcting automatically. 
-%
-%               Note: this feature has not been thoroughly tested, so use
-%               with caution. 
+%   These options have been removed after CWB learned that FFmpeg was not 
+%   introducing misalignments in audiovisual files, but instead prepending
+%   a duplicate video frame and delaying the audio by the duration of this
+%   frame. 
 %
 % Development:
 %
-%   1) Add a "calibrate by channel" option. This will likely be necessary
-%   for ANL since the two tracks differ by 0.4 dB. Or we can just assume
-%   it's OK, use the raw materials we have, and then say "well, we're wrong
-%   the same way that everyone else is wrong". I hate that, but maybe
-%   better than mucking with things here?
+%   Note (anymore)
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -133,17 +134,18 @@ function scale = SIN_CalAudio(REF, varargin)
 d=varargin2struct(varargin{:}); 
 
 %% SET THE RMS ESTIMATOR
-rms_func = d.rms_function;
+rms_function = @rms;
 
 %% GET TEST INFORMATION
 %   The general field also has information we'll need regarding the
 %   location of noise files. 
 opts = SIN_TestSetup(d.testID, ''); 
+opts = opts(1); 
 
 %% OVERWRITE FILE FILTER IF NECESSARY
 if isfield(d, 'wav_regexp')
     
-    input(['Overwriting ' opts.specific.wav_regexp ' with ' d.wav_regexp '. Press enter to continue']);
+    input(['Overwriting ' opts(1).specific.wav_regexp ' with ' d.wav_regexp '. Press enter to continue']);
     
     % Error check to make sure we haven't changed the field name to
     % something else.
@@ -161,6 +163,23 @@ end % isfield
 %% SCALE NOISE
 ref_data = ref_data*d.nmixer; 
 
+%% FILTER REFERENCE DATA:
+%   Filter the reference data. This is often needed for Project AD in which
+%   we want to bandpass all sounds between [0.125 10] kHz. 
+if d.apply_filter
+    
+    % Convert cutoff frequencies to normalized units (normalized to
+    % Nyquist)
+    d.frequency_cutoff = d.frequency_cutoff / (rfs/2);
+    
+    % Get filter coefficients
+    [b, a] = butter(d.filter_order, d.frequency_cutoff, d.filter_type); 
+    
+    % Apply filter to reference sound
+    ref_data = filtfilt(b, a, ref_data); 
+    
+end % if d.apply_filter
+
 %% WRITE SCALED REFERENCE
 %   Write the (scaled) reference file back to disk? 
 if d.writeref
@@ -169,10 +188,10 @@ if d.writeref
     [PATHSTR,NAME,EXT] = fileparts(REF);
     
     % Create output filename
-    fout = fullfile(PATHSTR, [NAME d.suffix EXT]); 
+    audio_file_out = fullfile(PATHSTR, [NAME d.suffix EXT]); 
     
     % Write to file
-    audiowrite(fout, ref_data, rfs, 'BitsperSample', d.bitdepth); 
+    audiowrite(audio_file_out, ref_data, rfs, 'BitsperSample', d.bitdepth); 
     
 end % if d.writeref
 
@@ -184,19 +203,42 @@ end % if d.writeref
 
 %% LOAD ALL FILES IN STIMULUS LIST
 %   - Load all files, concatenate into larger file for RMS estimation
+%   - We need to save the (potentially filtered) audio files for use below.
+
+% concat is a concatenated time waveform of the to-be-scaled stimulus(i). 
 concat = [];
+
+% fs is the sampling rate of the to-be-scaled stimulus(i). There's an error
+% check built in to catch cases in which fs does not match between these
+% stimuli and the reference stimuli. No recovery mechanisms coded, however.
 fs = [];
+
+audio_data = {}; 
 for i=1:numel(files)
     
     % Loop through files
     for k=1:numel(files{i})
         
         % Load data file
-        [data, nfs] = audioread(files{i}{k}); 
+        [audio_data{i}{k}, nfs] = audioread(files{i}{k}); 
         
         % Apply appropriate mixer
         %   This should reduce the data to a single channel. 
-        data = data*d.tmixer;
+        audio_data{i}{k} = audio_data{i}{k}*d.tmixer;
+        
+        % Do we filter the waveforms before concatenating them? \
+        if d.apply_filter
+            % Note that d.frequency_cutoff already converted to Nyquist
+            % normalized values above.
+%             d.frequency_cutoff = d.frequency_cutoff / (rfs/2);
+
+            % Get filter coefficients
+            [b, a] = butter(d.filter_order, d.frequency_cutoff, d.filter_type); 
+
+            % Apply filter to reference sound
+            audio_data{i}{k} = filtfilt(b, a, audio_data{i}{k}); 
+            
+        end % if d.apply_filter
         
         % Sampling rate check
         if isempty(fs)
@@ -205,15 +247,18 @@ for i=1:numel(files)
             error('Sampling rates do not match');
         end % if isempty(fs)
         
+        % Double check that reference and files are at the same sampling
+        % rate
+        if fs ~= rfs
+            error('Mismatched sampling rates. Recommend resampling.')
+        end % if fs ~= rfs
+            
         % Remove silence?
         if d.removesilence
-            data = threshclipaudio(data, d.ampthresh, 'begin&end');
-        end % if d.removesilence
-        
-        % Concatenate data
-        %   Apply mixer to data as well. Should reduce data to single
-        %   channel. 
-        concat =[concat; data]; 
+            concat = [concat; threshclipaudio(audio_data{i}{k}, d.ampthresh, 'begin&end')];
+        else
+            concat = [concat; audio_data{i}{k}];
+        end % if d.removesilence        
         
     end % for k=1:numel(files{i})
     
@@ -234,173 +279,51 @@ for i=1:numel(files)
         [PATHSTR,NAME,EXT] = fileparts(files{i}{k});        
         
         % Create output file name
-        fout = fullfile(PATHSTR, [NAME d.suffix EXT]);  
+        audio_file_out = fullfile(PATHSTR, [NAME d.suffix EXT]);  
+
+        % Scale audio data
+        audio_data{i}{k} = audio_data{i}{k}.*scale; 
+
+        % Multiply by omixer to generate appropriately sized output
+        % matrix.
+        audio_data{i}{k} = audio_data{i}{k}*d.omixer; 
+        
+        % Write audio track(s) to file                               
+        audiowrite(audio_file_out, audio_data{i}{k}, fs, 'BitsperSample', d.bitdepth); 
         
         % If a .wav/.mp3, then use audiowrite
         switch EXT
-            
-            case {'.wav' '.mp3'}
-                
-                % Read in audio data
-                [data, fs] = audioread(files{i}{k});
-                
-                % Apply tmixer
-                %   Need to apply this again since we applied it to
-                %   estimate the scaling factor. Also helps us create
-                %   monaural files (i.e., without noise!)
-                data = data * d.tmixer; 
-                
-                % Scale audio data
-                data = data.*scale; 
-                
-                % Multiply by omixer to generate appropriately sized output
-                % matrix.
-                data = data*d.omixer; 
-                
-                % Rewrite to file                               
-                audiowrite(fout, data, fs, 'BitsperSample', d.bitdepth); 
+            case {'.mp3', '.wav'}
+                % Nothing else to do here, it's all done above. 
                 
             case {'.mp4'}
                 
-                %% NOTE:
-                %   CWB tried a direct call to FFmpeg with channel scaling
-                %   parameters, but there were data still present in zeroed
-                %   out channels. Sounded like high frequency squeaking
-                %   when played with soundsc. Could not be heard on his PC
-                %   with wavplay or equivalent (unscaled) playback.
-                %
-                %   CWB worked out a work around that corrects any 
-                %   timing offsets introduced during video creation and
-                %   also creates stereo (or mono ... or other) MP4 files.
-%                 cmd = ['ffmpeg -i "' files{i}{k} '" -filter_complex ' mixer2pan((d.tmixer.*scale)*d.omixer) ' -c:v copy "' fout '"'];
-                
-                % Outline of procedure
-                %   - Read in audio data from existing MP4
-                %   - Scale/Mix audio data
-                %   - Write scaled/mixed audio to .WAV file
-                %   - Replace existing audio tracks in MP4 with
-                %   newly-written WAV file
-                %   
-                %   If timing correction is enabled, then do the following
-                %   as well
-                %   - Load audio from newly written MP4 and WAV file
-                %   - Determine time delay between the two
-                %   - Shift WAV file to correct this temporal offset
-                %   - Rewrite WAV file
-                %   - Replace the audio track of the MP4 again
-                %   
-                %   Other possible steps:
-                %   - Might need to fade time series by the desired shift
-                %   enough (zero it out by at least that many samples) to
-                %   prevent acoustic artifacts. 
-                %   - Might need fading after the time shift to prevent
-                %   acoustic artifacts. 
-                
-                % Read in audio file from MP4
-                [odata, ofs] = audioread(files{i}{k}); 
-                
-                % Scale and mix data to create data
-                odata = ((odata*d.tmixer).*scale)*d.omixer;
-                
-                % This section of code applies a fixed temporal shift to
-                % all audio files. CWB intends to use this to adjust for
-                % any gross audiovisual temporal misalignments. 
-                %
-                % Input should be in seconds, not samples
-                if isfield(d, 'tadjust') && ~isempty(d.tadjust)
-                    
-                    % Warn user that this has not been well-tested yet. 
-                    warning(['Manual audio adjustments are not well-tested, ' ...
-                        'so use with appropriate caution. - CWB']); 
-                    
-                    % Convert tadjust to samples instead of seconds. 
-                    tadjust = round(d.tadjust * ofs); 
-                    
-                    % Fade beginning and end of sounds in/out,
-                    % respectively, zero out shifted portion
-                    fade_data = odata(abs(tadjust)+1:end-abs(tadjust),:);
-                    
-                    % Fade data in/out using 5 ms Hanning window. 
-                    fade_data = fade(fade_data, ofs, true, true, @hann, 0.005);
-                    
-                    % Prepend and Append tadjust zero samples
-                    fade_data = [zeros(abs(tadjust), size(odata,2)); fade_data; zeros(abs(tadjust), size(odata,2))];
-                    
-                    % Check size, make sure we haven't added or removed
-                    % samples
-                    if any(size(fade_data) ~= size(odata))
-                        error('Data sizes differ');
-                    end % if any
-                    
-                    % Now apply temporal shift to sound
-                    %   This approach really only works if there is very
-                    %   little acoustic energy at the beginning and end of
-                    %   each sound file. This is a safe assumption for
-                    %   MLST, but maybe not for other stimuli we may end up
-                    %   using. 
-                    odata = circshift(fade_data, tadjust); 
-                    
-                end % isfield(d, ...
-                
-                % Write WAV to file
-                wavout = fullfile(PATHSTR, [NAME d.suffix '.wav']);                 
-                audiowrite(wavout, odata, ofs, 'BitsperSample', d.bitdepth); 
+                % Now we need to reencode the MP4s with the scaled (and
+                % potentially filtered) audio data. 
                 
                 % Is overwriteMP4 set?
+                %   -y overwrites without asking in ffmpeg. Not used by
+                %   default. Maybe a separate parameter?
                 if d.overwritemp4
-                    cmd = ['ffmpeg -y '];
+                    cmd = 'ffmpeg -y ';
                 else
                     cmd = 'ffmpeg ';
                 end % if d.overwritemp4
                 
-                % Replace audio in MP4
-                %   - -y overwrites without asking in ffmpeg. Not used by
-                %   default. Maybe a separate parameter?
-                mp4out = fullfile(PATHSTR, [NAME d.suffix '.mp4']); 
-                cmd = [cmd '-i "' files{i}{k} '" -i "' wavout '"' ...
-                    ' -map 0:0 -map 1 "' mp4out '"'];
+                % Replace audio in MP4                
+                mp4_file_out = fullfile(PATHSTR, [NAME d.suffix '.mp4']); 
+                cmd = [cmd '-i "' files{i}{k} '" -i "' audio_file_out '"' ...
+                    ' -map 0:0 -map 1 "' mp4_file_out '"'];
+                
+                % Issue system call 
                 system(cmd, '-echo');
                 
-                % Two-step procedure for AV temporal alignment.
-                %   Often times FFmpeg introduces errors in temporal
-                %   alignment between audio and visual tracks in the MP4.
-                %   This empirically determines any shift introduced and
-                %   attempts to correct (remove) them. 
-                %
-                %   CWB later discovered that the temporal alignments he
-                %   saw were in fact an attempt to align audio and video.
-                %   The video had an extra frame added to the beginning of
-                %   the MP4, so the audio had to be delayed appropriately.
-                %   So this chunk of code might be totally unnecessary. 
-                if d.talign
-                    
-                    % Read in audio data from MP4
-                    [ndata, nfs] = audioread(mp4out); 
-
-                    % Align signals, plot results
-                    %   Need another argument, 'align to'
-                    %   L is the number of samples the two signals are offset
-                    %   by
-                    [~, ~, L]=align_timeseries(odata(:, d.alignto), ndata(:, d.alignto), 'xcorr', 'fsx', ofs, 'fsy', nfs, 'pflag', 1);
-
-                    % Shift odata, rewrite wav file
-                    odata = circshift(odata, L); 
-
-                    % Rewrite WAV file 
-                    %   Write a corrected wav file
-                    tshift_wavout = fullfile(PATHSTR, [NAME d.suffix 'tshift' EXT]);
-                    audiowrite(fullfile(PATHSTR, [NAME d.suffix 'tshift' EXT]), odata, ofs, 'BitsperSample', d.bitdepth);
-
-                    % Remap audio (again)
-                    cmd = ['ffmpeg -i "' files{i}{k} '" -i "' tshift_wavout '"' ...
-                    ' -map 0:0 -map 1 "' mp4out '"'];
-                    system(cmd, '-echo');
-                    
-                end % if d.talign
-                
             otherwise
+                
                 error('Unknown file extension');
+                
         end % switch EXT
+        
         % If MP4, then use FFmpeg (see MLST_makemono for details)
         
     end % for k=1:numel(files{i})

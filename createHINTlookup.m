@@ -17,6 +17,7 @@ function createHINTlookup(suffix)
 
 % Load HINT options
 opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', '');
+opts = opts(1); 
 
 % Load original HINT lookup table 
 %   Relevant information is in sheet 2
