@@ -7,14 +7,21 @@ function addnoise2HINT(NFILE, varargin)
 %
 % INPUT:
 %
-%   NFILE:    path to wavfile containing noise stimulus.
+%   NFILE:    path to wavfile containing noise stimulus. These must be
+%               single channel files.
 %
 % Parameters:
 %
 %   'testID':   string, test ID that has the most relevant fields and
 %               information (likely 'HINT (SNR-50, Sentence-Based)'); 
 %
-%   'nmixer':   NoiseChannel x HintChannel mixing matrix. The noise
+%   'tmixer':   HintChannel x Output channel mixing matrix. HintChannel
+%               corresponds to the number of channels in the HINT sentence
+%               files (currently 1) and OutputChannel corresponds to the
+%               number of output channels in the resulting wav file after
+%               target and noise have been mixed together.
+%
+%   'nmixer':   NoiseChannel x OutputChannel mixing matrix. The noise
 %               stimulus will be multiplied by the noise mixer (nmixer) to
 %               create a stimulus that can be added to each of the sentence
 %               stimuli. 
@@ -44,12 +51,6 @@ function addnoise2HINT(NFILE, varargin)
 %
 %   'ampthresh':    used to remove silence from beginning and end of
 %                   acoustic waveforms prior to RMS estimation. 
-%
-%   'chan4silence': integer, channel to use for silence estimation. This
-%                   should typically correspond to the speech track in the
-%                   HINT audio files (typically 2). CWB left this as an
-%                   input in case the file format changes in later stages
-%                   of testing. 
 %
 %   'bitdepth': integer, bit depth used when writing WAV files. (e.g., 16, 24, 32)   
 %
@@ -87,12 +88,7 @@ end % isfield
 [~, files] = SIN_stiminfo(opts); 
 
 % Massage into a file list
-wavlist={}; 
-for i=1:numel(files)
-    for k=1:numel(files{i})
-        wavlist{end+1, 1} = files{i}{k};  %#ok<AGROW>
-    end % for k=1: ...
-end % for i=1: ...
+wavlist = concatenate_lists(files); 
 
 % Load noise stimulus
 t.dtype=2; % only allow wav
@@ -115,8 +111,8 @@ for i=1:numel(wavlist)
     display(wavlist{i}); 
     
     % Load the wav file
-    t.dtype=2; 
-    [wav, fs] = SIN_loaddata(wavlist{i}, t);     
+    t.dtype=2; t.maxts = 1;  
+    [wav, fs] = SIN_loaddata(wavlist{i}, t);        
     
     % Error check for mismatch in sampling rate
     if fs ~= nfs, error('Sampling rates do not match. Something amiss'); end 
@@ -125,8 +121,8 @@ for i=1:numel(wavlist)
     if d.removesilence
         
         % Find number of leading samples
-        leadtrim = threshclipaudio(wav(:, d.chan4silence), d.ampthresh, 'begin');
-        lagtrim = threshclipaudio(wav(:, d.chan4silence), d.ampthresh, 'end');
+        leadtrim = threshclipaudio(wav, d.ampthresh, 'begin');
+        lagtrim = threshclipaudio(wav, d.ampthresh, 'end');
         
         % How many samples do we think are silence at the beginning of the
         % sound? And the end?
@@ -145,7 +141,7 @@ for i=1:numel(wavlist)
     lagsamps = round(d.leadlag(2)*fs) - rmlag; 
     
     % Create padded data
-    wavout = [zeros(leadsamps, size(wav,2)); wav; zeros(lagsamps, size(wav,2))];    
+    wavout = [zeros(leadsamps, size(wav,2)); wav; zeros(lagsamps, size(wav,2))];        
     
     % How many times must the noise be repeated?
     nreps = ceil(size(wavout,1)/size(noise,1));
@@ -164,7 +160,7 @@ for i=1:numel(wavlist)
     rnoise = fade(rnoise, fs, true, true, @hann, 0.02); 
     
     % Mix noise with mixer, add to wav file
-    wavout = wavout + rnoise*d.nmixer; 
+    wavout = wavout*d.tmixer + rnoise*d.nmixer; 
     
     % write 32-bit output wav file
     [pathstr,name,ext] = fileparts(wavlist{i});

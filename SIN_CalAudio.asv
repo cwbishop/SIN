@@ -220,7 +220,7 @@ for i=1:numel(files)
     for k=1:numel(files{i})
         
         % Load data file
-        [audio_data{i}{k}, nfs] = SIN_loaddata(files{i}{k}); 
+        [audio_data{i}{k}, nfs] = audioread(files{i}{k}); 
         
         % Apply appropriate mixer
         %   This should reduce the data to a single channel. 
@@ -265,11 +265,10 @@ for i=1:numel(files)
 end % for i=1:length(files)
 
 % Concatenate files
-%   Now we'll concatenate the filtered files. 
-concat = concat_audio_files(concatenate_lists(audio_data), ...
+concat = concat_audio_files(concatenate_lists(audio_files), ...
     'fs', fs, ...
     'remove_silence', d.removesilence, ...
-    'amplitude_threshold', d.ampthresh);
+    'amplitud)
 %% CALCULATE SCALING FACTOR
 %   Identical scaling factor should be applied to all stimuli from the same
 %   test. 

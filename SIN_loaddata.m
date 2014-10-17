@@ -114,13 +114,8 @@ function [X, FS, LABELS, ODAT, DTYPE]=SIN_loaddata(X, varargin)
 % Convert inputs to structure
 %   Users may also pass a parameter structure directly, which makes CWB's
 %   life a lot easier. 
-if length(varargin)>1
-    p=struct(varargin{:}); 
-elseif length(varargin)==1
-    p=varargin{1};
-elseif isempty(varargin)
-    p=struct();     
-end %
+%% GATHER PARAMETERS
+p = varargin2struct(varargin{:}); 
 
 %% INITIALIZE VARIABLES
 
@@ -384,8 +379,8 @@ end % if ~ismember(DTYPE, p.datatype)
 %   during plotting routines.
 if ~isempty(p.fs) && isempty(FS)
     FS=p.fs;
-elseif isempty(p.fs) && isempty(FS)
-    error('Sampling rate undefined.'); 
+% elseif isempty(p.fs) && isempty(FS)
+%     error('Sampling rate undefined.'); 
 end % if ~isempty(p.fs) && ... 
 
 end % function SIN_loaddata

@@ -8,8 +8,55 @@ function [concat, fs] = concat_audio_files(audio_files, varargin)
 % INPUT:
 %
 %   audio_files:    cell array of file names. All files should have the
-%                   same sampling rate
+%                   same sampling rate and the same number of channels
+%
+%                   Alternatively, this can be a cell array of time series.
+%                   If this is the case, then each time series will be
+%                   assumed to have the same sampling rate and number of
+%                   channels. 
+%
+% Parameters:
+%
+%   'fs':   sampling rate. Only required if audio_files is a cell array of
+%           time series. 
+%
+%   'remove_silence':   bool, if set, silence at beginning and end of
+%                       sounds will be removed before concatenating files.
+%                       If this is set to TRUE, then amp_thresh must be
+%                       defined below as well. 
+%
+%   'amplitude_threshold':  double, this is the amplitude threshold used to
+%                           determine what is "silence" and what is not.
+%                           Anything smaller than this value will be
+%                           considered silence. 
 %
 % OUTPUT:
 %
-%   c
+%   concat: concatenated time series.
+%
+%   fs:     sampling rate of concatenated time series.
+%
+% Development:
+%
+%   None (yet)
+%
+% Christopher W Bishop
+%   University of Washington
+%   10/14
+
+%% GATHER PARAMETERS
+d=varargin2struct(varargin{:}); 
+
+%% DEFINE OUTPUT PARAMETERS
+concat = [];
+
+% Load each file, remove silence if necessary
+for i=1:numel(audio_files)
+    
+    [time_series, tfs] = SIN_loaddata(audio_files{i}); 
+    
+    % Remove silence if user tells us to
+    if d.remove_silence
+        time_series = threshclipaudio(time_series, d.amplitude_
+    end % 
+end % for i=1:numel(audio_files)

@@ -5,7 +5,30 @@
 %
 
 % Clear the stack
-clear all;
+% clear all;
+
+%% VARIABLES THAT APPLY ACROSS MORE THAN ONE STIMULUS SET
+% Frequency range for IIR filtering below. This frequency range should be
+% used in all subsequent stimulus sets as well. 
+filter_frequency_range = [125 10000];
+
+% We want a 4th order bandpass filter (really 8th order since we're using
+% filtfilt).
+filter_type = 'bandpass';
+bandpass_filter_order = 4; 
+
+% Spectral matching filter information
+spectral_match_filter_order = 100; 
+
+% Bitdepth for audio files. This should be used in all subsequent write
+% calls as well. 
+audio_bit_depth = 24; 
+FS = 44100; % sampling rate of all audio files
+
+% Periodogram parameters
+pwelch_window = FS; % pwelch_window in seconds
+pwelch_noverlap = [];
+pwelch_nfft = FS;
 
 %% CREATE HINT + SPEECH SHAPED NOISE (SPSHN) STIMULI
 % ===================================
@@ -16,19 +39,6 @@ clear all;
 % Amplitude used for silence detection
 hint_ampthresh = 0.0001;
 
-% Frequency range for IIR filtering below. This frequency range should be
-% used in all subsequent stimulus sets as well. 
-filter_frequency_range = [125 10000];
-
-% We want a 4th order bandpass filter (really 8th order since we're using
-% filtfilt).
-filter_type = 'bandpass';
-filter_order = 4; 
-
-% Bitdepth for audio files. This should be used in all subsequent write
-% calls as well. 
-audio_bit_depth = 24; 
-
 scale = SIN_CalAudio(fullfile('playback', 'Noise', 'HINT-Noise.wav'), ...
     'testID', 'HINT (SNR-50, keywords, 1up1down)', ...
     'nmixer', [db2amp(-21); 0], ...
@@ -38,13 +48,13 @@ scale = SIN_CalAudio(fullfile('playback', 'Noise', 'HINT-Noise.wav'), ...
     'bitdepth', audio_bit_depth, ...
     'suffix', ';0dB', ...
     'tmixer', [0;1], ...
-    'omixer', [1 0], ...
+    'omixer', 1, ...
     'writeref', true, ...
     'wav_regexp', '[0-9]{2}.wav', ...
     'apply_filter', true, ...
     'filter_type', filter_type, ...
     'frequency_cutoff', filter_frequency_range, ...
-    'filter_order', filter_order);
+    'filter_order', bandpass_filter_order);
 
 % ===================================
 % Confirm that the SPSHN sample is spectrally matched to the HINT corpus
@@ -70,7 +80,26 @@ opts.specific.wav_regexp = '[0-9]{2};0dB.wav$';
 hint_audio_files = concatenate_lists(hint_audio_files); 
 
 % Concatenate the files 
+[hint_time_series, fs] = concat_audio_files(hint_audio_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh); 
 
+% figure, hold on
+% Get pwelch for concatenated hint sentences
+[Pxx, pwelch_freqs_xx] = pwelch(hint_time_series, pwelch_window, pwelch_noverlap, pwelch_nfft, fs); 
+% plot(pwelch_freqs, db(Pxx, 'power'), 'b');
+
+% Get pwelch for speech shaped noise sample
+hint_spshn = SIN_loaddata(fullfile('playback', 'Noise', 'HINT-Noise;0dB.wav'));
+[Pyy, pwelch_freqs_yy] = pwelch(hint_spshn, pwelch_window, pwelch_noverlap, pwelch_nfft, fs); 
+% plot(pwelch_freqs, db(Pyy, 'power'), 'r');
+
+% Plot results
+figure, hold on
+plot(pwelch_freqs, db([Pxx Pyy], 'power'))
+title('HINT PSDs')
+ylabel('PSD (dB/Hz)');
+xlabel('Frequency (Hz)');
 
 % ===================================
 % Add noise to newly created HINT stimuli
@@ -78,9 +107,48 @@ hint_audio_files = concatenate_lists(hint_audio_files);
 %   sentences and adds in a noise track (channel 2) that can later be
 %   mixed.
 % ===================================
+addnoise2HINT(fullfile('playback', 'Noise', 'HINT-Noise;0dB.wav'), ...
+    'testID', 'HINT (SNR-50, keywords, 1up1down)', ...
+    'wav_regexp', '[0-9]{2};0dB.wav$', ...
+    'tmixer', [1 0], ...
+    'nmixer', [0 1], ...
+    'leadlag', [1 1], ...
+    'suffix', '+spshn', ...
+    'noiserange', [0.5 5.5], ...
+    'bitdepth', audio_bit_depth, ...
+    'removesilence', true, ...
+    'ampthresh', hint_ampthresh*scale, ...
+    'chan4silence', 1);
 
 %% CREATE HINT + MULTI-TALKER BABBLE (ISTS) STIMULI
 % ===================================
-% Create a calibrated, spectrally matched 
+% Create a calibrated, spectrally matched ISTS stimulus for HINT
+%
+%   The ISTS should be calibrated and spectrally matched to the HINT SPSHN
+%   sample described above. This will (effectively) bandpass filter the 
+%   ISTS as well, since the SPSHN is already bandpass filtered. 
+%
+%   This will need to be saved as a separate file because its spectrum may
+%   not be appropriate for other tests (likely). 
 % ===================================
 
+% Load original ISTS
+[ists, ists_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'))); 
+[hint_spshn, hint_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise;0dB.wav'))); 
+if ists_fs ~= hint_fs, error('sampling rates differ'); end
+
+% Match ISTS to HINT SPSHN
+[ists_filt] = match_spectra(hint_spshn, ists, ...
+        'fsx', hint_fs, ...
+        'fsy', ists_fs, ...
+        'plot', true, ...
+        'frequency_range', [eps inf], ...
+        'filter_order', 200, 'window', pwelch_window, 'noverlap', pwelch_noverlap, 'nfft', pwelch_nfft);
+% Bandpass filter the ISTS stimulus
+% [b, a] = butter(bandpass_filter_order, filter_frequency_range./(ists_fs/2), filter_type);
+% ists_filt = filtfilt(b,a,ists); 
+
+
+% Scale spectrally matched ISTS to match rms levels to HINT spshn
+
+% Write spectrally matched/calibrated ISTS for HINT
