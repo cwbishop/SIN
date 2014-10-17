@@ -30,6 +30,10 @@ function [concat, fs] = concat_audio_files(audio_files, varargin)
 %                           Anything smaller than this value will be
 %                           considered silence. 
 %
+%   'mixer':    Dx1 mixing matrix. Some of the helper functions require
+%               single channel inputs, so the mixer may need to be put in
+%               line to collapse the data into a single channel. 
+%
 % OUTPUT:
 %
 %   concat: concatenated time series.
@@ -57,6 +61,9 @@ for i=1:numel(audio_files)
     % We pass in d as a paramter list so SIN_loaddata can have access to
     % the sampling rate information if it exists. 
     [time_series, tfs] = SIN_loaddata(audio_files{i}, d); 
+    
+    % Apply mixer to time_series
+    time_series = time_series*d.mixer; 
     
     % Sampling rate check 
     if isempty(fs)

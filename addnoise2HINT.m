@@ -34,7 +34,15 @@ function addnoise2HINT(NFILE, varargin)
 %   'noiserange':   two-element double array, which time range of the noise
 %                   sample to use. The noise sample is often already faded
 %                   in/out, so we need to use stable samples somewhere in
-%                   the middle. 
+%                   the middle. Units are sec. This can be combined with
+%                   the 'shift_noise' flag below to select a specific time
+%                   range within the noise file, but move the starting
+%                   point within this time range from file to file. 
+%
+%   'shift_noise':  bool, if true, then the noise sample selected by
+%                   'noiserange' is temporally shifted for every file to
+%                   allow for "pseudorandom" noise segments for each
+%                   sentence. 
 %
 %   'wav_regexp':   regular expression used to filter WAV files (e.g., 
 %                   '[0-9]{2}.wav$').
@@ -167,4 +175,8 @@ for i=1:numel(wavlist)
     fname = fullfile(pathstr, [name d.suffix ext]);
     audiowrite(fname, wavout, fs, 'BitsperSample', d.bitdepth), 
     
+    % We circularly shift the noise samples to keep things interesting. 
+    if d.shift_noise
+        noise = circshift(noise, mod(size(rnoise,1), size(noise,1))); 
+    end % if d.shift_noise
 end % for i

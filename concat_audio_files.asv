@@ -30,6 +30,10 @@ function [concat, fs] = concat_audio_files(audio_files, varargin)
 %                           Anything smaller than this value will be
 %                           considered silence. 
 %
+%   'mixer':    Dx1 mixing matrix. Some of the helper functions require
+%               single channel inputs, so the mixer may need to be put in
+%               line to collapse the data into a single channel. 
+%
 % OUTPUT:
 %
 %   concat: concatenated time series.
@@ -49,14 +53,30 @@ d=varargin2struct(varargin{:});
 
 %% DEFINE OUTPUT PARAMETERS
 concat = [];
+fs = []; 
 
 % Load each file, remove silence if necessary
 for i=1:numel(audio_files)
     
-    [time_series, tfs] = SIN_loaddata(audio_files{i}); 
+    % We pass in d as a paramter list so SIN_loaddata can have access to
+    % the sampling rate information if it exists. 
+    [time_series, tfs] = SIN_loaddata(audio_files{i}, d); 
+    
+    % Apply mixer to time_series
+    time_series = time_serie
+    % Sampling rate check 
+    if isempty(fs)
+        fs = tfs;
+    elseif tfs ~= fs
+        error('Sampling rates do not match');
+    end % if isempty(fs)
     
     % Remove silence if user tells us to
     if d.remove_silence
-        time_series = threshclipaudio(time_series, d.amplitude_
-    end % 
+        time_series = threshclipaudio(time_series, d.amplitude_threshold, 'begin&end'); 
+    end % if d.remove_silence
+    
+    % Concatenate time series
+    concat = [concat; time_series];
+    
 end % for i=1:numel(audio_files)

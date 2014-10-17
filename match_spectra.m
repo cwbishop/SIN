@@ -157,7 +157,7 @@ if d.plot
     figure, hold on
     plot(freqs, db([Pxx, Pyy, Pts], 'power'));
     title('PSDs');
-    legend('Reference', 'Original', 'Matched', 'FIR');
+    legend('Reference', 'Original', ['Matched w/ ' num2str(d.filter_order) ' FIR'], 'location', 'NorthOutside');
     xlabel('Frequency (Hz)')
     ylabel('PSD (dB/Hz)');
     set(gca, 'XScale', 'log')
