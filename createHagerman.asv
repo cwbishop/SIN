@@ -161,24 +161,7 @@ if ~isempty(d.noise_track)
    
 end % if ~isempty(d.noise_track) 
 
-% Match the duration of the noise track and target track
-if size(noise_track, 1) < size(target_track, 1)
-    
-    % If the noise track is too short, then replicate it 
-    noise_track = repmat(noise_track, ceil(size(target_track,1)./size(noise_track,1)));
-    
-end % if size ...
-
-% Now trim it to match the duration of the target track
-noise_track = noise_track(1:size(target_track,1), :); 
-
-% Calculate RMS of target and noise track
-target_rms = rms(concat_target_track); 
-noise_rms = rms(noise_track); 
-
-% Equate noise and target levels
-%   We need the SPL (measured as dB(rms) to be equal. That is, we need to
-%   scale the noise such that we have 0 dB
+% Calculate RMS 
 % % Should we remove silence from noise as well?
 % if ~isempty(nstim)    
 %     

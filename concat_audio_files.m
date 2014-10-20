@@ -1,4 +1,4 @@
-function [concat, fs] = concat_audio_files(audio_files, varargin)
+function [concat, fs, all_time_series] = concat_audio_files(audio_files, varargin)
 %% DESCRIPTION:
 %
 %   This function will load and concatenate all audio files. Parameters
@@ -54,6 +54,7 @@ d=varargin2struct(varargin{:});
 %% DEFINE OUTPUT PARAMETERS
 concat = [];
 fs = []; 
+all_time_series = {};
 
 % Load each file, remove silence if necessary
 for i=1:numel(audio_files)
@@ -78,6 +79,9 @@ for i=1:numel(audio_files)
     end % if d.remove_silence
     
     % Concatenate time series
-    concat = [concat; time_series];
+    concat = [concat; time_series]; %#ok<*AGROW>
+    
+    % Append to all time series
+    all_time_series{i} = time_series; 
     
 end % for i=1:numel(audio_files)

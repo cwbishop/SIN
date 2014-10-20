@@ -541,7 +541,8 @@ switch testID
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
         % Set regular expression for wav files
-        opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+%         opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m

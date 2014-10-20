@@ -1,6 +1,6 @@
 A sound will play from each speaker in turn. 
 
-- Set the SLM dial to 60, response to “Slow”, and weighting to “A”. 
+- Set the SLM dial to 60, response to “Slow”, and weighting to “C”. 
 
 - Click on the “Begin/Resume” button to begin the first speaker.
 

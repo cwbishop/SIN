@@ -264,7 +264,7 @@ for c=1:size(Y,1)
     %       the first entry to be blank, but others to be labeled. A work
     %       around is the set the first label to ' ' (note the space). This
     %       will achieve the user's intent. 
-    if ~isempty(d.legend{1}), legend(d.legend, 'location', d.legend_position); end 
+    if ~isempty(d.legend) && ~isempty(d.legend{1}), legend(d.legend, 'location', d.legend_position); end 
     
     % Turn grid on
     %   Have to set parameter fields directly rather than calling "grid".

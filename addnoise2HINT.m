@@ -106,6 +106,9 @@ t.dtype=2; % only allow wav
 %   Recall that the noise sample (at least for HINT) is faded in/out
 %   already, so we need to use some samples in the middle. 
 d.noiserange = round(d.noiserange .* nfs); 
+% Need to add 1 sample since "0" maps to sample 1 index wise. 
+d.noiserange(1) = d.noiserange(1) + 1; 
+
 noise = noise(d.noiserange(1):d.noiserange(2), :); 
 
 % Check noise dimensions
