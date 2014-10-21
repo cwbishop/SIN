@@ -47,6 +47,15 @@ function createHagerman(varargin)
 %
 %   'noise_input_mixer':     like target_mixer but applied to the noise sample.
 %
+%   'reference_track':  string, path to the reference track used to
+%                       RMS normalize the noise and target tracks to 0 dB.
+%                       In the context of the SNR grant, this will be the
+%                       HINT-SPSHN file, which is our standard for
+%                       calibration purposes. 
+%   
+%   'reference_input_mixer':    like target_input_mixer, but applied to
+%                               reference track
+%
 %   'remove_silence':    bool, if set, removes the silence from beginning
 %                       and end of noise and target samples before further
 %                       processing. If set to TRUE, must also set
@@ -65,7 +74,7 @@ function createHagerman(varargin)
 %                   end of noise track. If user does not want any
 %                   windowing, set to 0. Uses a Hanning windowing function
 %
-%   'noise_shift':   the temporal offset applied to noise between sequential
+%   'noise_time_shift':   the temporal offset applied to noise between sequential
 %                   output channels (in sec). 
 %
 %   File Output:
@@ -88,13 +97,6 @@ function createHagerman(varargin)
 %
 %   'noise_output_mixer'     1xP array, like target_output_mixer about, but mixes input noise
 %                   track into output tracks. 
-%
-%   'write_signal_mask':   bool, if true, then the function will write a
-%                           "companion file" for each output file. This is
-%                           a binary mask that can be later loaded and used
-%                           to mask a recording to limit RMS estimates to
-%                           the periods during which a signal is actually
-%                           present. 
 %
 % Visualization Parameters:
 %
@@ -142,46 +144,30 @@ end % if any ...
 
 % concat_target_trackenate stimuli into a single time series. This is later used in RMS
 % estimation routines. 
-[concat_target_track, target_fs, target_track] = concat_audio_files(d.target_tracks, ...
+[concat_target_track, target_fs, target_tracks] = concat_audio_files(d.target_tracks, ...
     'remove_silence', true, ...
     'amplitude_threshold', d.amplitude_threshold, ...
     'mixer', d.target_input_mixer); 
+
+% Assume target_fs will be the sampling rate
+FS = target_fs; 
 
 % Only load noise stimulus if user specifies it
 if ~isempty(d.noise_track)
     
     % Load noise track
-    [~, noise_fs, noise_track] = concat_audio_files(d.noise_track, ...
+    [concat_noise_track, noise_fs] = concat_audio_files(d.noise_track, ...
     'remove_silence', true, ...
     'amplitude_threshold', d.amplitude_threshold, ...
-    'mixer', d.noise_input_mixer); 
+    'mixer', d.noise_input_mixer);     
     
     % Sampling rate error check
-    if noise_fs ~= target_fs, error('Sampling rates do not match'); end 
+    if noise_fs ~= FS, error('Sampling rates do not match'); end 
    
 end % if ~isempty(d.noise_track) 
 
-% Calculate RMS 
-% % Should we remove silence from noise as well?
-% if ~isempty(nstim)    
-%     
-%     % Estimate RMS of target and noise track
-%     rmstarg = rms(concat_target_track); 
-%     rmsnoise = rms(noiseref);
-% 
-%     % If holdtargSPL is set, then scale the noise to target
-%     scale = db2amp(db(rmstarg) - db(rmsnoise)); 
-%     nstim = nstim.*scale; % scale the noise stimulus. 
-%     
-% end % ~isempty(nstim)
-
-%% WRITE concat_target_trackENATED FILE?
-%   If the user suggests it, then we need to write the concat_target_trackenated file
-%   used for scaling estimate to file. This may be useful when playing
-%   stimuli back in sound field for SPL measurement.
-
-% Clear potentially confusing variables
-clear concat_target_track noiseref noise
+% By this point, we should have noise and target stimuli calibrated to 0
+% dB. That is, the SNR should also be 0 dB. We'll work on things from here.
 
 % Set random number generator state to a constant so we get the same
 % stimulus every time 
@@ -189,63 +175,98 @@ clear concat_target_track noiseref noise
 rng(0, 'twister'); % resets default state of random number generate
 
 % Generate output target track
-tout = []; % target output track
+target_output_track = []; % target output track
 signal_mask = []; % the signal mask will be TRUE everywhere there's a signal and FALSE where we input silence
-for i=1:numel(tstim)
+for i=1:numel(target_tracks)
     
-    % Estimate silent periods at beginning and end of sound
-    if i>1
-        leadsamps = size(tstim{i-1}, 1) - size(threshclipaudio(tstim{i-1}, d.amplitude_threshold, 'begin'),1);
-    else 
-        leadsamps = 0; 
-    end 
-    
-    % Always calculate lag samps of current stimulus
-    lagsamps = size(tstim{i}, 1) - size(threshclipaudio(tstim{i}, d.amplitude_threshold, 'end'),1); 
-    
-    % Get total number of zeroed samples to add    
-    zsamps = round((d.gap_range(1) + diff(d.gap_range)*rand(1))*d.output_fs) - (leadsamps + lagsamps);   
-    
-    % Create zero-padded stimulus
-    zpad = [tstim{i}; zeros(zsamps, size(tstim{i}, 2))]; 
-    
-    % Create zero padded track
-    %   Zeros are how we account for silent period after sound offset
-    tout = [tout; zpad]; 
-    
-    % Make a signal_mask
-    %   This is one everywhere a "signal" has been added. Note, however,
-    %   that this requires a signal to be present in the data to begin with
-    %   - so it's a bit of a misnomer. 
-    %
-    %   signal_mask is written as an extra channel in the data. 
-%     if d.write_signal_mask
-        signal_mask = [signal_mask; true(size(tstim{i})); false(zsamps, size(tstim{i},2))];        
-%         tout = [tout; signal_mask];
-%     end % if d.write_signal_mask
-    
-    clear zpad
-    
-end % for i=1:numel(tstim)
+    [~, clip_mask] = threshclipaudio(target_tracks{i}, d.amplitude_threshold, 'begin&end');
+    if i < numel(target_tracks)
+        % Find the number of "zero" (or at least below threshold) samples at
+        % the beginning and end of the sound.
+        %
+        %   The threshold estimate needs to be scaled by target_scale since we
+        %   scaled target_tracks above.
 
-% Mix tout with target_output_mixer
-tout = tout * d.target_output_mixer; 
+        [~, clip_mask_next] = threshclipaudio(target_tracks{i+1}, d.amplitude_threshold, 'begin&end');
 
-%% CREATE NOISE OUTPUT (nout)
-%   - Remix the audio and implement time delays using remixaudio
-%   - Fade noise samples in and out on all channels. 
-if ~isempty(nstim)
-    % Create matching noise sample
-    nout = repmat(nstim, ceil(size(tout,1)./size(nstim,1)), 1); % repmat it to match
-    nout = nout(1:size(tout,1)); % truncate to match
+        % Find number of "0" samples at the beginning of the NEXT sound and the
+        % trailing zeros in the CURRENT trial. These two together tell us how
+        % long the "silence" is between sounds already. We'll need to adjust
+        % for this below. 
+        lag_zeros = size(target_tracks{i}, 1) - find(clip_mask == false, 1, 'last'); 
+        lead_zeros = find(clip_mask_next == false, 1, 'first'); 
 
-    % Fade noise in/out
-    nout = fade(nout, d.output_fs, true, true, @hann, d.noise_window_sec); 
+        % How many zeros do we need to add to the end of the CURRENT sound?
+        zeros_to_add = round((d.gap_range(1) + diff(d.gap_range)*rand(1))*FS);
+        zeros_to_add = zeros_to_add - (lag_zeros + lead_zeros); 
+
+        % Add the zeros to the current sound
+        target_track_padded = [target_tracks{i}; zeros(zeros_to_add, size(target_tracks{i}, 2))];
     
-    % Mix noise and apply time shift
-    nout = remixaudio(nout, 'fsx', d.output_fs, 'mixer', d.noise_output_mixer, 'toffset', d.noise_shift, 'writetofile', false);  
+    else
+        target_track_padded = target_tracks{i};
+        zeros_to_add = 0; 
+    end % if 
     
-end % if ~isempty(nstim)
+    % Add to growing output_target_track
+    target_output_track = [target_output_track; target_track_padded];
+    
+    % Grow signal_mask
+    %   Need to flip bool value of clip_mask since clip_mask tells us which
+    %   samples were REMOVED (i.e., are NOT signals)
+    signal_mask = logical([signal_mask; ~clip_mask; false(zeros_to_add, 1)]);
+    
+end % for i=1:numel(target_tracks)
+
+% Match the duration of the noise track and target track
+if size(concat_noise_track, 1) < size(target_output_track, 1)
+    
+    % If the noise track is too short, then replicate it 
+    concat_noise_track = repmat(concat_noise_track, ceil(size(target_output_track,1)./size(concat_noise_track, 1)), 1);
+    
+end % if size ...
+
+% Now trim it to match the duration of the target track
+concat_noise_track = concat_noise_track(1:size(target_output_track,1), :); 
+
+% Match RMS of target to RMS of reference
+%   The reference file is used to calibrate both the target and noise
+%   tracks to 0 dB. 
+[reference_track, reference_fs] = SIN_loaddata(d.reference_track); 
+
+% Apply reference mixer.
+reference_track = reference_track * d.reference_input_mixer; 
+
+% Sampling rate check
+if reference_fs ~= FS, error('Sampling rates do not match'); end
+
+% Scale noise and target to match the reference signal.
+target_rms = rms(target_output_track(signal_mask)); % only include the signal in the target_output_track
+reference_rms = rms(reference_track); 
+target_scale = reference_rms ./ target_rms;
+target_output_track = target_output_track .* target_scale; 
+
+% Calculate RMS of noise and scale to 0 dB SPL (that is, match to reference
+% track).
+noise_rms = rms(concat_noise_track);
+noise_scale = reference_rms ./ noise_rms;
+noise_output_track = concat_noise_track .* noise_scale;
+
+% ===============================
+% Interim Summary:
+%
+%   By this point, we have a single channel noise track
+%   (noise_output_track) and a single channel target track
+%   (target_output_track) that are RMS equated to a reference signal.
+%   The RMS normalization of target_output_track *excludes* the
+%   subthreshold regions of the signal. The RMS normalization of
+%   noise_output_track includes all data samples.
+%
+%   In other words, both tracks are at 0 dB relative to the reference track
+%   and 0 dB relative to each other. So the SNR of thes tracks is
+%   effectively 0 dB. Below, we will scale the noise_output_track to create
+%   the intended SNRs. 
+% ===============================
 
 % Now, assuming we're at 0 dB SNR, create requested SNR outputs
 for i=1:numel(d.snrs)
@@ -258,36 +279,44 @@ for i=1:numel(d.snrs)
     %   target*-1, noise*1: TinvNorig
     %   target*-1, noise*-1:    TinvNinv
     %   target*1, noise*-1: TorigNinv
-    invmixer = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
+    polarity = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
     
-    for n=1:size(invmixer,1)
-        % Scale noise, mix to create output track
-        if ~isempty(nstim)     
-            % We have to multiply the SNR by -1 since we are holding th
-            % speech track constant, but changing the noise. 
-            out = tout.*invmixer(n,1) + nout.*db2amp(d.snrs(i).*-1).*invmixer(n,2);
-        else
-            out = tout.*invmixer(n,1);
-        end % out
+    for n=1:size(polarity,1)
         
-        % Append signal mask as the last channel in audio file
-        if d.write_signal_mask
-            out = [out signal_mask];
-        end % if d.write_signal_mask
+        % Scale the noise_output_channel to create the desired SNR
+        noise_output_mixed = noise_output_track .* db2amp(d.snrs(i).*-1);
         
+        % Remix the noise sample, including time shifts
+        noise_output_mixed = remixaudio(noise_output_mixed, ...
+            'fsx',  FS, ...
+            'mixer',    d.noise_output_mixer, ...
+            'toffset',  d.noise_time_shift, ...
+            'writetofile',  false); 
+        
+        % Fade noise in/out
+        noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+        
+        % Mix target output
+        %   Assumes we won't be applying a time shift. Don't think we'd
+        %   ever need to for these specific stimuli.
+        target_output_mixed = target_output_track * d.target_output_mixer;
+        
+        % Mix the noise and target
+        mixe
+                
         % Generate target description string
-        if sign(invmixer(n,1))==1
+        if sign(polarity(n,1))==1
             tstr = 'Torig';
-        elseif sign(invmixer(n,1))==-1
+        elseif sign(polarity(n,1))==-1
             tstr = 'Tinv';
         else
             error('I broke');
         end %if ...
         
         % Generate Noise description string
-        if sign(invmixer(n,2))==1
+        if sign(polarity(n,2))==1
             nstr = 'Norig';
-        elseif sign(invmixer(n,2))==-1
+        elseif sign(polarity(n,2))==-1
             nstr = 'Ninv';
         else
             error('I broke');

@@ -1,4 +1,4 @@
-function [concat, fs, all_time_series] = concat_audio_files(audio_files, varargin)
+function [concat, fs,  original_time_series, clipped_time_series] = concat_audio_files(audio_files, varargin)
 %% DESCRIPTION:
 %
 %   This function will load and concatenate all audio files. Parameters
@@ -75,13 +75,14 @@ for i=1:numel(audio_files)
     
     % Remove silence if user tells us to
     if d.remove_silence
-        time_series = threshclipaudio(time_series, d.amplitude_threshold, 'begin&end'); 
+        time_series_clipped = threshclipaudio(time_series, d.amplitude_threshold, 'begin&end'); 
     end % if d.remove_silence
     
     % Concatenate time series
-    concat = [concat; time_series]; %#ok<*AGROW>
+    concat = [concat; time_series_clipped]; %#ok<*AGROW>
     
     % Append to all time series
-    all_time_series{i} = time_series; 
+    clipped_time_series{i} = time_series_clipped; 
+    original_time_series{i} = time_series; 
     
 end % for i=1:numel(audio_files)
