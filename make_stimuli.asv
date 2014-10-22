@@ -512,5 +512,5 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
 % ===================================
 % Create MLST
 %   
-%   
+%   Like the Hagerman, we essentially have to start from scratch for 
 % ===================================
