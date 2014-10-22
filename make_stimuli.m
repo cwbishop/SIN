@@ -39,6 +39,9 @@ pwelch_nfft = FS;
 % Amplitude used for silence detection
 hint_ampthresh = 0.0001;
 
+% Random noise seed for noise sample selection
+hint_random_noise_seed = '1000';
+
 % ===================================
 % Match the long-term spectrum of the spshn spectrum to the long-term
 % spectrum of the concatenated HINT corpus
@@ -71,6 +74,10 @@ hint_spshn = hint_spshn(:,1);
 % sample rate check
 if spshn_fs ~= hint_fs, error('Mismatched sample rates'); end 
 
+% We need to create a SPSHN stimulus that is spectrally-matched to the HINT
+% speech corpus (concatenated sentences). We just need to spectrally match
+% in a high-pass sense. We don't bandpass filter here because bandpass
+% filtering is implicitly done in the call to SIN_CalAudio below. 
 [hint_spshn] = match_spectra(hint_time_series, hint_spshn, ...
         'fsx', hint_fs, ...
         'fsy', hint_fs, ...
@@ -103,7 +110,13 @@ hint_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'frequency_cutoff', filter_frequency_range, ...
     'filter_order', bandpass_filter_order);
 
-% Check spectra
+% The output SPSHN (HINT-SPSHN;bandpass;0dB.wav) is our calibration
+% stimulus moving forward. That is, all other calibration procedures should
+% use THIS file, not HINT-SPSHN. Recall that HINT-SPHN is not bandpass
+% filtered. 
+calibration_file = fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav');
+
+% Confirm that spectral matching procedure led to good results. 
 
 % Need to get the new 0dB hint_time_series
 opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', '1001');
@@ -124,7 +137,7 @@ hint_audio_files = concatenate_lists(hint_audio_files);
     'mixer', 1);
 
 % Load the speech shaped noise file
-hint_spshn = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav')); 
+hint_spshn = SIN_loaddata(calibration_file); 
 
 % Replace this call with plot_psd
 plot_psd({ hint_time_series hint_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
@@ -135,7 +148,7 @@ plot_psd({ hint_time_series hint_spshn }, @pwelch, pwelch_window, pwelch_noverla
 %   sentences and adds in a noise track (channel 2) that can later be
 %   mixed.
 % ===================================
-addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav'), ...
+addnoise2HINT(calibration_file, ...
     'testID', 'HINT (SNR-50, keywords, 1up1down)', ...
     'wav_regexp', '[0-9]{2};bandpass;0dB.wav$', ...
     'tmixer', [1 0], ...
@@ -146,7 +159,7 @@ addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SP
     'bitdepth', audio_bit_depth, ...
     'removesilence', true, ...
     'ampthresh', hint_ampthresh*hint_scale, ...
-    'shift_noise', false);     
+    'random_noise_seed', str2double(hint_random_noise_seed));     
 
 %% CREATE HINT + MULTI-TALKER BABBLE (ISTS) STIMULI
 % ===================================
@@ -158,6 +171,9 @@ addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SP
 %
 %   This will need to be saved as a separate file because its spectrum may
 %   not be appropriate for other tests (likely). 
+%
+%   Note: We need to create a 3-talker ISTS by temporally shifting and
+%   adding the single-talker ISTS.
 % ===================================
 
 % Load original ISTS
@@ -180,32 +196,56 @@ ists_filt = filtfilt(b, a, ists);
         'noverlap', pwelch_noverlap, ...
         'nfft', pwelch_nfft);
 
-% Need to RMS scale the filtered ISTS to match our calibration stimulus
+% Need to RMS scale the filtered ISTS to match our calibration stimulus.
+% This will produce a single-channel, 1-talker ISTS stimulus that is
+% calibrated to ~0 dB relative to the calibration stimulus. 
 ists_scale = rms(hint_spshn) ./ rms(ists_filt);
 ists_filt = ists_filt .* ists_scale;
 
 % Write spectrally matched/calibrated ISTS for HINT
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-ISTS;bandpass;0dB.wav'), ists_filt, hint_fs, 'BitsperSample', audio_bit_depth);
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS_1_talker;bandpass;0dB.wav'), ists_filt, hint_fs, 'BitsperSample', audio_bit_depth);
+
+% Make 3-talker ISTS
+%   Note that the timing offsets were selected through some trial and error
+%   by CWB. His goal was to minimize temporal gaps (that is, periods of
+%   relative silence) when summing the signal over channels.
+ists_3talker = remixaudio(ists_filt, ...
+    'fsx',    hint_fs, ...
+    'mixer',    [1 1 1], ...
+    'toffset',  [0 11.234 28.1987], ...
+    'writetofile',  false); 
+
+% Confirm that RMS is the same for all channels
+db(rms(ists_3talker)) - db(rms(ists_filt)) 
+
+% Write the 3-talker version
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS_3_talker;bandpass;0dB.wav'), ists_3talker, hint_fs, 'BitsperSample', audio_bit_depth);
+
+% Need to calculate the scaling factor that needs to be applied to each
+% of the ISTS channels (talkers) to collapse them into a single channel. 
+ists_scale4hint = rms(hint_spshn)./rms(sum(ists_3talker,2));
 
 % Add ISTS noise to HINT stimuli
-addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-ISTS;bandpass;0dB.wav'), ...
+%   nmixer is DxP, where D is the number of channels in the wav file and P
+%   is the number of output channels 
+addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS_3_talker;bandpass;0dB.wav'), ...
     'testID', 'HINT (SNR-50, keywords, 1up1down)', ...
     'wav_regexp', '[0-9]{2};bandpass;0dB.wav$', ...
     'tmixer', [1 0], ...
-    'nmixer', [0 1], ...
+    'nmixer', [ [zeros(size(ists_3talker,2),1)] [ists_scale4hint; ists_scale4hint; ists_scale4hint] ], ...
     'leadlag', [1 1], ...
-    'suffix', '+ists', ...
+    'suffix', '+3talker_ists', ...
     'noiserange', [0 60], ...
     'bitdepth', audio_bit_depth, ...
     'removesilence', true, ...
     'ampthresh', hint_ampthresh*hint_scale, ...
-    'shift_noise', true);
+    'random_noise_seed', str2double(hint_random_noise_seed)); % seed with subject identifier. hard-coded here, but will wrap this into a function later.
 
 % Clear SPSHN and ISTS variables and read them in fresh from file to make
 % sure we have calibrated these correctly and nothing is botched when
 % writing to file.
 clear ists_filt ists
-[ists, ists_fs] = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-ISTS;bandpass;0dB.wav'));
+[ists, ists_fs] = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS_1_talker;bandpass;0dB.wav'));
 
 % Get pwelch for concatenated hint sentences
 [Pxx, pwelch_freqs] = pwelch(hint_time_series, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
@@ -241,9 +281,6 @@ title('Relative HINT Stimulus Levels');
 %
 %   Note: we do NOT want to do any spectral matching here.
 % ===================================
-% Load HINT SPSHN stimulus (this is what all stimuli are normalized to, RMS
-% wise)
-% This is loaded as hint_spshn above.
 
 % Load ANL
 [anl, anl_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'ANL', 'ANL.wav'));
@@ -264,7 +301,7 @@ anl_scale = rms(hint_spshn)./rms(anl_filt(:,1));
 anl_filt = anl_filt.*anl_scale; 
 
 % Write ANL
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'ANL', 'ANL;0dB.wav'), anl_filt, anl_fs, 'BitsperSample', audio_bit_depth);
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'ANL', 'ANL;bandpass;0dB.wav'), anl_filt, anl_fs, 'BitsperSample', audio_bit_depth);
 
 % Visualization
 figure, hold on
@@ -296,6 +333,8 @@ legend('HINT SPSHN', 'ANL (Channel 1)', 'ANL (Channel 2)', 'location', 'NorthOut
 % to create a noise sample that is long enough for 40 sentences ... if
 % that's the case, we should probably be spectrally matching based on the
 % noise sample we'll be using - repeats included ...
+%
+% CWB unsure about this still ...
 % ===================================
 
 % Select a subset of HINT sentences
@@ -317,7 +356,7 @@ hagerman_time_series = concat_audio_files(hagerman_audio_files, ...
     'mixer', 1); 
 
 % RMS normalize the concatenated sentences to calibration stimulus
-hint_spshn = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav'));
+hint_spshn = SIN_loaddata(calibration_file);
 hagerman_time_series = hagerman_time_series .* (rms(hint_spshn)./rms(hagerman_time_series));
 
 % Load ORIGINAL the speech shaped noise file
@@ -358,6 +397,10 @@ audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'Hagerman-S
 % ===================================
 % Create the ISTS (spectrally matched) ISTS stimulus for Hagerman
 % recordings. 
+%
+%   Again, we want to start from scratch here (that is, load the original
+%   file) so we don't double our filter order. See discussion above for
+%   more details. 
 % ===================================
 [hagerman_ists, ists_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'))); 
 if ists_fs ~= hint_fs, error('sampling rates differ'); end
@@ -426,13 +469,13 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'noise_track', {{fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'Hagerman-SPSHN;bandpass;0dB.wav')}}, ...
     'target_input_mixer',   1, ...
     'noise_input_mixer',    1, ...
-    'reference_track', fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav'), ...
+    'reference_track', calibration_file, ...
     'reference_input_mixer', 1, ...
     'remove_silence',   true, ...
     'amplitude_threshold', hint_ampthresh.*hint_scale, ...
     'snrs',     -10:10:10, ...
     'noise_window_sec', 0.02, ...
-    'output_base_name', fullfile(fileparts(which('runSIN')), 'playback', 'Hagerman', 'spshn;bandpass;0dB.wav'), ...
+    'output_base_name', calibration_file, ...
     'bit_depth',    audio_bit_depth, ...
     'gap_range',    [0.1 0.3], ...
     'target_output_mixer',  [1 0 0 0 0], ...
@@ -450,7 +493,7 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'noise_track', {{fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'Hagerman-ISTS;bandpass;0dB.wav')}}, ...
     'target_input_mixer',   1, ...
     'noise_input_mixer',    1, ...
-    'reference_track', fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav'), ...
+    'reference_track', calibration_file, ...
     'reference_input_mixer', 1, ...
     'remove_silence',   true, ...
     'amplitude_threshold', hint_ampthresh.*hint_scale, ...
@@ -465,3 +508,8 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'write_signal_mask',    true, ...
     'estimate_noise_floor', true, ...
     'noise_floor_sec',  10);
+
+% ===================================
+% Create MLST
+%   
+% ===================================

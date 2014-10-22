@@ -300,7 +300,6 @@ switch testID
             opts.player, ...
             'adaptive_mode',    'bytrial', ... % 'bytrial' means modchecks performed after each trial.
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
@@ -336,8 +335,7 @@ switch testID
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 'plot',     true, ... % generate plot
                 'chans',    [1 2], ...% only perform analyses on channels 1 and 2
-                'dBtol',    1)); % 1 dB tolerance is OK. 
-        
+                'dBtol',    1)); % 1 dB tolerance is OK.        
         
     case 'Reading Span'
         % Launch and run the reading span test provided by Thomas Lunner
@@ -907,7 +905,7 @@ switch testID
         opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
-    case 'Hagerman'
+    case 'Hagerman (SPSHN)'
         
         %% SETUP FOR HAGERMAN STYLE RECORDINGS
         %   This specific experiment has some basic needs. 
@@ -938,7 +936,7 @@ switch testID
         opts.specific.list_regexp=''; 
                 
         % Set regular expression for wav files
-        opts.specific.wav_regexp = '.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        opts.specific.wav_regexp = 'spshn;bandpass;0dB'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
@@ -966,7 +964,6 @@ switch testID
             opts.player, ...
             'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        false, ...   % randomize trial order before playback
             'append_files',     false, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.
@@ -997,7 +994,14 @@ switch testID
             'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 )); 
-            
+    case 'Hagerman (ISTS)'       
+        
+        % Use Hagerman (SPSHN) as a base
+        opts = SIN_TestSetup('Hagerman (SPSHN)', subjectID); 
+        
+        % Change the file filter
+        opts.specific.wav_regexp = 'ists;bandpass;0dB';
+        
     case 'HINT (First Correct)'
         
         % This is the first segment in HINT testing during which we present
@@ -1256,7 +1260,6 @@ switch testID
             opts.player, ...
             'adaptive_mode',    'continuous', ... % 'continuous' adaptive playback
             'record_mic',       true, ...   % record playback and vocal responses via recording device. 
-            'randomize',        false, ...   % randomize trial order before playback
             'append_files',     true, ...  % append files before playback (makes one long trial)
             'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
             'window_dur',       0.005, ...  % window duration in seconds.

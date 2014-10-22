@@ -39,8 +39,8 @@ function addnoise2HINT(NFILE, varargin)
 %                   range within the noise file, but move the starting
 %                   point within this time range from file to file. 
 %
-%   'random_noise_seed':    double, random noise seed used to seed the
-%                           random start point selection within the noise. 
+%   'random_noise_position':    bool, if true, then the noise sample selected 
+%                               by
 %                             
 %
 %   'wav_regexp':   regular expression used to filter WAV files (e.g., 
@@ -71,9 +71,6 @@ function addnoise2HINT(NFILE, varargin)
 
 %% PLACE PARAMETERS IN STRUCTURE
 d=varargin2struct(varargin{:});  
-
-% Seed random 
-rng(d.random_noise_seed, 'twister'); 
 
 % Get HINT information
 opts = SIN_TestSetup(d.testID, ''); 
@@ -165,10 +162,6 @@ for i=1:numel(wavlist)
     %   ramped.
     rnoise = repmat(noise, nreps, 1);
     
-    % Select random start location
-    %   We do this by circularly shifting the noise sample
-    rnoise = circshift(rnoise, round(rand(1) * size(rnoise,1)));
-    
     % Truncate noise to correct number of samples
     rnoise = rnoise(1:size(wavout,1), :);
     
@@ -183,4 +176,9 @@ for i=1:numel(wavlist)
     [pathstr,name,ext] = fileparts(wavlist{i});
     fname = fullfile(pathstr, [name d.suffix ext]);
     audiowrite(fname, wavout, fs, 'BitsperSample', d.bitdepth), 
+    
+    % We circularly shift the noise samples to keep things interesting. 
+    if d.shift_noise
+        noise = circshift(noise, mod(size(rnoise,1), size(noise,1))); 
+    end % if d.shift_noise
 end % for i
