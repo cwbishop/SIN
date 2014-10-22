@@ -200,7 +200,7 @@ elseif isa(X, 'cell')
         
         % Determine file type to load. 
         switch lower(ext)
-            case {'.wav' '.mp3' 'mp4'}
+            case {'.wav' '.mp3' '.mp4'}
                 % If this is a WAV file
                 DTYPE=2;
                 [tx, FS]=audioread(X{n}); 

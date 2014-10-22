@@ -42,6 +42,9 @@ hint_ampthresh = 0.0001;
 % Random noise seed for noise sample selection
 hint_random_noise_seed = '1000';
 
+% MLST threshold 
+mlst_ampthresh = 0.01; 
+
 % ===================================
 % Match the long-term spectrum of the spshn spectrum to the long-term
 % spectrum of the concatenated HINT corpus
@@ -509,7 +512,67 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'estimate_noise_floor', true, ...
     'noise_floor_sec',  10);
 
+%% MLST + SPSHN
 % ===================================
-% Create MLST
-%   
+% Create SPSHN sample for MLST
+%  
 % ===================================
+
+% Load the HINT noise sample - we'll use this to create the speech shaped
+% noise sample for MLST
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', '1001');
+opts = opts(1);
+
+% Load the oroginal MLST MP4 files. We'll extract the audio from these
+% tracks. 
+opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$';
+
+% Get the file names and massage them into a useful format.
+[~, mlst_audio_files] = SIN_stiminfo(opts); 
+mlst_audio_files = concatenate_lists(mlst_audio_files); 
+[mlst_time_series, mlst_fs] = concat_audio_files(mlst_audio_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', mlst_ampthresh, ...
+    'mixer', [1; 0]); % just use the first channel. CWB confirms that the two channels are identical (no differences)
+
+% Resample MLST (48 k) to match native FS (44.1 k)
+if mlst_fs ~= FS, 
+    mlst_time_series = resample(mlst_time_series, FS, mlst_fs); 
+end % if nlst_fs ...
+
+mlst_time_series = mlst_time_series .* (rms(hint_spshn)./rms(mlst_time_series));
+
+% Load ORIGINAL the speech shaped noise file
+%   We want to basically start over so we aren't filting this noise file
+%   more than the one used for HINT. If we started with the completed
+%   version of HINT-SPSHN and filtered that, then our filter order would be
+%   twice what we expect it to be here. So some recreating the wheel is
+%   necessary. 
+[mlst_spshn, fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
+
+% Just use channel 1 of mlst_spshn
+mlst_spshn = mlst_spshn(:,1); 
+
+% Bandpass filter 
+mlst_spshn_filt = filtfilt(b, a, mlst_spshn); 
+
+% Create speech shaped noise sample
+[mlst_spshn_filt] = match_spectra(mlst_time_series, mlst_spshn_filt, ...
+        'fsx', hint_fs, ...
+        'fsy', hint_fs, ...
+        'plot', true, ...
+        'frequency_range', [eps inf], ... % exclude DC component
+        'filter_order', spectral_match_filter_order, ...
+        'window', pwelch_window, ...
+        'noverlap', pwelch_noverlap, ...
+        'nfft', pwelch_nfft);
+    
+% RMS normalize to calibration stimulus
+mlst_scale = rms(hint_spshn)./rms(mlst_spshn_filt); 
+mlst_spshn_filt = mlst_spshn_filt .* mlst_scale; 
+
+% Check dB values
+db(rms(hint_spshn)) - db(rms(mlst_spshn_filt)) 
+
+% Write to file
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'mlst-SPSHN;bandpass;0dB.wav'), mlst_spshn_filt, mlst_fs, 'BitsperSample', audio_bit_depth);
