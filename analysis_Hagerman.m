@@ -368,23 +368,17 @@ for i=1:numel(target_empirical)
     
 end % for i=1:numel(target_empirical)
 
-% Loop through each theoretical SNR
-% for i=1:size(snr_theoretical,1)
-%     
-%     % Calculate SNR 
-%     %   RMS estimate here as a place holder - need to wrap in James's code.
-%     target_db = db(rms(target{i}));
-%     noise_db = db(rms(noise{i}));
-%     snr_empirical(i,:) = target_db - noise_db; 
-% %     snr_empirical(i,:) = db(rms(target{i})) - db(rms(noise{i}));
-%     
-% end % for i=1: ...
-
 %% GENERATE PLOTS
 
-% Empirical vs. Theoretical SNR plot
 if d.pflag > 0
     
+    % Theoretical vs. Requested SNR plot
+    %   This plot should help us quantify any slop in our analysis routine.
+    %   There's no reason why the the theoretical and requested SNRs should
+    %   not match point for point. Unless, of course, there's an error or
+    %   something somewhere ... 
+    
+    % Empirical vs. Theoretical SNR plot
     figure, hold on
     
     % Plot unity line
