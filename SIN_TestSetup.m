@@ -973,8 +973,8 @@ switch testID
         % generation. They are used in a call to SIN_getPlaylist, which in
         % turn invokes SIN_stiminfo and other supportive functions.         
         opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
-        opts.specific.genPlaylist.Randomize = 'within'; % randomize playback order. 
-        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Randomize = ''; % randomize playback order. 
+        opts.specific.genPlaylist.Repeats = 'any'; % 
         opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
         
         % ============================
@@ -1026,6 +1026,9 @@ switch testID
         
         % Use Hagerman (SPSHN) as a base
         opts = SIN_TestSetup('Hagerman (SPSHN)', subjectID); 
+        
+        % Change test ID
+        opts.specific.testID = testID; 
         
         % Change the file filter
         opts.specific.wav_regexp = 'ists;bandpass;0dB';

@@ -64,7 +64,7 @@ if logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))
     %   This chunk of code is not well-tested since the UUIDs make it
     %   nearly impossible for two files to be exactly the same. 
     if isequal(response, 'n')
-        fname = [fname datestr(now)];
+        fname = [fname '-' now];
         results(1).RunTime.specific.saveData2mat = fname; 
         SIN_saveResults(results); 
     end %

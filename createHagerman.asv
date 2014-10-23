@@ -138,6 +138,7 @@ if any(d.target_input_mixer ~= 1 && d.target_input_mixer ~= 0) || any(d.noise_in
     error('Do not use negative values in your mixing matrices. Bad user! Read the help, please.');
 end % if any ...
 
+
 %% LOAD AND RESAMPLE STIMULI
 %   Load stimuli from file and resample to match user specified sampling
 %   rate (FS).
@@ -230,13 +231,6 @@ for i=1:numel(target_tracks)
     
 end % for i=1:numel(target_tracks)
 
-% Check target_output_track size
-%   Much of the code below assumes we have a single channel target_track.
-%   Let's make sure that's the case
-if size(target_output_track,2) ~= 1
-    error('Target output track must be single channel'); 
-end % if size(target_output_track) ...
-
 % Match the duration of the noise track and target track
 if size(concat_noise_track, 1) < size(target_output_track, 1)
     
@@ -257,13 +251,7 @@ noise_output_mixed = remixaudio(concat_noise_track, ...
     'writetofile',  false); 
 
 % Now trim it to match the duration of the target track
-noise_output_mixed = noise_output_mixed(1:size(target_output_track,1), :); 
-
-% Fade noise in/out
-%   Windowing could potentially affect RMS estimates significantly,
-%   depending on the duration of the windowing function. So, let's window
-%   (fade in/out) the noise before normalizing the noise levels. 
-noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+concat_noise_track_mixed = concat_noise_track_mixed(1:size(target_output_track,1), :); 
 
 % Match RMS of target to RMS of reference
 %   The reference file is used to calibrate both the target and noise
@@ -284,12 +272,7 @@ target_output_track = target_output_track .* target_scale;
 
 % Calculate RMS of noise and scale to 0 dB SPL (that is, match to reference
 % track).
-%   Note that the calibration is done slightly differently here since we
-%   will likely have noise over more than one channel. In sound field, that
-%   means the sounds will add constructively and create a higher than
-%   expected SPL. To estimate and correct for this interaction, we sum
-%   over channels. 
-noise_rms = rms(sum(noise_output_mixed,2));
+noise_rms = rms(concat_noise_track);
 noise_scale = reference_rms ./ noise_rms;
 noise_output_mixed = noise_output_mixed .* noise_scale;
 
@@ -302,15 +285,33 @@ noise_output_mixed = noise_output_mixed .* noise_scale;
 %   target_output_track *excludes* the subthreshold regions of the signal. 
 %   The RMS normalization of noise_output_track includes all data samples.
 %
-%   Each channel of the noise track (noise_output_mixed) and the
-%   target_output_track are calibrated to 0 dB. That is, each individual
-%   channel (at least those that have a non-zero signal in them) should be
-%   calibrated to match the reference sound. 
+%   
 %
 %   Note: There is an option below to correct for multi-channel playback.
 %   That is, an option to set the multichannel noise track to 0 dB by
 %   summing over all noise channels. 
 % ===============================
+
+% Correct the levels to account for multi-channel playback, if the
+% user requests.
+%   This correction adjusts (scales) the noise levels for multichannel
+%   playback. The correction assumes that the sounds are presented
+%   simultaneously from speakers placed equidistant from the listener.
+%   This is true by design for the SNR grant. 
+if d.apply_multichannel_noise_correction
+    
+    noise_by_channel_rms = rms(noise_output_mixed(:, d.noise_output_mixer == 1));        
+
+    noise_summed_rms = rms(sum(noise_output_mixed,2)); 
+
+    noise_output_mixed = noise_output_mixed .* (noise_by_channel_rms(1)./noise_summed_rms);
+
+end % if d.apply_multichannel_noise_correction        
+
+% Fade noise in/out
+%   This will add in small differences in RMS values between channels.
+%   CWB not sure if he should control for this or not ... 
+noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
     
 % Now, assuming we're at 0 dB SNR, create requested SNR outputs
 for i=1:numel(d.snrs)
