@@ -134,9 +134,10 @@ d=varargin2struct(varargin{:});
 %   end. CWB thinks he'll end up regretting the quick fix ... CWB in the
 %   future, if you're reading this and scratching your head, then you knew
 %   you were being an idiot when you wrote this. Silly, silly bear.
-if any(d.target_input_mixer==-1) || any(d.noise_input_mixer==-1) || any(d.target_output_mixer==-1) || any(d.noise_output_mixer==-1)
+if any(d.target_input_mixer ~= 1 && d.target_input_mixer ~= 0) || any(d.noise_input_mixer ~= 1 && d.noise_input_mixer ~= 0) || any(d.target_output_mixer ~= 1 & d.target_output_mixer ~= 0) ||any(d.noise_output_mixer ~= 1 & d.noise_output_mixer ~= 0)
     error('Do not use negative values in your mixing matrices. Bad user! Read the help, please.');
 end % if any ...
+
 
 %% LOAD AND RESAMPLE STIMULI
 %   Load stimuli from file and resample to match user specified sampling
@@ -160,9 +161,9 @@ if ~isempty(d.noise_track)
     
     % Load noise track
     [concat_noise_track, noise_fs] = concat_audio_files(d.noise_track, ...
-    'remove_silence', true, ...
-    'amplitude_threshold', d.amplitude_threshold, ...
-    'mixer', d.noise_input_mixer);     
+        'remove_silence', true, ...
+        'amplitude_threshold', d.amplitude_threshold, ...
+        'mixer', d.noise_input_mixer);     
     
     % Sampling rate error check
     if noise_fs ~= FS, error('Sampling rates do not match'); end 
@@ -298,7 +299,7 @@ noise_output_mixed = remixaudio(noise_output_track, ...
 %   simultaneously from speakers placed equidistant from the listener.
 %   This is true by design for the SNR grant. 
 if d.apply_multichannel_noise_correction
-
+    
     noise_by_channel_rms = rms(noise_output_mixed(:, d.noise_output_mixer == 1));        
 
     noise_summed_rms = rms(sum(noise_output_mixed,2)); 
@@ -325,12 +326,10 @@ for i=1:numel(d.snrs)
     %   target*1, noise*-1: TorigNinv
     polarity = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
     
-
+    % Scale the noise_output_channel to create the desired SNR
+    noise_output_mixed_scaled = noise_output_mixed .* db2amp(d.snrs(i).*-1);
     
-    for n=1:size(polarity,1)
-       
-        % Scale the noise_output_channel to create the desired SNR
-        noise_output_mixed = noise_output_mixed .* db2amp(d.snrs(i).*-1);
+    for n=1:size(polarity,1)       
         
         % Mix target output
         %   Assumes we won't be applying a time shift. Don't think we'd
@@ -338,7 +337,7 @@ for i=1:numel(d.snrs)
         target_output_mixed = target_output_track * d.target_output_mixer;
         
         % Mix the noise and target
-        mixed_output_track = target_output_mixed.*polarity(n,1) + noise_output_mixed.*polarity(n,2);
+        mixed_output_track = target_output_mixed.*polarity(n,1) + noise_output_mixed_scaled.*polarity(n,2);
         
         % Append the signal_mask
         mixed_output_track = [mixed_output_track signal_mask]; %#ok<AGROW>
@@ -383,7 +382,7 @@ if d.estimate_noise_floor
     nsamps = round(d.noise_floor_sec * FS);
     
     % Make zeros in all output tracks
-    noise_floor_track = zeros(nsamps, size(d.target_output_mixer,2));
+    noise_floor_track = zeros(nsamps, size(mixed_output_track,2));
     
     % Write file
     fname = fullfile(PATHSTR, [NAME '(noise floor)' EXT]);

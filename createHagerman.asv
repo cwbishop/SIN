@@ -134,9 +134,13 @@ d=varargin2struct(varargin{:});
 %   end. CWB thinks he'll end up regretting the quick fix ... CWB in the
 %   future, if you're reading this and scratching your head, then you knew
 %   you were being an idiot when you wrote this. Silly, silly bear.
-if any(d.target_input_mixer==-1) || any(d.noise_input_mixer==-1) || any(d.target_output_mixer==-1) || any(d.noise_output_mixer==-1)
+if any(d.noise_output_mixer ~= 1)
+    error('noise_output_mixer only accepts values of 1'); 
+end 
+% if any(d.target_input_mixer==-1) || any(d.noise_input_mixer==-1) || any(d.target_output_mixer==-1) || any(d.noise_output_mixer==-1)
     error('Do not use negative values in your mixing matrices. Bad user! Read the help, please.');
 end % if any ...
+
 
 %% LOAD AND RESAMPLE STIMULI
 %   Load stimuli from file and resample to match user specified sampling
@@ -278,8 +282,41 @@ noise_output_track = concat_noise_track .* noise_scale;
 %   and 0 dB relative to each other. So the SNR of thes tracks is
 %   effectively 0 dB. Below, we will scale the noise_output_track to create
 %   the intended SNRs. 
+%
+%   Note: There is an option below to correct for multi-channel playback.
+%   That is, an option to set the multichannel noise track to 0 dB by
+%   summing over all noise channels. 
 % ===============================
 
+% Remix the noise sample, including time shifts
+noise_output_mixed = remixaudio(noise_output_track, ...
+    'fsx',  FS, ...
+    'mixer',    d.noise_output_mixer, ...
+    'toffset',  d.noise_time_shift, ...
+    'writetofile',  false); 
+
+% Correct the levels to account for multi-channel playback, if the
+% user requests.
+%   This correction adjusts (scales) the noise levels for multichannel
+%   playback. The correction assumes that the sounds are presented
+%   simultaneously from speakers placed equidistant from the listener.
+%   This is true by design for the SNR grant. 
+if d.apply_multichannel_noise_correction
+
+    
+    noise_by_channel_rms = rms(noise_output_mixed(:, d.noise_output_mixer == 1));        
+
+    noise_summed_rms = rms(sum(noise_output_mixed,2)); 
+
+    noise_output_mixed = noise_output_mixed .* (noise_by_channel_rms(1)./noise_summed_rms);
+
+end % if d.apply_multichannel_noise_correction        
+
+% Fade noise in/out
+%   This will add in small differences in RMS values between channels.
+%   CWB not sure if he should control for this or not ... 
+noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+    
 % Now, assuming we're at 0 dB SNR, create requested SNR outputs
 for i=1:numel(d.snrs)
     
@@ -293,35 +330,12 @@ for i=1:numel(d.snrs)
     %   target*1, noise*-1: TorigNinv
     polarity = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
     
-    % Remix the noise sample, including time shifts
-    noise_output_mixed = remixaudio(noise_output_mixed, ...
-        'fsx',  FS, ...
-        'mixer',    d.noise_output_mixer, ...
-        'toffset',  d.noise_time_shift, ...
-        'writetofile',  false); 
-    
-    % Correct the levels to account for multi-channel playback, if the
-    % user requests.
-    %   This correction adjusts (scales) the noise levels for multichannel
-    %   playback. The correction assumes that the sounds are presented
-    %   simultaneously from speakers placed equidistant from the listener.
-    %   This is true by design for the SNR grant. 
-    if d.apply_multichannel_noise_correction
-        
-        noise_by_channel_rms = rms(noise_output_mixed);        
-        
-        noise_summed_rms = rms(sum(noise_output_mixed,2)); 
-        
-        noise_output_mixed = noise_output_mixed .* (noise_by_channel_rms
-    end % if d.apply_multichannel_noise_correction        
+
     
     for n=1:size(polarity,1)
        
         % Scale the noise_output_channel to create the desired SNR
-        noise_output_mixed = noise_output_track .* db2amp(d.snrs(i).*-1);
-        
-        % Fade noise in/out
-        noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+        noise_output_mixed = noise_output_mixed .* db2amp(d.snrs(i).*-1);
         
         % Mix target output
         %   Assumes we won't be applying a time shift. Don't think we'd

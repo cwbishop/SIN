@@ -342,7 +342,6 @@ end % i=1:numel(target_theoretical)
 %   This process requires an additional realignment step. In a nutshell, we
 %   must realign the recording with the original file in order to apply the
 %   signal_mask to our RMS calculations.
-snr_empirical = nan(numel(target_empirical), size(target_empirical{1},2)); 
 for i=1:numel(target_empirical)
     
     % Realign each channel to the (summed) wav file. This should allow us
@@ -355,18 +354,10 @@ for i=1:numel(target_empirical)
             align_timeseries(target_theoretical{i}, ...
                 target_empirical{i}, 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
 
-    % Create signal_mask for each channel and apply it to the data
-    target_masked = [];
-    for c=1:numel(lag)
-        mask = logical([false(abs(lag(c)),1); signal_mask; false(size(target_empirical{i},1) - (abs(lag(c)) + numel(signal_mask)),1)]);
-        target_masked(:,c) = target_empirical{i}(mask,c); 
-    end % for c=1:numel(lag)
-    
-    % This gives a relative measure within each recording channel ... I
-    % think. CWB is very tired and probably should not be writing this ...
-    snr_empirical(i,:) = db(rms(target_masked)) - db(rms(noise_empirical{i})); 
     
 end % for i=1:numel(target_empirical)
+
+
 
 % Loop through each theoretical SNR
 % for i=1:size(snr_theoretical,1)
@@ -392,13 +383,13 @@ if d.pflag > 0
     plot(x, x, 'k--', 'linewidth', 2)
     
     % Plot channel estimates
-    plot(snr_theoretical*ones(1, size(snr_empirical,2)), snr_empirical, '*', 'linewidth', 1, 'markersize', 10)
+    plot(snr_theoretical, snr_empirical, '*', 'linewidth', 1, 'markersize', 10)
     
     % Plot mean(across channel) estimates
     plot(mean(snr_theoretical, 2), mean(snr_empirical,2), 'sk', 'linewidth', 2); 
     
     % Plot the absolute noise floor
-%     plot(x*ones(1, numel(d.channels)), repmat(db(noise_floor_rms), length(x), 1), '--', 'linewidth', 1); 
+    plot(x*ones(1, numel(d.channels)), repmat(db(noise_floor_rms), length(x), 1), '--', 'linewidth', 1); 
     
     % Markup
     xlabel('Theoretical SNR (dB)');
