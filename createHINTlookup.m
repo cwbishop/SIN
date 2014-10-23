@@ -16,7 +16,7 @@ function createHINTlookup(suffix)
 %   8/14
 
 % Load HINT options
-opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', '');
+opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '');
 opts = opts(1); 
 
 % Load original HINT lookup table 

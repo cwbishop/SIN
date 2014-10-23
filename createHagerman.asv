@@ -1,4 +1,4 @@
-function createHagerman(varargin)
+function output_file_names = createHagerman(varargin)
 %% DESCRIPTION:
 %
 %   Function to create stimuli for Hagerman recordings. The basic idea is
@@ -152,6 +152,9 @@ end % if any ...
 % Assume target_fs will be the sampling rate
 FS = target_fs; 
 
+% Return variable
+output_file_names = {}; 
+
 % Only load noise stimulus if user specifies it
 if ~isempty(d.noise_track)
     
@@ -179,8 +182,13 @@ target_output_track = []; % target output track
 signal_mask = []; % the signal mask will be TRUE everywhere there's a signal and FALSE where we input silence
 for i=1:numel(target_tracks)
     
+    % Figure out where our signal is and where relative 'silence' is.
+    % Silence is defined here as falling below a predefined amplitude
+    % threshold. 
     [~, clip_mask] = threshclipaudio(target_tracks{i}, d.amplitude_threshold, 'begin&end');
+    
     if i < numel(target_tracks)
+        
         % Find the number of "zero" (or at least below threshold) samples at
         % the beginning and end of the sound.
         %
@@ -204,8 +212,12 @@ for i=1:numel(target_tracks)
         target_track_padded = [target_tracks{i}; zeros(zeros_to_add, size(target_tracks{i}, 2))];
     
     else
+        
+        % For the last trial, we just want want to assign the target track
+        % We aren't appending any zeros (jitter here would be pointless). 
         target_track_padded = target_tracks{i};
         zeros_to_add = 0; 
+        
     end % if 
     
     % Add to growing output_target_track
@@ -281,17 +293,32 @@ for i=1:numel(d.snrs)
     %   target*1, noise*-1: TorigNinv
     polarity = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
     
-    for n=1:size(polarity,1)
+    % Remix the noise sample, including time shifts
+    noise_output_mixed = remixaudio(noise_output_mixed, ...
+        'fsx',  FS, ...
+        'mixer',    d.noise_output_mixer, ...
+        'toffset',  d.noise_time_shift, ...
+        'writetofile',  false); 
+    
+    % Correct the levels to account for multi-channel playback, if the
+    % user requests.
+    %   This correction adjusts (scales) the noise levels for multichannel
+    %   playback. The correction assumes that the sounds are presented
+    %   simultaneously from speakers placed equidistant from the listener.
+    %   This is true by design for the SNR grant. 
+    if d.apply_multichannel_noise_correction
         
+        noise_by_channel_rms = rms(noise_output_mixed);        
+        
+        noise_summed_rms = rms(sum(noise_output_mixed,2)); 
+        
+        noise_output_mixed = noise_output_mixed .* (noise_by_channel_rms
+    end % if d.apply_multichannel_noise_correction        
+    
+    for n=1:size(polarity,1)
+       
         % Scale the noise_output_channel to create the desired SNR
         noise_output_mixed = noise_output_track .* db2amp(d.snrs(i).*-1);
-        
-        % Remix the noise sample, including time shifts
-        noise_output_mixed = remixaudio(noise_output_mixed, ...
-            'fsx',  FS, ...
-            'mixer',    d.noise_output_mixer, ...
-            'toffset',  d.noise_time_shift, ...
-            'writetofile',  false); 
         
         % Fade noise in/out
         noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
@@ -302,8 +329,11 @@ for i=1:numel(d.snrs)
         target_output_mixed = target_output_track * d.target_output_mixer;
         
         % Mix the noise and target
-        mixe
-                
+        mixed_output_track = target_output_mixed.*polarity(n,1) + noise_output_mixed.*polarity(n,2);
+        
+        % Append the signal_mask
+        mixed_output_track = [mixed_output_track signal_mask]; %#ok<AGROW>
+        
         % Generate target description string
         if sign(polarity(n,1))==1
             tstr = 'Torig';
@@ -325,8 +355,11 @@ for i=1:numel(d.snrs)
         % Make file name
         fname = fullfile(PATHSTR, [NAME ';' num2str(d.snrs(i)) 'dB SNR;' tstr nstr EXT]);
         
+        % Append file name to return variable 
+        output_file_names{end+1, 1} = fname; 
+        
         % Write file
-        audiowrite(fname, out, d.output_fs, 'BitsperSample', d.bit_depth); 
+        audiowrite(fname, mixed_output_track, FS, 'BitsperSample', d.bit_depth); 
         
         clear out
     end % 
@@ -338,15 +371,15 @@ end % for i=1:d.snrs
 if d.estimate_noise_floor
     
     % Number of zero samples
-    nsamps = round(d.noise_floor_sec * d.output_fs);
+    nsamps = round(d.noise_floor_sec * FS);
     
     % Make zeros in all output tracks
-    out = zeros(nsamps, size(d.target_output_mixer,2));
+    noise_floor_track = zeros(nsamps, size(d.target_output_mixer,2));
     
     % Write file
     fname = fullfile(PATHSTR, [NAME '(noise floor)' EXT]);
     
     % Write file
-    audiowrite(fname, out, d.output_fs, 'BitsperSample', d.bit_depth); 
+    audiowrite(fname, noise_floor_track, FS, 'BitsperSample', d.bit_depth); 
     
 end % end 

@@ -59,9 +59,16 @@ if logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))
         response = lower(input(['File "' fname '" exists. Overwrite? (y/n)'], 's'));
     end % while
     
+    % If we don't want to overwrite the file, then append the date to the
+    % file name and write it.
+    %   This chunk of code is not well-tested since the UUIDs make it
+    %   nearly impossible for two files to be exactly the same. 
     if isequal(response, 'n')
-        return
-    end
+        fname = [fname datestr(now)];
+        results(1).RunTime.specific.saveData2mat = fname; 
+        SIN_saveResults(results); 
+    end %
+    
 end % if logical(exist(fname ...
     
     

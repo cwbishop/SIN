@@ -1187,33 +1187,6 @@ while trial <= number_of_trials
             % Fill the playback buffer
             if trial == 1
                 
-                %% OPEN FIGURE FOR ACTIVE X CONTROLLER
-                %   Maximize to fit screen
-%                 wmpactxfig = figure;
-                
-                %% SET TO NORMALIZED UNITS
-                %   This makes it substantially easier to maximize a figure
-                %   on a secondary screen.
-                %
-                %   Then set position
-%                 set(wmpactxfig, 'units', 'normalized', 'outerposition', d.player.screenpos);
-                
-                %% OPEN ACTIVE X CONTROL
-                %   
-                %   ActiveX needs the screen resolution in pixels. So
-                %   switch to pixels, get figure position, feed to
-                %   activexcontrol call.
-%                 set(wmpactxfig, 'units', 'pixels');
-%                 d.player.screenpos = get(wmpactxfig, 'position'); 
-%                 wmp = actxcontrol(d.player.activex, [0 0 d.player.screenpos(3:4)], wmpactxfig);
-
-                % Set autostart to false
-                %   We need to get information about the movie first.
-%                 wmp.settings.autostart = false;
-
-                % Set volume to preset value
-%                 wmp.settings.volume=d.player.WMPvol;        
-                
                 %% LOAD NOISE
                 %   Load using SIN_loaddata
                 %   Mix using noise_mixer field

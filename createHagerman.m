@@ -1,4 +1,4 @@
-function createHagerman(varargin)
+function output_file_names = createHagerman(varargin)
 %% DESCRIPTION:
 %
 %   Function to create stimuli for Hagerman recordings. The basic idea is
@@ -152,6 +152,9 @@ end % if any ...
 % Assume target_fs will be the sampling rate
 FS = target_fs; 
 
+% Return variable
+output_file_names = {}; 
+
 % Only load noise stimulus if user specifies it
 if ~isempty(d.noise_track)
     
@@ -275,8 +278,40 @@ noise_output_track = concat_noise_track .* noise_scale;
 %   and 0 dB relative to each other. So the SNR of thes tracks is
 %   effectively 0 dB. Below, we will scale the noise_output_track to create
 %   the intended SNRs. 
+%
+%   Note: There is an option below to correct for multi-channel playback.
+%   That is, an option to set the multichannel noise track to 0 dB by
+%   summing over all noise channels. 
 % ===============================
 
+% Remix the noise sample, including time shifts
+noise_output_mixed = remixaudio(noise_output_track, ...
+    'fsx',  FS, ...
+    'mixer',    d.noise_output_mixer, ...
+    'toffset',  d.noise_time_shift, ...
+    'writetofile',  false); 
+
+% Correct the levels to account for multi-channel playback, if the
+% user requests.
+%   This correction adjusts (scales) the noise levels for multichannel
+%   playback. The correction assumes that the sounds are presented
+%   simultaneously from speakers placed equidistant from the listener.
+%   This is true by design for the SNR grant. 
+if d.apply_multichannel_noise_correction
+
+    noise_by_channel_rms = rms(noise_output_mixed(:, d.noise_output_mixer == 1));        
+
+    noise_summed_rms = rms(sum(noise_output_mixed,2)); 
+
+    noise_output_mixed = noise_output_mixed .* (noise_by_channel_rms(1)./noise_summed_rms);
+
+end % if d.apply_multichannel_noise_correction        
+
+% Fade noise in/out
+%   This will add in small differences in RMS values between channels.
+%   CWB not sure if he should control for this or not ... 
+noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+    
 % Now, assuming we're at 0 dB SNR, create requested SNR outputs
 for i=1:numel(d.snrs)
     
@@ -290,20 +325,12 @@ for i=1:numel(d.snrs)
     %   target*1, noise*-1: TorigNinv
     polarity = [[1 1]; [1 -1]; [-1 1]; [-1 -1]];
     
+
+    
     for n=1:size(polarity,1)
-        
+       
         % Scale the noise_output_channel to create the desired SNR
-        noise_output_mixed = noise_output_track .* db2amp(d.snrs(i).*-1);
-        
-        % Remix the noise sample, including time shifts
-        noise_output_mixed = remixaudio(noise_output_mixed, ...
-            'fsx',  FS, ...
-            'mixer',    d.noise_output_mixer, ...
-            'toffset',  d.noise_time_shift, ...
-            'writetofile',  false); 
-        
-        % Fade noise in/out
-        noise_output_mixed = fade(noise_output_mixed, FS, true, true, @hann, d.noise_window_sec);
+        noise_output_mixed = noise_output_mixed .* db2amp(d.snrs(i).*-1);
         
         % Mix target output
         %   Assumes we won't be applying a time shift. Don't think we'd
@@ -336,6 +363,9 @@ for i=1:numel(d.snrs)
         
         % Make file name
         fname = fullfile(PATHSTR, [NAME ';' num2str(d.snrs(i)) 'dB SNR;' tstr nstr EXT]);
+        
+        % Append file name to return variable 
+        output_file_names{end+1, 1} = fname; 
         
         % Write file
         audiowrite(fname, mixed_output_track, FS, 'BitsperSample', d.bit_depth); 

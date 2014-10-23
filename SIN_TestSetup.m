@@ -183,7 +183,7 @@ switch testID
         % Change root directory (for wavfile selection) and change
         % wav_regexp to choose correct calibration file
         opts.specific.root= fullfile(opts.general.root, 'playback', 'Noise');
-        opts.specific.wav_regexp = 'HINT-Noise;0dB.wav';
+        opts.specific.wav_regexp = 'HINT-SPSHN;bandpass;0dB.wav';
         
         % Don't write noise file to UsedList
         %   Not necessary since we're just using this for calibration
@@ -196,16 +196,10 @@ switch testID
         
         % Reset instructions for modcheck
         opts.player.modcheck.instructions = fileread(fullfile(opts.general.instruction_dir, 'calibrate_speaker_output.txt')); 
-%         opts.player.modcheck.instructions = {['A sound will play from each speaker in turn. Place the SPL meter at ' ...
-%             'the location of the listeners head with the sensor facing the active speaker.' ...
-%             ' Adjust the amplifier settings until the SPL meter reads +65 dB SPL (A-weight, slow response)']};        
         
         % Redo key mapping to prevent users from increasing/decreasing
         % volume.
          opts.player.modcheck.map(opts.player.modcheck.keys(1:2))=false; 
-        
-        % Also remove *all* modifiers
-%         opts.player.modifier = {struct()}; 
         
         % Clear analysis
         opts.analysis.run = false; 
@@ -223,16 +217,6 @@ switch testID
             cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback.device.NrOutputChannels)]; 
             
         end % for i=1:opts ...        
-
-        % Add a calibration routine for windows mediaplayer at the end.
-        % This will ensure that WMP is setup correctly.
-%         cal(end+1) = opts;
-%         cal(end).player.modcheck.title = [testID ': Calibrate Windows Media Player']; 
-        
-        % Assign cal to opts
-        opts = cal;
-        
-        clear cal;    
         
     case 'Audio Test (10 Hz click train)'
         
@@ -404,13 +388,23 @@ switch testID
         
        % Same as practice run.
        opts = SIN_TestSetup('ANL (Practice)', subjectID);
-%        opts.specific.testID = testID;       
-    case 'HINT (Perceptual Test)'
+       
+       % Change testID
+       for i=1:numel(opts)
+           opts(i).specific.testID = testID; 
+       end % for i=1:numel(opts) 
+
+    case 'HINT (Perceptual Test, SPSHN)'
         
         % Perceived Performance Test (PPT) is a subjective measure of
         % performance on a HINT-style test. This should be otherwise
         % identical to 'HINT (SNR-50, keywords, 1up1down) algorithm.
-        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID);
+        
+        % Change testID
+        for i=1:numel(opts)
+            opts(i).specific.testID = testID; 
+        end % for i=1:numel(opts)
         
         % Change scoring for explorative phase so it's based on sentences,
         % not keywords.
@@ -446,25 +440,17 @@ switch testID
         % Change scoring labels to something more intuitive
 %         opts.player.modcheck.score_labels = {'C', 'Not_All'};
 
-    case 'HINT (SNR-80, keywords, 3down1up)'
+    case 'HINT (SNR-80, SPSHN)'
         
         % This will be very similar to HINT (SNR-50, keywords, 1up1down),
         % but will need to change the algorithm.
-        opts=SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
-                
-        % Need to add 2 more lists (20 more sentences) to this test. This
-        % will serve as a hard cap for the number of trials. So just make a
-        % new "test" and grab the files. Easiest way to do it since it will
-        % also automatically append the lists used to the "UsedList" file. 
-%         tmp = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
-%         
-%         playlist = {tmp(1).specific.genPlaylist.files{1} tmp(2).specific.genPlaylist.files{:}}';
-%         
-%         % Append to existing playlist
-%         opts(2).specific.genPlaylist.files = {opts(2).specific.genPlaylist.files{:} playlist{:}}';
-%         
-%         clear playlist
+        opts=SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID); 
         
+        % Change testID
+        for i=1:numel(opts)
+            opts(i).specific.testID = testID; 
+        end % for i=1:numel(opts)
+                
         % Change algorithm tracking
         %   Start with 1up1down, then switch to 4down1up after trial 4
         opts(2).player.modcheck.algo = {@algo_HINT1up1down @algo_HINT3down1up}; 
@@ -511,10 +497,9 @@ switch testID
                 'include_next_trial', true, ...
                 'plot', true)); % generate plot
         
-        opts(2).analysis = opts(1).analysis;
-        
+        opts(2).analysis = opts(1).analysis;        
        
-    case 'HINT (SNR-50, keywords, 1up1down)'
+    case 'HINT (SNR-50, SPSHN)'
         
         % ============================
         % Get default information
@@ -539,13 +524,13 @@ switch testID
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
         % Set regular expression for wav files
-%         opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-        opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+%         opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
         opts.specific.hint_lookup=struct(...
-            'filename', fullfile(opts.specific.root, 'HINT (;0dB+spshn).xlsx'), ...
+            'filename', fullfile(opts.specific.root, 'HINT (;bandpass;0dB+spshn).xlsx'), ...
             'sheetnum', 1); 
         
         % The following set of subfields are required for playlist
@@ -654,12 +639,12 @@ switch testID
         % completely. 
         rove = opts;
         % Start with HINT (SNR-50 ... for starters
-%         opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+%         opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID);
         
         % Change testID
         %   This is hard-coded since it's the roving test at the beginning
         %   of the HINT.
-        rove.specific.testID = 'Search for First Correct'; 
+        rove.specific.testID = testID; 
         
         % Add a modifier to stop playback after the first correct response
         % is recorded (that's 100% of scored words repeated correctly).
@@ -691,7 +676,43 @@ switch testID
         % Now remove first stimulus from playback list. HINT manual says we
         % should move onto second stimulus
         opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }; 
-                
+        
+    case 'HINT (SNR-50, ISTS)'
+        
+        % ISTS version of HINT test
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID); 
+        
+        % Change testID and change wav_regexp
+        for i=1:numel(opts)
+            opts(i).specific.testID = testID;
+            opts(i).specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]ists.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+            opts(i).specific.genPlaylist.files = {};             
+        end % for i=1:numel(opts)
+                    
+        % Get different files
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts(2).specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
+        opts(2).specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts(2).specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
+        opts(2).specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        
+        % Get the stimulus list that we need. We need to populate this
+        % field here so we know which stimulus will be FIRST for the roving
+        % part.
+        opts(2).specific.genPlaylist.files = SIN_getPlaylist(opts(2)); 
+        
+        % Now reset genPlaylist information so it won't buck when called
+        % from SIN_runTest.
+        opts.specific.genPlaylist.NLists = 0; % Set to 0 so SIN_getPlaylist won't buck later.
+        opts.specific.genPlaylist.Randomize = ''; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        
+         % Use a specific file for the roving portion of the test
+        opts(1).specific.genPlaylist.files = repmat({opts(2).specific.genPlaylist.files{1}}, 20,1); 
+        
     case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
         % Configured to administer the (audio only) MLST. This serves as
@@ -701,7 +722,7 @@ switch testID
         % Use the HINT as a starting point
         %   - The HINT is quite similar to the MLST in many ways, so let's
         %   use this as a starting point. 
-        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID); 
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID); 
         opts = opts(2); % we don't need the first bit of the HINT (searching) 
         
         % Clear playlist
@@ -781,7 +802,6 @@ switch testID
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)                
                 'plot', true)); % generate plot      
-        
     case 'MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)'
         
         % Just like aided 65 dB SPL test, but with different wav_regexp and
@@ -969,7 +989,7 @@ switch testID
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [[1; 0;0;0] [0;1;0;0] [0;0;1;0] [0;0;0;1]], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
@@ -1009,7 +1029,7 @@ switch testID
         % completely. 
         
         % Start with HINT (SNR-50 ... for starters
-        opts = SIN_TestSetup('HINT (SNR-50, keywords, 1up1down)', subjectID);
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID);
         
         % Change testID
         opts.specific.testID = testID; 
@@ -1225,9 +1245,7 @@ switch testID
         %   
         %   This field is used in SIN_stiminfo.m. 
         opts.specific.list_regexp = ''; 
-%         warning('Change ANL stimulus back to 0dB'); 
-        opts.specific.wav_regexp='ANL;0dB.wav'; 
-%         opts.specific.wav_regexp='ANL.wav'; 
+        opts.specific.wav_regexp='ANL;bandpass;0dB.wav'; 
         
         % The following set of subfields are required for playlist
         % generation. They are used in a call to SIN_getPlaylist, which in
