@@ -377,12 +377,28 @@ if d.pflag > 0
     %   There's no reason why the the theoretical and requested SNRs should
     %   not match point for point. Unless, of course, there's an error or
     %   something somewhere ... 
+    figure, hold on
+    
+    % Plot unity line
+    x = [min(min(snr_requested)):0.01:max(max(snr_requested))]';
+    plot(x, x, 'k--', 'linewidth', 2)
+    
+    % Plot channel estimates
+    plot(snr_requested, snr_theoretical, '*', 'linewidth', 1, 'markersize', 10)
+    
+    % Plot the absolute noise floor
+%     plot(x*ones(1, numel(d.channels)), repmat(db(noise_floor_rms), length(x), 1), '--', 'linewidth', 1); 
+    
+    % Markup
+    xlabel('Requested SNR (dB)');
+    ylabel('Theoretical SNR (dB)'); 
+    legend(strvcat('Perfect SNR', [repmat('SNR: Channel ', numel(d.channels)+1, 1) strvcat(num2str(d.channels'), 'Mean')], strvcat([repmat('Channel ', numel(d.channels), 1) num2str(d.channels') repmat(' Noise Floor', numel(d.channels), 1)])), 'location', 'eastoutside')    
+    grid on
     
     % Empirical vs. Theoretical SNR plot
     figure, hold on
     
     % Plot unity line
-    x = [min(min(snr_theoretical)):0.01:max(max(snr_theoretical))]';
     plot(x, x, 'k--', 'linewidth', 2)
     
     % Plot channel estimates

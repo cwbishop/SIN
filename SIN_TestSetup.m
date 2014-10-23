@@ -180,6 +180,11 @@ switch testID
         % Change test ID
         opts.specific.testID = testID; 
         
+        % Turn off recordings
+        %   We don't want to do recordings during this phase because
+        %   KEMAR's mics should be off anyway. 
+        opts.player.record_mic = false; 
+        
         % Change root directory (for wavfile selection) and change
         % wav_regexp to choose correct calibration file
         opts.specific.root= fullfile(opts.general.root, 'playback', 'Noise');
@@ -217,6 +222,9 @@ switch testID
             cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback.device.NrOutputChannels)]; 
             
         end % for i=1:opts ...        
+        
+        % Reset options
+        opts = cal; 
         
     case 'Audio Test (10 Hz click train)'
         
