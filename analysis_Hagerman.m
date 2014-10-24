@@ -362,9 +362,23 @@ for i=1:numel(target_empirical)
         target_masked(:,c) = target_empirical{i}(mask,c); 
     end % for c=1:numel(lag)
     
+    % Now find the noise samples
+    %   There is often silence at the beginning/end of the recordings that
+    %   can artificially inflate our SNR estimates. So, we'll realign the
+    %   recorded noise sample to the noise theoretical_noise sample and
+    %   only use those samples in noise RMS estimation
+    [aligned_theoretical, aligned_empirical, lag] = ...
+            align_timeseries(noise_theoretical{i}, ...
+                noise_empirical{i}, 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
+    
+    for c=1:numel(lag)
+        mask = logical([false(abs(lag(c)),1); true(size(noise_theoretical{i},1),1); false(size(noise_empirical{i},1) - (abs(lag(c)) +size(noise_theoretical{i},1)),1)]);
+        noise_masked(:,c) = noise_empirical{i}(mask,c); 
+    end % forc=1:numel(lag)
+    
     % This gives a relative measure within each recording channel ... I
     % think. CWB is very tired and probably should not be writing this ...
-    snr_empirical(i,:) = db(rms(target_masked)) - db(rms(noise_empirical{i})); 
+    snr_empirical(i,:) = db(rms(target_masked)) - db(rms(noise_masked)); 
     
 end % for i=1:numel(target_empirical)
 

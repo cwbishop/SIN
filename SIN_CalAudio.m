@@ -250,15 +250,9 @@ for i=1:numel(files)
         % Double check that reference and files are at the same sampling
         % rate
         if fs ~= rfs
-            error('Mismatched sampling rates. Recommend resampling.')
-        end % if fs ~= rfs
-            
-%         % Remove silence?
-%         if d.removesilence
-%             concat = [concat; threshclipaudio(audio_data{i}{k}, d.ampthresh, 'begin&end')];
-%         else
-%             concat = [concat; audio_data{i}{k}];
-%         end % if d.removesilence        
+            audio_data{i}{k} = resample(audio_data{i}{k}, rfs, nfs); 
+            display(['Resampling ' files{i}{k} ]); 
+        end % if fs ~= rfs    
         
     end % for k=1:numel(files{i})
     
@@ -288,7 +282,8 @@ for i=1:numel(files)
         [PATHSTR,NAME,EXT] = fileparts(files{i}{k});        
         
         % Create output file name
-        audio_file_out = fullfile(PATHSTR, [NAME d.suffix EXT]);  
+        %   We always want to write audio data as wav files
+        audio_file_out = fullfile(PATHSTR, [NAME d.suffix '.wav']);  
 
         % Scale audio data
         audio_data{i}{k} = audio_data{i}{k}.*scale; 
