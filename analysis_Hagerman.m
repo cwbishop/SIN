@@ -1,4 +1,4 @@
-function [target, noise] = analysis_Hagerman(results, varargin)
+function [snr_requested, snr_theoretical, snr_empirical] = analysis_Hagerman(results, varargin)
 %% DESCRIPTION:
 %
 %   This function analyzes Hagerman-style (that is, phase inversion
