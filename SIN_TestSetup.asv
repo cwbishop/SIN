@@ -1072,28 +1072,13 @@ switch testID
         % field populated. 
         opts.specific.genPlaylist.files = {}; 
         
-        % Set the mixer to all zeros
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [], 0);
-        
         % Create a test sequence to play (and record) the sound from each
-        % speaker in turn.         
+        % speaker in turn. 
+        temp_opts
         for i=1:opts(1).player.playback.device.NrOutputChannels
-            
             temp_opts(i) = opts; 
-            
-            % Remove the instructions modifier since we don't need to
-            % present instructions between locations
-            if i>1
-                temp_opts(i).player.modifier={}; 
-            end % if i>1
-            
-            % Set to play sound out of one speaker at a time. 
-            temp_opts(i).player.mod_mixer(1,i) = 1; 
-            
-        end % for i=1:opts(1).player.playback.device ...
-        
-        % Reassign to opts
-        opts = temp_opts; 
+            temp_opts
+        end 
         
     case 'HINT (First Correct)'
         
@@ -1137,7 +1122,9 @@ switch testID
         % Set NLists to 0 now or the next call to SIN_getPlaylist will
         % crash
         opts.specific.genPlaylist.NLists = 0;
+        
     
+            
     case 'ANL (MCL-Too Loud)'
         % ANL (MCL-Too Loud) is the first step in the ANL sequence. The
         % listener is instructed to adjust the speech track until it is too

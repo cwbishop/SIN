@@ -1,0 +1,55 @@
+function [results, weights] = analysis_weight_estimation(results, varargin)
+%% DESCRIPTION:
+%
+%   This function uses a series of recordings to estimate the location and
+%   channel specific weights that can be applied to adjust theoretical
+%   level estimates in a multi-speaker/channel setup.
+%
+%   This was originally written as an auxiliary test/analysis to support
+%   the primary Hagerman analysis, but can likely be used in many recording
+%   circumstances, particularly when the target and masker are presented
+%   from a different combination of speakers.
+%
+% INPUT:
+%
+%   results:    results structure from SIN's player_main
+%
+% Parameters:
+%
+%   reference_location: double, indicates which speaker number should be
+%                       used as the reference location (i.e., which
+%                       location's weight should be defined as 1 for a
+%                       given channel). In the context of Hagerman style
+%                       recordings, this will likely need to be the
+%                       location of the target track (e.g., 1 for SNR
+%                       grant). 
+%
+% OUTPUT:
+%
+%   
+% Development:
+%
+%   XXX
+%
+% Christopher W Bishop
+%   University of Washington
+%   10/14
+
+%% GET INPUT PARAMETERS
+d=varargin2struct(varargin{:});
+
+%% GET RECORDED DATA
+%   Grab recorded data from each speaker/channel as well as the sampling
+%   rate. 
+for i=1:numel(results)
+    recs{i} = results(i).RunTime.sandbox.mic_recording; 
+end % for i=1:numel(results)
+
+%% FIND RMS FOR EACH LOCATION/CHANNEL COMBINATION
+
+% rms_level will store the rms estimation for each location/channel
+% combination
+rms_level = cell2mat(cellfun(@rms, concatenate_lists(recs), 'UniformOutput', false)); 
+
+% Normalize to the reference location
+rms_level = rms_level./(ones(size(rms_level,1), 1)*rms_level(d.reference_location,:));
