@@ -544,19 +544,22 @@ end % if d.player ...
 %   Note: this initialization procedure actually added more variance to the
 %   recording length on CWB's laptop. So WEIRD! Not sure what that's about.
 %   Commented out now. 
-% 
+%
+%   Note: CWB wants to try this again to see if the increased variance was
+%   a fluke. So strange, though.
+
 % Initialize playback device 
-% if ~isempty(phand)
-%     PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, pstruct.NrOutputChannels)');
-%     PsychPortAudio('Start', phand, 0, [], 0); 
-%     PsychPortAudio('Stop', phand, 1);
-% end % if ~isempty
-% 
-% % Initialize recording device
-% if ~isempty(rhand)
-%     PsychPortAudio('Start', rhand, [], [], 1); 
-%     PsychPortAudio('Stop', rhand, 1);
-% end % if ~isempty(rhand)
+if ~isempty(phand)
+    PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, pstruct.NrOutputChannels)');
+    PsychPortAudio('Start', phand, 0, [], 0); 
+    PsychPortAudio('Stop', phand, 1);
+end % if ~isempty
+
+% Initialize recording device
+if ~isempty(rhand)
+    PsychPortAudio('Start', rhand, [], [], 1); 
+    PsychPortAudio('Stop', rhand, 1);
+end % if ~isempty(rhand)
 
 %% INITIALIZE TRIAL COUNTER
 trial = 1; 
