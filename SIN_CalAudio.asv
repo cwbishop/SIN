@@ -306,8 +306,7 @@ for i=1:numel(files)
                 % audio track as a temporary MP4 file, then use that audio
                 % track (with the proper AAC encoder) as the audio track
                 % for the output MP4.
-                temp_audio_file = fullfile(PATHSTR, [NAME d.suffix '_temp.mp4']);
-                audiowrite(temp_audio_file, audio_data{i}{k}, FS); 
+                temp_audio_file = fullfile(PATHSTR, [NAME d.suffix '.mp4'])
                 
                 % Is overwriteMP4 set?
                 %   -y overwrites without asking in ffmpeg. Not used by
@@ -318,19 +317,13 @@ for i=1:numel(files)
                     cmd = 'ffmpeg ';
                 end % if d.overwritemp4
                 
-                % Replace audio in MP4              
-                %   Revised to use only MP4 as video and audio inputs, so
-                %   we can copy the codecs and save time/improve data
-                %   precision. 
+                % Replace audio in MP4                
                 mp4_file_out = fullfile(PATHSTR, [NAME d.suffix '.mp4']); 
-                cmd = [cmd '-i "' files{i}{k} '" -i "' temp_audio_file '"' ...
-                    ' -map 0:0 -map 1 -c copy "' mp4_file_out '"'];
+                cmd = [cmd '-i "' files{i}{k} '" -i "' audio_file_out '"' ...
+                    ' -map 0:0 -map 1 "' mp4_file_out '"'];
                 
                 % Issue system call 
                 [status, cmdout] = system(cmd);
-                
-                % Remove the temporary audio file
-                delete(temp_audio_file); 
                 
                 % If there's an error, then print the command output.
                 % Otherwise, post the file name to give the user some
@@ -339,7 +332,7 @@ for i=1:numel(files)
                     display(cmdout);
                 else
                     display([num2str((i-1)*numel(files{1}) + k) ' of ' num2str(numel(files) .* numel(files{1}))])
-                end % if ~status                
+                end % if ~status
                 
             otherwise
                 

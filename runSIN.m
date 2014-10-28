@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 22-Oct-2014 21:37:00
+% Last Modified by GUIDE v2.5 27-Oct-2014 10:13:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -531,3 +531,32 @@ function button_stop_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 SIN_ClearErrors; 
+
+
+% --- Executes on button press in load_results_button.
+function load_results_button_Callback(hObject, eventdata, handles)
+% hObject    handle to load_results_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Load test results
+%   Field will only be populated if a test is selected in the review panel.
+%   If not, then just return without doing anything
+try
+    test2review = handles.test2review;
+catch
+    return
+end 
+
+% Post to terminal
+post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
+
+% Load the test
+results = load(test2review);
+results = results.results;
+
+% Assign to workspace
+assignin('base', 'results', results); 
+
+% Load the corresponding test results
+post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal

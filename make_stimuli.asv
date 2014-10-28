@@ -529,17 +529,11 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'estimate_noise_floor', true, ...    
     'noise_floor_sec',  10);
 
-%% CREATE MLST + SPEECH SHAPED NOISE (SPSHN) STIMULI (65 dB and 80 dB)
+%% CREATE MLST + SPEECH SHAPED NOISE (SPSHN) STIMULI (65 dB, +8 dB SNR)
 %   Ultimately, we need a single channel speech track + an single-channel
 %   speech shaped noise track (SPSHN). The calibration procedure should be
 %   identical to the HINT calibration procedure above, just with different
 %   stimuli. 
-
-% ===================================
-% 65 dB
-%   The code below creates the SPSHN sample and creates the 0 dB stimuli
-%   for use in the 65 dB/+8 dB SNR condition. 
-% ===================================
 
 % ===================================
 % Match the long-term spectrum of the spshn spectrum to the long-term
@@ -698,48 +692,10 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
     'mixer', [1;0]); 
 
 % Load the (calibrated and filtered) MLST SPSHN track
-mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
+mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav');
 % sample rate check
 if mlst_fs ~= FS, error('Mismatched sample rates'); end 
 
 plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+
 title('0 dB MLST');
-
-% Plot RMS levels
-%   These should be very close to identical. CWB noticed that the MP4s are
-%   slightly quieter (49.1142 vs 49.0327 dB). Not perfect, but not terrible
-%   either. Can spend some time on this if we need to later. 
-figure, hold on
-plot(1, [db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series)) db(rms(mlst_spshn))], 's')
-legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
-
-% ===================================
-% 80 dB
-%   The code below creates the SPSHN sample and creates the +15 dB stimuli
-%   for use in the 80 dB/+0 dB SNR condition. 
-% ===================================
-
-%% CREATE MLST + SPEECH SHAPED NOISE (SPSHN) STIMULI (80 dB)
-%   Ultimately, we need a single channel speech track + an single-channel
-%   speech shaped noise track (SPSHN). The calibration procedure should be
-%   identical to the HINT calibration procedure above, just with different
-%   stimuli. 
-mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN.wav'), ...
-    'testID', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', ...
-    'nmixer', db2amp(0), ... % We don't want to scale the noise file at all since it is already RMS scaled to calibration levels. 
-    'targetdB', +15, ... % Set levels to match the reference sound. 
-    'removesilence', true, ...
-    'ampthresh', mlst_ampthresh, ... 
-    'bitdepth', audio_bit_depth, ...
-    'suffix', ';bandpass;+15dB', ...
-    'tmixer', [0;1], ...
-    'omixer', [1 0], ...
-    'writeref', true, ...
-    'wav_regexp',  '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$', ...
-    'apply_filter', true, ...
-    'filter_type', filter_type, ...
-    'frequency_cutoff', filter_frequency_range, ...
-    'filter_order', bandpass_filter_order, ...
-    'overwritemp4', true);
-
-display('Need sanity checks here for +15 dB case'); 
