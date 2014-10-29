@@ -696,7 +696,7 @@ switch testID
         % Change testID and change wav_regexp
         for i=1:numel(opts)
             opts(i).specific.testID = testID;
-            opts(i).specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]ists.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+            opts(i).specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]4talker_ists.wav$'; % Use calibrated noise files (calibrated to 0 dB)
             opts(i).specific.genPlaylist.files = {};             
         end % for i=1:numel(opts)
                     

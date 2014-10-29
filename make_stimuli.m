@@ -551,7 +551,7 @@ opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
-% files that do NOT have the noise added to the second channel. 
+% original MP4s
 opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$';
 
 % Get the file names and massage them into a useful format.
@@ -655,7 +655,7 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 [~, mlst_mp4_files] = SIN_stiminfo(opts); 
 mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
 
-% Concatenate the HINT Corpus
+% Concatenate the MLST Corpus
 [mlst_mp4_time_series, mlst_fs] = concat_audio_files(mlst_mp4_files, ...
     'remove_silence', true, ...
     'amplitude_threshold', mlst_ampthresh.*mlst_scale, ...
@@ -699,6 +699,7 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
 
 % Load the (calibrated and filtered) MLST SPSHN track
 mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
+
 % sample rate check
 if mlst_fs ~= FS, error('Mismatched sample rates'); end 
 
@@ -742,4 +743,51 @@ mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'filter_order', bandpass_filter_order, ...
     'overwritemp4', true);
 
-display('Need sanity checks here for +15 dB case'); 
+% Get a list of MLST sentences using SIN functions
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
+opts = opts(1);
+
+% Change the regular expression used to search for audio files; we want the
+% files that do NOT have the noise added to the second channel. 
+opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB.mp4$';
+
+[~, mlst_mp4_files] = SIN_stiminfo(opts); 
+mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
+
+% Concatenate the MLST Corpus
+[mlst_mp4_time_series, mlst_fs] = concat_audio_files(mlst_mp4_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', mlst_ampthresh.*mlst_scale, ...
+    'mixer', [1;0]); 
+
+% Change the regular expression used to search for audio files; we want the
+% files that do NOT have the noise added to the second channel. 
+opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB.wav$';
+
+[~, mlst_audio_files] = SIN_stiminfo(opts); 
+mlst_audio_files = concatenate_lists(mlst_audio_files); 
+
+% Concatenate the HINT Corpus
+[mlst_audio_time_series, mlst_fs] = concat_audio_files(mlst_audio_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', mlst_ampthresh.*mlst_scale, ...
+    'mixer', [1;0]); 
+
+% Load the (calibrated and filtered) MLST SPSHN track
+mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
+
+plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+title('+15dB MLST');
+legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
+
+% Plot RMS levels
+%   These should be very close to identical. CWB noticed that the MP4s are
+%   slightly quieter (49.1142 vs 49.0327 dB). Not perfect, but not terrible
+%   either. Can spend some time on this if we need to later. 
+figure, hold on
+plot(1, [db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series)) db(rms(mlst_spshn))], 's')
+legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
+
+%% CREATE MLST + 4-talker ISTS STIMULI (65 dB and 80 dB)
+%   Ultimately, we need a single channel speech track + 4 channels of the
+%   ISTS. 

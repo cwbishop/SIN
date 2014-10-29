@@ -219,6 +219,20 @@ for i=1:numel(files)
         % Load data file
         [audio_data{i}{k}, nfs] = SIN_loaddata(files{i}{k}); 
         
+        % Sampling rate check
+        if isempty(fs)
+            fs = nfs;
+        elseif fs ~= nfs
+            error('Sampling rates do not match');
+        end % if isempty(fs)
+        
+        % Double check that reference and files are at the same sampling
+        % rate
+        if fs ~= FS
+            audio_data{i}{k} = resample(audio_data{i}{k}, FS, nfs); 
+            display(['Resampling ' files{i}{k} ]); 
+        end % if fs ~= rfs    
+        
         % Apply appropriate mixer
         %   This should reduce the data to a single channel. 
         audio_data{i}{k} = audio_data{i}{k}*d.tmixer;
@@ -237,19 +251,7 @@ for i=1:numel(files)
             
         end % if d.apply_filter
         
-        % Sampling rate check
-        if isempty(fs)
-            fs = nfs;
-        elseif fs ~= nfs
-            error('Sampling rates do not match');
-        end % if isempty(fs)
         
-        % Double check that reference and files are at the same sampling
-        % rate
-        if fs ~= FS
-            audio_data{i}{k} = resample(audio_data{i}{k}, FS, nfs); 
-            display(['Resampling ' files{i}{k} ]); 
-        end % if fs ~= rfs    
         
     end % for k=1:numel(files{i})
     
