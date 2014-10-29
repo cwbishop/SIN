@@ -27,12 +27,12 @@ function opts=SIN_TestSetup(testID, subjectID)
 
 % Below are a list of correction factors that must be applied under various
 % playback conditions. Note that at time of writing, these correction
-% factors should only be applied to MLST. The only other test with
-% multi-channel maskers is the Hagerman, but the correction factor is dealt
-% with implicitly in the call to createHagerman (see line 292 of
-% createHagerman). 
-mlst_ists_4speaker_correction_db = 6.011;
-mlst_spshn_4speaker_correction_db = 6.05;
+% factors should 
+% This is the correction factor that should be applied when uncorrelated
+% noise sources are presented from 4, equidistant speakers. This was
+% theoretically calculated and empirically verified in Christi Miller's Lab
+% at UW by CWB. 
+db_correction_4speakers = 6.05;
 
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
@@ -538,8 +538,8 @@ switch testID
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
         % Set regular expression for wav files
-%         opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-        opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+%         opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
