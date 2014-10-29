@@ -570,6 +570,8 @@ mlst_spshn = mlst_spshn(:,1);
     'amplitude_threshold', mlst_ampthresh, ...
     'mixer', [0;1]); 
 
+% if max(max(abs(mlst_time_series))) > 1, error('Value out of range'); end
+
 % Resample MLST time series
 %   MLST stimuli are written at 48 kHz, so we have to resample to match the
 %   44.1 kHz sampling rate of all other stimuli.
@@ -584,8 +586,8 @@ if mlst_fs ~= FS, error('Mismatched sample rates'); end
 % in a high-pass sense. We don't bandpass filter here because bandpass
 % filtering is implicitly done in the call to SIN_CalAudio below. 
 [mlst_spshn] = match_spectra(mlst_time_series, mlst_spshn, ...
-        'fsx', mlst_fs, ...
-        'fsy', mlst_fs, ...
+        'fsx', FS, ...
+        'fsy', FS, ...
         'plot', true, ...
         'frequency_range', [filter_frequency_range(1) inf], ... % only work on the higher frequencies.
         'filter_order', spectral_match_filter_order, ...
@@ -597,7 +599,7 @@ if mlst_fs ~= FS, error('Mismatched sample rates'); end
 % RMS of the calibration file
 mlst_spshn_filt = filtfilt(b, a, mlst_spshn); 
 
-% Match MLST_SPSHN_1_channel.wav to calibration file
+% Match MLST-SPSHN.wav to calibration file
 hint_spshn = SIN_loaddata(calibration_file); 
 mlst_scale = rms(hint_spshn)./rms(mlst_spshn_filt); 
 mlst_spshn_filt = mlst_spshn_filt .* mlst_scale; 
@@ -616,12 +618,12 @@ mlst_spshn = mlst_spshn .* mlst_scale;
 %   1) The spectrally matched + bandpass filtered SPSHN
 %   2) The spectrally matched SPSHN (no bandpass filtering). This file will
 %   be used in the call to SIN_CalAudio below. 
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel.wav'), mlst_spshn, FS, 'BitsperSample', audio_bit_depth);
-% audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel;bandpass.wav'), mlst_spshn_filt, FS, 'BitsperSample', audio_bit_depth);
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN.wav'), mlst_spshn, FS, 'BitsperSample', audio_bit_depth);
+% audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass.wav'), mlst_spshn_filt, FS, 'BitsperSample', audio_bit_depth);
 
 % Using the spectrally matched SPSHN sample above, calibrate the whole
 % corpus. 
-mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel.wav'), ...
+mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN.wav'), ...
     'testID', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', ...
     'nmixer', db2amp(0), ... % We don't want to scale the noise file at all since it is already RMS scaled to calibration levels. 
     'targetdB', 0, ... % Set levels to match the reference sound. 
@@ -698,17 +700,10 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
     'mixer', [1;0]); 
 
 % Load the (calibrated and filtered) MLST SPSHN track
-mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel;bandpass;0dB.wav'));
+mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
 
-mlst_spshn_4talker = remixaudio(mlst_spshn, ...
-    'fsx',    FS, ...
-    'mixer',    [1 1 1 1], ...
-    'toffset',  [0 11.234 28.1987 46], ...
-    'writetofile',  false); 
-
-mlst_spshn_correction_db = db(rms(hint_spshn)./rms(sum(mlst_spshn_4talker,2)))
-
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_4_channel.wav'), mlst_spshn_4talker, FS, 'BitsperSample', audio_bit_depth);
+% sample rate check
+if mlst_fs ~= FS, error('Mismatched sample rates'); end 
 
 plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 title('0 dB MLST');
@@ -732,7 +727,7 @@ legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutsid
 %   speech shaped noise track (SPSHN). The calibration procedure should be
 %   identical to the HINT calibration procedure above, just with different
 %   stimuli. 
-mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel.wav'), ...
+mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN.wav'), ...
     'testID', 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', ...
     'nmixer', db2amp(0), ... % We don't want to scale the noise file at all since it is already RMS scaled to calibration levels. 
     'targetdB', +15, ... % Set levels to match the reference sound. 
@@ -781,9 +776,7 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
     'mixer', [1;0]); 
 
 % Load the (calibrated and filtered) MLST SPSHN track
-mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_SPSHN_1_channel;bandpass;0dB.wav'));
-
-% Create 4-channel SPSHN file
+mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
 
 plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 title('+15dB MLST');
@@ -799,60 +792,4 @@ legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutsid
 
 %% CREATE MLST + 4-talker ISTS STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + 4 channels of the
-%   ISTS.
-
-
-% Load original ISTS
-[ists, ists_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'))); 
-
-if ists_fs ~= FS, error('sampling rates differ'); end
-
-% Band pass filter ISTS 
-[b, a] = butter(bandpass_filter_order, filter_frequency_range./(FS/2), filter_type);
-ists_filt = filtfilt(b, a, ists);
-
-% Match ISTS to concatenated MLST corpus
-%   Use the WAV files rather than the MP4s since the MP4s seem to introduce
-%   some error in the spectral properties. This is something we'll need to
-%   address. 
-[ists_filt] = match_spectra(mlst_audio_time_series, ists_filt, ...
-        'fsx', FS, ...
-        'fsy', FS, ...
-        'plot', true, ...
-        'frequency_range', [eps inf], ... % excludes DC component
-        'filter_order', spectral_match_filter_order, ...
-        'window', pwelch_window, ...
-        'noverlap', pwelch_noverlap, ...
-        'nfft', pwelch_nfft);
-
-% Need to RMS scale the filtered ISTS to match our calibration stimulus.
-% This will produce a single-channel, 1-talker ISTS stimulus that is
-% calibrated to ~0 dB relative to the calibration stimulus. 
-ists_scale = rms(hint_spshn) ./ rms(ists_filt);
-ists_filt = ists_filt .* ists_scale;
-
-% Write spectrally matched/calibrated ISTS for HINT
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_1_talker;bandpass;0dB.wav'), ists_filt, hint_fs, 'BitsperSample', audio_bit_depth);
-
-% Make 4-talker ISTS
-%   Note that the timing offsets were selected through some trial and error
-%   by CWB. His goal was to minimize temporal gaps (that is, periods of
-%   relative silence) when summing the signal over channels.
-ists_4talker = remixaudio(ists_filt, ...
-    'fsx',    FS, ...
-    'mixer',    [1 1 1 1], ...
-    'toffset',  [0 11.234 28.1987 46], ...
-    'writetofile',  false); 
-
-% Confirm that RMS is the same for all channels relative to the calibration
-% file
-[db(rms(ists_4talker)) db(rms(ists_filt))] - db(rms(hint_spshn))
-
-% Write the 4-talker version
-%   Note that each channel of the ISTS should be calibrated to ~ 0 dB. So,
-%   we will need to apply a correction factor to the mod_mixer during sound
-%   playback to account for multiple speaker playback. 
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'), ists_4talker, hint_fs, 'BitsperSample', audio_bit_depth);
-
-% Estimate the correction factor for ISTS playback
-mlst_ists_correction_db = db(rms(hint_spshn)./rms(sum(ists_4talker,2)))
+%   ISTS. 

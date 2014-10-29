@@ -291,7 +291,8 @@ for i=1:numel(files)
         % matrix.
         audio_data{i}{k} = audio_data{i}{k}*d.omixer; 
         
-        if max(max(abs(audio
+        if max(max(abs(audio_data{i}{k}))) > 1, error('Signal Clipped'); end 
+        
         % Write audio track(s) to file                               
         audiowrite(audio_file_out, audio_data{i}{k}, FS, 'BitsperSample', d.bitdepth); 
         

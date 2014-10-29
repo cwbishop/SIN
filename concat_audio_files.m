@@ -82,7 +82,7 @@ for i=1:numel(audio_files)
     concat = [concat; time_series_clipped]; %#ok<*AGROW>
     
     % Error check for out of range values
-    if max(max(abs(time_series))) > 1, error('Value out of range'); end
+%     if max(max(abs(time_series))) > 1, error('Value out of range'); end
     
     % Append to all time series
     clipped_time_series{i} = time_series_clipped; 
