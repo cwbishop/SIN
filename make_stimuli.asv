@@ -570,7 +570,7 @@ mlst_spshn = mlst_spshn(:,1);
     'amplitude_threshold', mlst_ampthresh, ...
     'mixer', [0;1]); 
 
-if max(max(abs(mlst_time_series))) > 1, error('Value out of range'); end
+% if max(max(abs(mlst_time_series))) > 1, error('Value out of range'); end
 
 % Resample MLST time series
 %   MLST stimuli are written at 48 kHz, so we have to resample to match the
@@ -657,8 +657,8 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 [~, mlst_mp4_files] = SIN_stiminfo(opts); 
 mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
 
-% Remove a faulty file for plotting purposes
-mlst_mp4_files = mlst_mp4_file_files(
+% remove a botched file
+
 % Concatenate the MLST Corpus
 [mlst_mp4_time_series, mlst_fs] = concat_audio_files(mlst_mp4_files, ...
     'remove_silence', true, ...

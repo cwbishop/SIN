@@ -558,6 +558,8 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$';
 [~, mlst_audio_files] = SIN_stiminfo(opts); 
 mlst_audio_files = concatenate_lists(mlst_audio_files); 
 
+% mlst_audio_files = {mlst_audio_files{(cellfun(@isempty, strfind(mlst_audio_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4')))}}';
+
 % Load the speech shaped noise file
 [mlst_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
@@ -657,6 +659,9 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 [~, mlst_mp4_files] = SIN_stiminfo(opts); 
 mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
 
+% remove a botched file
+% mlst_mp4_files = {mlst_mp4_files{(cellfun(@isempty, strfind(mlst_mp4_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.mp4')))}}';
+
 % Concatenate the MLST Corpus
 [mlst_mp4_time_series, mlst_fs] = concat_audio_files(mlst_mp4_files, ...
     'remove_silence', true, ...
@@ -692,6 +697,7 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 
 [~, mlst_audio_files] = SIN_stiminfo(opts); 
 mlst_audio_files = concatenate_lists(mlst_audio_files); 
+% mlst_audio_files = {mlst_audio_files{(cellfun(@isempty, strfind(mlst_audio_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.wav')))}}';
 
 % Concatenate the HINT Corpus
 [mlst_audio_time_series, mlst_fs] = concat_audio_files(mlst_audio_files, ...
