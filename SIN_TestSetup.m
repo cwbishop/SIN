@@ -32,7 +32,7 @@ function opts=SIN_TestSetup(testID, subjectID)
 % with implicitly in the call to createHagerman (see line 292 of
 % createHagerman). 
 mlst_ists_4speaker_correction_db = 6.011;
-mlst_spshn_4speaker_correction_db = 6.05;
+mlst_spshn_4speaker_correction_db = -6.0262;
 
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
@@ -803,8 +803,8 @@ switch testID
         %   Loads a file containing a 4-channel noise sample and plays the
         %   noise back from all 4 speakers. 
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped)4chan;0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 - db_correction_4speakers).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
-                                                                                                                  % -6.05 dB corrects for level gain due to playing noise from multiple speakers.
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 - mlst_spshn_4speaker_correction_db).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
+                                                                                                                  % ~ -6.05 dB corrects for level gain due to playing noise from multiple speakers.
                                                                                                                   % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
                                                                                                                   % See the note link below here for details on how CWB estimated the 6.05 dB correction factor
                                                                                                                   % http://www.evernote.com/shard/s353/sh/a51a39a6-4732-4dfe-9040-840ba98945fd/9e1c5846a09fe0e7e3e3297c8a220380
