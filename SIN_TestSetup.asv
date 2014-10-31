@@ -34,8 +34,6 @@ function opts=SIN_TestSetup(testID, subjectID)
 mlst_ists_4speaker_correction_db = -6.011;
 mlst_spshn_4speaker_correction_db = -6.0262;
 
-warning('MLST ISTS correction factor not yet applied'); 
-
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
 end 
