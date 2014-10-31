@@ -311,7 +311,7 @@ for i=1:numel(files)
                 % track (with the proper AAC encoder) as the audio track
                 % for the output MP4.
                 temp_audio_file = fullfile(PATHSTR, [NAME d.suffix '_temp.mp4']);
-                audiowrite(temp_audio_file, audio_data{i}{k}, FS); 
+                audiowrite(temp_audio_file, audio_data{i}{k}, FS, 'Bitrate', d.bitrate); 
                 
                 % Is overwriteMP4 set?
                 %   -y overwrites without asking in ffmpeg. Not used by

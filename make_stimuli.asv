@@ -22,7 +22,8 @@ spectral_match_filter_order = 800;
 
 % Bitdepth for audio files. This should be used in all subsequent write
 % calls as well. 
-audio_bit_depth = 24; 
+audio_bit_depth = 24; % used when writing WAV files
+audio_bit_rate = 192; % Note that 192 is the highest bitrate available on Windows 7. 
 FS = 44100; % sampling rate of all audio files
 
 % Periodogram parameters
@@ -110,6 +111,7 @@ hint_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'removesilence', true, ...
     'ampthresh', hint_ampthresh, ...
     'bitdepth', audio_bit_depth, ...
+    'bitrate',  audio_bit_rate, ...
     'suffix', ';bandpass;0dB', ...
     'tmixer', [0;1], ...
     'omixer', 1, ...
@@ -558,6 +560,8 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS].mp4$';
 [~, mlst_audio_files] = SIN_stiminfo(opts); 
 mlst_audio_files = concatenate_lists(mlst_audio_files); 
 
+% mlst_audio_files = {mlst_audio_files{(cellfun(@isempty, strfind(mlst_audio_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4')))}}';
+
 % Load the speech shaped noise file
 [mlst_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
@@ -630,6 +634,7 @@ mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'removesilence', true, ...
     'ampthresh', mlst_ampthresh, ... 
     'bitdepth', audio_bit_depth, ...
+    'bitrate',  audio_bit_rate, ...
     'suffix', ';bandpass;0dB', ...
     'tmixer', [0;1], ...
     'omixer', [1 0], ...
@@ -640,6 +645,18 @@ mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'frequency_cutoff', filter_frequency_range, ...
     'filter_order', bandpass_filter_order, ...
     'overwritemp4', true);
+
+% Fix C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.mp4
+%   This file's audio track is bunk, so rewrite the MP4 with the Wav file
+%   instead.
+%
+%   Note that the -c option is ommitted since we can't copy the FLAC codec
+%   to MP4 (need AAC). 
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.mp4"'];
+
+system(cmd, '-echo')
 
 % Plot PSD and levels
 %   Before we do this, we'll want to reload all of the data from file, just
@@ -658,6 +675,7 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
 
 % remove a botched file
+% mlst_mp4_files = {mlst_mp4_files{(cellfun(@isempty, strfind(mlst_mp4_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.mp4')))}}';
 
 % Concatenate the MLST Corpus
 [mlst_mp4_time_series, mlst_fs] = concat_audio_files(mlst_mp4_files, ...
@@ -694,6 +712,7 @@ opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0d
 
 [~, mlst_audio_files] = SIN_stiminfo(opts); 
 mlst_audio_files = concatenate_lists(mlst_audio_files); 
+% mlst_audio_files = {mlst_audio_files{(cellfun(@isempty, strfind(mlst_audio_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;0dB.wav')))}}';
 
 % Concatenate the HINT Corpus
 [mlst_audio_time_series, mlst_fs] = concat_audio_files(mlst_audio_files, ...
@@ -704,11 +723,9 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
 % Load the (calibrated and filtered) MLST SPSHN track
 mlst_spshn = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST-SPSHN;bandpass;0dB.wav'));
 
-% sample rate check
-if mlst_fs ~= FS, error('Mismatched sample rates'); end 
-
 plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 title('0 dB MLST');
+legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
 
 % Plot RMS levels
 %   These should be very close to identical. CWB noticed that the MP4s are
@@ -736,6 +753,7 @@ mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'removesilence', true, ...
     'ampthresh', mlst_ampthresh, ... 
     'bitdepth', audio_bit_depth, ...
+    'bitrate',  audio_bit_rate, ...
     'suffix', ';bandpass;+15dB', ...
     'tmixer', [0;1], ...
     'omixer', [1 0], ...
@@ -746,6 +764,12 @@ mlst_scale = SIN_CalAudio(fullfile(fileparts(which('runSIN')), 'playback', 'Nois
     'frequency_cutoff', filter_frequency_range, ...
     'filter_order', bandpass_filter_order, ...
     'overwritemp4', true);
+
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;+15dB.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;+15dB.mp4"'];
+
+system(cmd, '-echo')
 
 % Get a list of MLST sentences using SIN functions
 opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
@@ -792,6 +816,66 @@ figure, hold on
 plot(1, [db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series)) db(rms(mlst_spshn))], 's')
 legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
 
+% =================
+% Create lookup tables for MLST SPSHN
+%   Need separate lookup talbes for 0 dB and +15 dB case
+% =================
+createMLSTlookup('suffix', ';bandpass;0dB', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB.mp4$');
+createMLSTlookup('suffix', ';bandpass;+15dB', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB.mp4$');
+
 %% CREATE MLST + 4-talker ISTS STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + 4 channels of the
 %   ISTS. 
+
+% Load original ISTS
+[ists, ists_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'))); 
+
+if ists_fs ~= FS, error('sampling rates differ'); end
+
+% Band pass filter ISTS 
+[b, a] = butter(bandpass_filter_order, filter_frequency_range./(FS/2), filter_type);
+ists_filt = filtfilt(b, a, ists);
+
+% Match ISTS to concatenated MLST corpus
+%   Use the WAV files rather than the MP4s since the MP4s seem to introduce
+%   some error in the spectral properties. This is something we'll need to
+%   address. 
+[ists_filt] = match_spectra(mlst_audio_time_series, ists_filt, ...
+        'fsx', FS, ...
+        'fsy', FS, ...
+        'plot', true, ...
+        'frequency_range', [eps inf], ... % excludes DC component
+        'filter_order', spectral_match_filter_order, ...
+        'window', pwelch_window, ...
+        'noverlap', pwelch_noverlap, ...
+        'nfft', pwelch_nfft);
+    
+% Need to RMS scale the filtered ISTS to match our calibration stimulus.
+% This will produce a single-channel, 1-talker ISTS stimulus that is
+% calibrated to ~0 dB relative to the calibration stimulus. 
+ists_scale = rms(hint_spshn) ./ rms(ists_filt);
+ists_filt = ists_filt .* ists_scale;
+
+% Write spectrally matched/calibrated ISTS for HINT
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_1_talker;bandpass;0dB.wav'), ists_filt, FS, 'BitsperSample', audio_bit_depth);
+
+% Make 4-talker ISTS
+%   Note that the timing offsets were selected through some trial and error
+%   by CWB. His goal was to minimize temporal gaps (that is, periods of
+%   relative silence) when summing the signal over channels.
+ists_4talker = remixaudio(ists_filt, ...
+    'fsx',    FS, ...
+    'mixer',    [1 1 1 1], ...
+    'toffset',  [0 11.234 28.1987 46], ...
+    'writetofile',  false); 
+
+% Confirm that RMS is the same for all channels relative to the calibration
+% file
+[db(rms(ists_4talker)) db(rms(ists_filt))] - db(rms(hint_spshn))
+
+% Write the 4-talker version
+%   Note that each channel of the ISTS should be calibrated to ~ 0 dB. So,
+%   we will need to apply a correction factor to the mod_mixer during sound
+%   playback to account for multiple speaker playback. 
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'), ists_4talker, FS, 'BitsperSample', audio_bit_depth);
+
