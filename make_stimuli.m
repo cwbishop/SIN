@@ -936,7 +936,12 @@ mlst_audio_files_0dB = concatenate_lists(mlst_audio_files_0dB);
     'remove_silence', true, ...
     'amplitude_threshold', mlst_ampthresh.*mlst_scale, ...
     'mixer', [1;0]); 
+
 % Plot sanity checks
+% plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_ists_4talker(:,1) mlst_ists_4talker(:,2) mlst_ists_4talker(:,3) mlst_ists_4talker(:,4)}, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+title('MLST, ISTS');
+legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
 
 % plot_psd({ mlst_audio_time_series mlst_mp4_time_series_0dB mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 plot_psd({ mlst_audio_time_series_0dB mlst_mp4_time_series_0dB mlst_audio_time_series mlst_mp4_time_series mlst_spshn_4channel(:,1) mlst_ists_4talker(:,1) }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 

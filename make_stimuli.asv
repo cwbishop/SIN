@@ -936,17 +936,22 @@ mlst_audio_files_0dB = concatenate_lists(mlst_audio_files_0dB);
     'remove_silence', true, ...
     'amplitude_threshold', mlst_ampthresh.*mlst_scale, ...
     'mixer', [1;0]); 
+
 % Plot sanity checks
+% plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+plot_psd({ mlst_audio_time_series mlst_mp4_time_series mlst_ists_4talker(:,1) mlst_ists_4talker(:,2) mlst_ists_4talker(:,3) mlst_ists_4talker(:,4)}, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+title('MLST, ISTS');
+legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
 
 % plot_psd({ mlst_audio_time_series mlst_mp4_time_series_0dB mlst_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 plot_psd({ mlst_audio_time_series_0dB mlst_mp4_time_series_0dB mlst_audio_time_series mlst_mp4_time_series mlst_spshn_4channel(:,1) mlst_ists_4talker(:,1) }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
-title('+15dB MLST');
+title('MLST PSD');
 legend('MLST WAV Files (0dB)', 'MLST MP4 Files (0dB)', 'MLST WAV Files (+15dB)', 'MLST MP4 Files (+15dB)', 'MLST SPSHN', 'MLST ISTS', 'location', 'EastOutside')
 
 % Plot RMS levels
-%   These should be very close to identical. CWB noticed that the MP4s are
-%   slightly quieter (49.1142 vs 49.0327 dB). Not perfect, but not terrible
-%   either. Can spend some time on this if we need to later. 
+%   This is not spot on for anything yet ... we're off by ~0.5 dB for the
+%   audio and MP4 files of the 0dB MLST files. The rest are close. Not sure
+%   why we're seeing the discrepancy for those ... will need to work on it.
 figure, hold on
-plot(1, [db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series_0dB)) db(rms(mlst_spshn_4channel)) db(rms(mlst_ists_4talker))], 's')
+plot(1, [db(rms(mlst_audio_time_series_0dB)) db(rms(mlst_mp4_time_series_0dB)) db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series)) db(rms(mlst_spshn_4channel)) db(rms(mlst_ists_4talker))] - db(rms(hint_spshn)), 's')
 legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
