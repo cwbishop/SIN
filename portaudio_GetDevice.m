@@ -32,12 +32,18 @@ function [D]=portaudio_GetDevice(X, varargin)
 % if the device index has changed), then the device will be saved to the
 % provided mat file. 
 %
+%   For a more detailed and likely more up-to-date description of these
+%   parameters, see SIN_select.m. 
+%
 %   'title':    string, title for SIN_select if it's called. 
 %
 %   'prompt':   string, prompt for SIN_select if it's called.
 %
 %   'mat_file': string, path to mat-file to save device in (e.g., a default
 %               file)
+%
+%   'max_selections':   double, the maximum number of selections that the
+%                       user can make. (e.g., 1)
 %
 % OUTPUT:
 %

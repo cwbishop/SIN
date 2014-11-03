@@ -59,7 +59,7 @@ hagerman_sentence_number = 5; % use 5 for testing purposes, will need to change 
 % ===================================
 
 % Get a list of HINT sentences using SIN functions
-opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '1001');
+opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -131,7 +131,7 @@ calibration_file = fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HI
 % Confirm that spectral matching procedure led to good results. 
 
 % Need to get the new 0dB hint_time_series
-opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '1001');
+opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -360,7 +360,7 @@ legend('HINT SPSHN', 'ANL (Channel 1)', 'ANL (Channel 2)', 'location', 'NorthOut
 % Select a subset of HINT sentences
 %   Use the first N sentences in the corpus, where N is determined by
 %   hagerman_sentence_number above. 
-opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '1001');
+opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -531,6 +531,25 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'estimate_noise_floor', true, ...    
     'noise_floor_sec',  10);
 
+%% MLST CLEANUP
+%   There are two lists that have 13 stimuli instead of 12. CWB contacted
+%   Ginny Driscoll on October 29, 2014 and inquired about these additional
+%   files. The additional files are filtered out in their software rather
+%   than deleted manually. We won't have that luxury, so we need to delete
+%   the files. We need to delete or otherwise rename the following files:
+%
+%       List_09\9_T6_237_LS.mp4/mp3
+%       List_12\12_T3_309_LD.mp4/mp3
+%
+%   CWB decided to go with renaming rather than deleting in case we need
+%   the files later. 
+!move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_09\9_T6_237_LS.mp4" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_09\9_T6_237_LS_DONOTUSE.mp4"
+!move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_09\9_T6_237_LS.mp3" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_09\9_T6_237_LS_DONOTUSE.mp3"
+
+!move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD.mp4" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD_DONOTUSE.mp4"
+!move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD.mp3" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD_DONOTUSE.mp3"
+
+
 %% CREATE MLST + SPEECH SHAPED NOISE (SPSHN) STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + an single-channel
 %   speech shaped noise track (SPSHN). The calibration procedure should be
@@ -549,7 +568,7 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
 % ===================================
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -665,7 +684,7 @@ system(cmd, '-echo')
 % Get the file names and massage them into a useful format.
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -792,7 +811,7 @@ cmd = ['ffmpeg -y -i '...
 system(cmd, '-echo')
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -908,7 +927,7 @@ audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_
 mlst_ists_correction_db = db(rms(hint_spshn)./rms(sum(mlst_ists_4talker,2)))
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '1001');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the

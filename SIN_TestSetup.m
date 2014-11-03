@@ -126,13 +126,13 @@ switch testID
         
         % Set sound output paramters. 
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(fullfile(opts.general.root, 'playback_device.mat'), 'title', 'Playback Device Selection', 'prompt', 'Select ONE playback Device', 'mat_file', fullfile(opts.general.root, 'playback_device.mat')), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(fullfile(opts.general.root, 'playback_device.mat'), 'title', 'Playback Device Selection', 'prompt', 'Select ONE playback Device', 'mat_file', fullfile(opts.general.root, 'playback_device.mat'), 'max_selections', 1), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'block_dur', 0.5, ... % 500 ms block duration.            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
         % Recording device
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(fullfile(opts.general.root, 'recording_device.mat'), 'title', 'recording Device Selection', 'prompt', 'Select ONE recording Device', 'mat_file', fullfile(opts.general.root, 'recording_device.mat')), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', portaudio_GetDevice(fullfile(opts.general.root, 'recording_device.mat'), 'title', 'recording Device Selection', 'prompt', 'Select ONE recording Device', 'mat_file', fullfile(opts.general.root, 'recording_device.mat'), 'max_selections', 1), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
             'buffer_dur', 60*60); % recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
         
         % Stop playback if we encounter an error
@@ -540,8 +540,8 @@ switch testID
         opts.specific.list_regexp='List[0-9]{2}'; 
                 
         % Set regular expression for wav files
-        opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-%         opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+%         opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
+        opts.specific.wav_regexp = '[0-9]{2}.wav$'; % Use calibrated noise files (calibrated to 0 dB)
         
         % full path to HINT lookup list. Currently an XLSX file provided by
         % Wu. Used by importHINT.m
