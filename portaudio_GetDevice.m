@@ -45,6 +45,9 @@ function [D]=portaudio_GetDevice(X, varargin)
 %   'max_selections':   double, the maximum number of selections that the
 %                       user can make. (e.g., 1)
 %
+%   'field_name':   field name used to select input/outputs. This is
+%                   equivalent to the 'field_name' field in map_channels.
+%
 % OUTPUT:
 %
 %   d:  structure, device structure.
@@ -98,8 +101,14 @@ elseif isa(X, 'char')
         % Run check on selection
         device = portaudio_GetDevice(device, opts);
         
+        % Map channels
+        %   This calls map_channels, which will map the each data stream to
+        %   the specified output channel.
+        [channel_number, channel_map] = map_channels(device, opts.field_name, 'title', opts.title);
+        
         % Save the device to file
-        save(X, 'device');
+        %   Also save mapping information about the device. 
+        save(X, 'device', 'channel_number', 'channel_map');        
         
         clear device; 
         

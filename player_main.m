@@ -879,7 +879,9 @@ while trial <= number_of_trials
                 %   easier for users to playback what was presented to each
                 %   speaker at the commandline (using audioplayer or
                 %   wavplay or some other variant). 
-                d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
+                %
+                %   Had to disable this due to memory constraints.
+%                 d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
                 
                 % Get playback device status
                 pstatus=PsychPortAudio('GetStatus', phand);
