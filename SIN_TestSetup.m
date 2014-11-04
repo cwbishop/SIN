@@ -125,15 +125,35 @@ switch testID
         opts.subject.subjectDir = fullfile(opts.general.subjectDir, opts.subject.subjectID); 
         
         % Set sound output paramters. 
+        [playback_device, playback_map] = portaudio_GetDevice(fullfile(opts.general.root, 'playback_device.mat'), ...
+                        'title', 'Playback Device Selection', ...
+                        'prompt', 'Select ONE playback Device', ...
+                        'mat_file', fullfile(opts.general.root, 'playback_device.mat'), ...
+                        'max_selections', 1, ...
+                        'field_name', 'NrOutputChannels');
+   
         opts.player.playback = struct( ...
-            'device', portaudio_GetDevice(fullfile(opts.general.root, 'playback_device.mat'), 'title', 'Playback Device Selection', 'prompt', 'Select ONE playback Device', 'mat_file', fullfile(opts.general.root, 'playback_device.mat'), 'max_selections', 1, 'field_name', 'NrOutputChannels'), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
+            'device', playback_device, ...    
             'block_dur', 0.5, ... % 500 ms block duration.            
             'internal_buffer', 4096); % used in 'buffersize' input to PsychPortAudio('Open', ...
         
+        % Set playback map parameter for player_main
+        opts.player.playback_map = playback_map; 
+        
         % Recording device
+        [record_device, record_map] = portaudio_GetDevice(fullfile(opts.general.root, 'recording_device.mat'), ...
+                        'title', 'recording Device Selection', ...
+                        'prompt', 'Select ONE recording Device', ...
+                        'mat_file', fullfile(opts.general.root, 'recording_device.mat'), ...
+                        'max_selections', 1, ...
+                        'field_name', 'NrInputChannels');
+                        
         opts.player.record = struct( ...
-            'device', portaudio_GetDevice(fullfile(opts.general.root, 'recording_device.mat'), 'title', 'recording Device Selection', 'prompt', 'Select ONE recording Device', 'mat_file', fullfile(opts.general.root, 'recording_device.mat'), 'max_selections', 1, 'field_name', 'NrInputChannels'), ... % device structure, (20) for ASIO on Miller PC, 29 for fast track ASIO
-            'buffer_dur', 0.001*60); % recording buffer duration. Make this longer than you'll ever need for a single trial of HINT
+            'device', record_device, ...
+            'buffer_dur', 60); % 
+        
+        % Set record_map
+        opts.player.record_map = record_map; 
         
         % Stop playback if we encounter an error
         opts.player.stop_if_error = true; 
@@ -143,17 +163,9 @@ switch testID
         %   "resume", and "quit" requests.
         %   No, we don't want this added by default. Only to ANL
         opts.player.modifier={}; 
-%         opts.player.modifier{1} = struct( ...
-%             'fhandle', @modifier_PlaybackControl, ...
-%             'mod_stage',    'premix');             
         
         % Where the UsedList is stored. 
         opts.specific.genPlaylist.UsedList = fullfile(opts.subject.subjectDir, [opts.subject.subjectID '-UsedList.mat']); % This is where used list information is stored.
-        
-        % Do not return the test as "to be used" test by default. There are
-        % many cases that should not (typically) be called by the user. So,
-        % don't return those.
-%         opts.specific.listtest = false; 
         
         % Preload stimuli by default
         %   Generally do not want to preload AV stims, though, so look for
@@ -194,7 +206,7 @@ switch testID
         %
         %   CWB had to disable this on Wu's machine since he was running
         %   into memory errors. 
-        opts.player.record_mic = false; 
+        opts.player.record_mic = true; 
         
         % Change root directory (for wavfile selection) and change
         % wav_regexp to choose correct calibration file
@@ -210,7 +222,7 @@ switch testID
         
         % Change the mixer to match the single channel calibration sound
         %   Initializes with zeros
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [], 0);
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [], 0);
         
         % Reset instructions for modcheck
         opts.player.modcheck.instructions = fileread(fullfile(opts.general.instruction_dir, 'calibrate_speaker_output.txt')); 
@@ -225,14 +237,15 @@ switch testID
         % Now create a test stage for each speaker in turn. All we should
         % have to do is modify the mod_mixer to present the sound from the
         % next speaker.
-        for i=1:opts.player.playback.device.NrOutputChannels
+        for i=1:opts.player.playback_map.channel_number
             
             % Set channel to "on"
             cal(i) = opts;            
             cal(i).player.mod_mixer(1, i) = 1;
             
             % Change title 
-            cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback.device.NrOutputChannels)]; 
+            %   Need to increment channel_map to be 1 index rather than 0. 
+            cal(i).player.modcheck.title = [testID ': Speaker ' num2str(i) ' of ' num2str(opts.player.playback_map.channel_number)]; 
             
         end % for i=1:opts ...        
         
@@ -311,7 +324,7 @@ switch testID
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [1], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [1], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
@@ -1365,7 +1378,7 @@ switch testID
             'playback_mode',    'looped', ... % loop sound playback - so the same sound just keeps playing over and over again until the player exits
             'playertype',       'ptb (stream)', ... % use streaming playback mode 
             'startplaybackat',    0, ...  % start playback at beginning of sound 
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [0;0] [0;0] [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [0;0] [0;0] [1;1] [0;0] ], 0), ... % Play both channels to left ear only. 
             'contnoise',    '',     ... % no continuous noise playback. This option only relevent for MLST (usually)            
             'state',    'pause'); % start in paused state
         
@@ -1422,8 +1435,8 @@ switch testID
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_ANL)
                 'order',    1:6, ...
-                'tmask',    logical(fillPlaybackMixer(opts.player.playback.device, [1;0], 0)), ...   % just get data/physical channel 1
-                'nmask',    logical(fillPlaybackMixer(opts.player.playback.device, [0;1], 0)), ...   % get data chan 2/phys chan 1
+                'tmask',    logical(fillPlaybackMixer(opts.player.playback_map, [1;0], 0)), ...   % just get data/physical channel 1
+                'nmask',    logical(fillPlaybackMixer(opts.player.playback_map, [0;1], 0)), ...   % get data chan 2/phys chan 1
                 'plot', 1)); % generate summary plots only
             
     otherwise

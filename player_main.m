@@ -210,6 +210,12 @@ function [results, status]=player_main(playback_list, varargin)
 %                       also be applied directly to the mixing matrix with
 %                       seamless tracking over trials/stimuli/loops. 
 %
+%   'playback_map': mapping parameters for the playback device. For more
+%                   details, see help for map_channels.m
+%
+%   'record_map':   mapping parameters for the recording device. For more
+%                   details, see help for map_channels.m 
+%
 %   'state':    player state when first launched. States may change, but
 %               currently include :
 %                   'run':  run the test/playback
@@ -385,7 +391,7 @@ end % try/catch
 % mod_mixer check
 %   Need to make sure the number of columns in mod_mixer matches the number
 %   of output channels
-if size(d.player.mod_mixer, 2) ~= pstruct.NrOutputChannels, error('columns in mod_mixer does not match the number of output channels.'); end 
+if size(d.player.mod_mixer, 2) ~= d.player.playback_map.channel_number, error('columns in mod_mixer does not match the number of output channels.'); end 
 
 % Flag for Duplex check below (mode 3)
 isDuplex=false;
@@ -399,7 +405,15 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
         
         % Load in duplex mode (mode 3) if the recording and playback
         % devices are the same device. 
-        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 3, 0, playback_fs, [pstruct.NrOutputChannels rstruct.NrInputChannels], d.player.playback.internal_buffer);
+        phand = PsychPortAudio('Open', ...
+            pstruct.DeviceIndex, ...
+            3, ...
+            0, ...
+            playback_fs, ...
+            [d.player.playback_map.channel_number d.player.record_map.channel_number], ...
+            d.player.playback.internal_buffer, ...
+            [], ...
+            [d.player.playback_map.channel_map; d.player.record_map.channel_map]);
         
         % Now the recording handle is the same as the playback handle. 
         rhand = phand;
@@ -412,7 +426,17 @@ if isequal(d.player.adaptive_mode, 'continuous') || isequal(d.player.adaptive_mo
     else
         
         % If we don't need duplex mode, just open the device. 
-        phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, playback_fs, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
+        phand = PsychPortAudio('Open', ...
+            pstruct.DeviceIndex, ...
+            1, ...
+            0, ...
+            playback_fs, ...
+            d.player.playback_map.channel_number, ...
+            d.player.playback.internal_buffer, ...
+            [], ...
+            [d.player.playback_map.channel_map]);
+        
+%         phand = PsychPortAudio('Open', pstruct.DeviceIndex, 1, 0, playback_fs, pstruct.NrOutputChannels, d.player.playback.internal_buffer);
     end % if (d ...
     
 end % 
@@ -550,7 +574,7 @@ end % if d.player ...
 
 % Initialize playback device 
 if ~isempty(phand)
-    PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, pstruct.NrOutputChannels)');
+    PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, d.player.playback_map.channel_number)');
     PsychPortAudio('Start', phand, 0, [], 0); 
     PsychPortAudio('Stop', phand, 1);
 end % if ~isempty
@@ -901,7 +925,7 @@ while trial <= number_of_trials
                     % started. Should help compensate for intialization time. 
         
                     % Fill buffer with zeros
-                    PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, pstruct.NrOutputChannels)');
+                    PsychPortAudio('FillBuffer', phand, zeros(buffer_nsamps, d.player.playback_map.channel_number)');
                     
                     % Add one extra repetition for a clean transition.
                     % Note that below we wait for the second buffer block

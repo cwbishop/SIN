@@ -1,4 +1,4 @@
-function [D]=portaudio_GetDevice(X, varargin)
+function [D, map]=portaudio_GetDevice(X, varargin)
 %% DESCRIPTION:
 %
 %   Function to find and return device based on input information. Input
@@ -50,7 +50,15 @@ function [D]=portaudio_GetDevice(X, varargin)
 %
 % OUTPUT:
 %
-%   d:  structure, device structure.
+%   D:  structure, device structure. This contains additional subfields
+%       based on the device mapping. These subfields include ...
+%
+%   map:    structure describing the channel map, with the
+%           following subfields.
+%
+%       'channel_number':   the number of channels used by this device
+%       'channel_map':  the channel_map established by calls to
+%                       map_channels.
 %
 % Christopher W. Bishop
 %   University of Washington
@@ -106,19 +114,24 @@ elseif isa(X, 'char')
         %   the specified output channel.
         [channel_number, channel_map] = map_channels(device, opts.field_name, 'title', opts.title);
         
+        % Copy over to map structure
+        map.channel_number = channel_number; 
+        map.channel_map = channel_map;
+        
         % Save the device to file
         %   Also save mapping information about the device. 
-        save(X, 'device', 'channel_number', 'channel_map');        
+        save(X, 'device', 'map');        
         
         clear device; 
         
     end % if ~exist(X, 'file'); 
     
     % Now load what we just wrote (or was previously written) to file. 
-    D = load(X); 
+    device_data = load(X); 
     
     % Device stored in device field
-    D = D.device; 
+    D = device_data.device; 
+    map = device_data.map; 
     
     % Run check on device
     D = portaudio_GetDevice(D, opts); 

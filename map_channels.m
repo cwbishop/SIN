@@ -54,5 +54,10 @@ end % for i=1:channel_number
 % If the user wants to reconfigure, then make a recursive call to
 % map_channels. 
 if review_selection == 2
-    map_channels(device, d);
+    map_channels(device, field_name, d);
 end % if review_selection == 2
+
+% Modify channel map to work with 0 indexing
+%   Recall that channels begin with index 0 in PsychToolBox. 
+%   See http://docs.psychtoolbox.org/Open for more information.
+channel_map = channel_map - 1; 
