@@ -31,6 +31,18 @@ pwelch_window = FS; % pwelch_window in seconds
 pwelch_noverlap = [];
 pwelch_nfft = FS;
 
+%% SOUND CARD CHECK STIMULI
+%   These stimuli are used to run a basic soundcard check. The test itself
+%   is meant to be run in conjunction with some additional hardware,
+%   including an oscilloscope.
+tone = sin_gen(1000, 60, FS);
+
+% Write to file
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'calibration', '1kHz_tone.wav'), tone, FS, 'BitsperSample', audio_bit_depth);
+
+% Clear sin wave
+clear tone
+
 %% CREATE HINT + SPEECH SHAPED NOISE (SPSHN) STIMULI
 % ===================================
 % Create a calibrated HINT SPSHN file, then use this to calibrate the

@@ -206,7 +206,7 @@ switch testID
         %
         %   CWB had to disable this on Wu's machine since he was running
         %   into memory errors. 
-        opts.player.record_mic = true; 
+        opts.player.record_mic = false; 
         
         % Change root directory (for wavfile selection) and change
         % wav_regexp to choose correct calibration file
@@ -609,7 +609,7 @@ switch testID
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-20); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [db2amp(-20); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
@@ -659,7 +659,7 @@ switch testID
             'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
-                'channel_mask',    fillPlaybackMixer(opts.player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'channel_mask',    fillPlaybackMixer(opts.player.playback_map, [1;0], 0), ...   % just get data/physical channel 1                
                 'RTSest',   'trial_mean',  ... % specify first trial to include in average. Requires 'trial' field as well
                 'start_at_trial', 4,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
                 'include_next_trial', true, ...
@@ -793,7 +793,7 @@ switch testID
         % Change mod_mixer to work with single channel data
         %   Scale speech track to full volume, assuming we calibrate to 65
         %   dB SPL. 
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [1 0], 0);
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [1 0], 0);
         
         % Change to 'wmp' mode
         opts.player.playertype = 'wmp';
@@ -823,7 +823,7 @@ switch testID
         %   Loads a file containing a 4-channel noise sample and plays the
         %   noise back from all 4 speakers. 
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped)4chan;0dB.wav'); % File name
-        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback.device, db2amp(-8 + mlst_spshn_4speaker_correction_db).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(-8 + mlst_spshn_4speaker_correction_db).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
                                                                                                                   % ~ -6.05 dB corrects for level gain due to playing noise from multiple speakers.
                                                                                                                   % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
                                                                                                                   % See the note link below here for details on how CWB estimated the 6.05 dB correction factor
@@ -1023,7 +1023,7 @@ switch testID
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback.device, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
@@ -1096,7 +1096,7 @@ switch testID
         opts.specific.genPlaylist.files = {}; 
         
         % Set the mixer to all zeros
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback.device, [], 0);
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [], 0);
         
         % Create a test sequence to play (and record) the sound from each
         % speaker in turn.         
@@ -1117,6 +1117,30 @@ switch testID
         
         % Reassign to opts
         opts = temp_opts; 
+        
+    case 'Sound Card Test'
+        
+        % This tests plays a sound from all mapped channels of the sound
+        % card at once. The user should then use an oscilloscope to verify
+        % a good match between each channel tested. 
+        
+        % Use ANL base as a starting point since we'll get continuous,
+        % looped sound playback
+        opts = SIN_TestSetup('ANL (base)', subjectID); 
+        
+        % Change test ID
+        opts.specific.testID = testID; 
+        
+        % Change the stimulus directory, wav filter, and task instructions.
+        opts.specific.root = fullfile(opts.general.root, 'playback', 'calibration'); 
+        opts.specific.wav_regexp = '1kHz_tone.wav'; 
+        
+        % Change the mixer so we pipe the calibration tone to all channels
+        % simultaneously.        
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, 0.5.*ones(1,4), 0);
+        
+        % We don't need to record, so set flag to false
+        opts.player.record_mic = false; 
         
     case 'HINT (First Correct)'
         
@@ -1173,9 +1197,9 @@ switch testID
         opts.specific.testID = testID;
                        
         % Set mixer
-%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(+10); 0 ] [0; 0]], 0); % just discourse in first channel 
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [db2amp(-15); 0 ] [0; 0]], 0); % just discourse in first channel 
-%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [0.2.*ones(2, 8)], 0); % just discourse in first channel 
+%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [db2amp(+10); 0 ] [0; 0]], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [db2amp(-15); 0 ] [0; 0]], 0); % just discourse in first channel 
+%         opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [0.2.*ones(2, 8)], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Too Quiet)'
         
@@ -1194,7 +1218,7 @@ switch testID
             'Each time you point your thumb down, I will turn the story down']};
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (MCL-Estimate)' 
         
@@ -1215,7 +1239,7 @@ switch testID
         clear ind; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [1; 0] [0; 0 ] ], 0); % just discourse in first channel 
         
     case 'ANL (BNL-Too Loud)'
         
@@ -1236,7 +1260,7 @@ switch testID
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [0; db2amp(-15)] [0; 0 ] ], 0); % discourse channel and babble to first channel only
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [0; db2amp(-15)] [0; 0 ] ], 0); % discourse channel and babble to first channel only
         
     case 'ANL (BNL-Too Quiet)' 
         
@@ -1254,7 +1278,7 @@ switch testID
         opts.player.modifier{2}.data_channels=2; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only       
         
     case 'ANL (BNL-Estimate)'
         
@@ -1279,7 +1303,7 @@ switch testID
         clear ind; 
         
         % Set mixer
-        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback.device, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
+        opts.player.mod_mixer=fillPlaybackMixer(opts.player.playback_map, [ [1; 1] [0; 0 ] ], 0); % discourse channel and babble to first channel only        
     
     case 'ANL (base)' % base settings for sequence of tests comprising ANL
         % ANL is administered differently than HINT or PPT. Here's a

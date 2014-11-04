@@ -905,7 +905,7 @@ while trial <= number_of_trials
                 %   wavplay or some other variant). 
                 %
                 %   Had to disable this due to memory constraints.
-%                 d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
+                d.sandbox.data2play_mixed=[d.sandbox.data2play_mixed; data2play_mixed]; 
                 
                 % Get playback device status
                 pstatus=PsychPortAudio('GetStatus', phand);
