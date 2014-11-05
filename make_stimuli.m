@@ -297,6 +297,9 @@ legend('Concatenated HINT Corpus', 'SPSHN', 'ISTS', 'location', 'NorthOutside');
 ylabel('dB')
 title('Relative HINT Stimulus Levels'); 
 
+% Create HINT Lookup
+createHINTlookup(';bandpass;0dB+4talker_ists');
+
 %% ACCEPTABLE NOISE LEVEL (ANL) CALIBRATION
 % ===================================
 %   This segment of code writes a bandpass and RMS normalized version of

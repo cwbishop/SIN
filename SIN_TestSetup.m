@@ -34,8 +34,6 @@ function opts=SIN_TestSetup(testID, subjectID)
 mlst_ists_4speaker_correction_db = -6.011;
 mlst_spshn_4speaker_correction_db = -6.0262;
 
-warning('MLST ISTS correction factor not yet applied'); 
-
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
 end 
@@ -735,11 +733,15 @@ switch testID
         % ISTS version of HINT test
         opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID); 
         
-        % Change testID and change wav_regexp
+        % Change testID, wav_regexp, and the hint_lookup table
         for i=1:numel(opts)
             opts(i).specific.testID = testID;
             opts(i).specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]4talker_ists.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-            opts(i).specific.genPlaylist.files = {};             
+            opts(i).specific.genPlaylist.files = {};          
+            
+            % Change hint lookup file so we're looking at the ISTS stimuli
+            opts(i).specific.hint_lookup.filename = strrep(opts(i).specific.hint_lookup.filename, '+spshn', '+4talker_ists');
+            
         end % for i=1:numel(opts)
                     
         % Get different files
@@ -758,13 +760,17 @@ switch testID
         
         % Now reset genPlaylist information so it won't buck when called
         % from SIN_runTest.
-        opts.specific.genPlaylist.NLists = 0; % Set to 0 so SIN_getPlaylist won't buck later.
-        opts.specific.genPlaylist.Randomize = ''; % just shuffle the lists, present stimuli in fixed order within each list.
-        opts.specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts(2).specific.genPlaylist.NLists = 0; % Set to 0 so SIN_getPlaylist won't buck later.
+        opts(2).specific.genPlaylist.Randomize = ''; % just shuffle the lists, present stimuli in fixed order within each list.
+        opts(2).specific.genPlaylist.Repeats = 'any'; % All lists must be used before we repeat any.         
+        opts(2).specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
          % Use a specific file for the roving portion of the test
         opts(1).specific.genPlaylist.files = repmat({opts(2).specific.genPlaylist.files{1}}, 20,1); 
+        
+        % Now remove first stimulus from playback list. HINT manual says we
+        % should move onto second stimulus
+        opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }; 
         
     case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
@@ -888,8 +894,12 @@ switch testID
         
         % Add 15 dB to account for the louder speech levels, then add 8 dB
         % to compensate for the -8 dB gain applied to noise in scaffold to
-        % create +8 dB SNR.
-        warning('CWB does not understand this line anymore'); 
+        % create +8 dB SNR. 
+        %
+        % In other words, we reduced the noise levels by 8 dB in the test
+        % used as a scaffold, so add the 8 back in to get us back to 0 dB
+        % SNR, then add another 15 dB on top of it to put us in the +15 dB
+        % range. 
         opts.player.noise_mixer = opts.player.noise_mixer.*db2amp(15 + 8); % multiply to apply dB change
         
     case 'MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
@@ -898,8 +908,12 @@ switch testID
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
         
         % Swap out continuous noise with ISTS
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit (4chan4MLST);0dB.wav'); % File name
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'); % File name
     
+        % Need to change the mod_mixer to incorporate ISTS corrective
+        % factor. 
+        opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(-8 + mlst_ists_4speaker_correction_db).*eye(4,4), 0);
+        
     case 'MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
         
          % Just swapping out the masker type.

@@ -85,7 +85,7 @@ for t=1:length(testID)
                 
             end % for i=1:length(opts)
         
-        case {'HINT (First Correct)', 'HINT (Perceptual Test, SPSHN)', 'HINT (SNR-50, SPSHN)', 'HINT (SNR-80, SPSHN)'};
+        case {'HINT (First Correct)', 'HINT (Perceptual Test, SPSHN)', 'HINT (SNR-50, SPSHN)', 'HINT (SNR-80, SPSHN)', 'HINT (SNR-50, ISTS)', 'HINT (SNR-80, ISTS)'};
             
             % Run HINT for SIN
             for i=1:numel(opts)
