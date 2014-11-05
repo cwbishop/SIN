@@ -31,13 +31,35 @@ function results = analysis_AudioTest(results, varargin)
 %   'dBtol':    double, decibel tolerance. If this tolerance value is
 %               exceeded, the analysis will generate a warning. 
 %
+%   'apply_filter': bool, if true, then the filter with the following
+%                   specifications is designed and applied to the
+%                   recordings prior to any further calculations. This
+%                   proved useful at UofI which had a tremendous amount of
+%                   low-frequency drift. 
+%
+%                   Note that the fulter is designed using MATLAB's
+%                   'butter' function combined with 'filtfilt'. Thus, the
+%                   practical order of the filter is double what is
+%                   specified below. User should adjust if necessary. 
+%
+%   'filter_type':  filter type, see butter for details (e.g., 'high')
+%
+%   'filter_order': filter order, see butter for details (e.g., 4)
+%
+%   'filter_frequency_range':   corner frequency information for filter design.
+%                           This may be a one- or two-element vector
+%                           depending on filter_type. See butter for
+%                           details (e.g., 125).
+%
 % OUTPUT:
 %
 %   results:    results structure with updated analysis field. 
 %
 % Development:
 %
-%   None (yet).
+%   - Add an analysis of frequency response. This could be done on a
+%   temporally averaged waveform, provided the timing is OK. Actually, this
+%   might be better handled with a standalone test. 
 %
 % Christopher W Bishop
 %   University of Washington 
@@ -51,26 +73,23 @@ d=varargin2struct(varargin{:});
 recs = results.RunTime.sandbox.mic_recording; 
 FS = results.RunTime.player.record.device.DefaultSampleRate;
 
-%% FIND MAXIMUM RECORDING LENGTH
-%   This is designed to address the following issue ...
-%   https://github.com/cwbishop/SIN/issues/28
-% max_recording_length = 0;
-% for c=1:numel(d.chans) % loop through all channels
-%     
-%     for i=1:numel(recs)
-%         
-%         if size(recs{i}(:,d.chans(c)), 1) > max_recording_length
-%             max_recording_length = size(recs{i}(:,d.chans(c)), 1);
-%         end 
-%         
-%     end % for i=1:numel(recs)
-%     
-% end % c=1:numel(d.chans) ...
-
 %% For each channel, realign all signals to first data trace
 lags = nan(numel(recs)-1, numel(d.chans)); 
 rmslevels = nan(numel(recs), numel(d.chans));
 peaklevels = nan(numel(recs), numel(d.chans));
+
+% Keep track of an average time series per channel
+average_time_series = []; 
+
+% Do we need to design a filter?
+%   We will only estimate filter coefficients if the user wants to apply a
+%   filter below.
+if d.apply_filter
+    
+    % Note that frequency vector is normalized to Nyquist
+    [b, a] = butter(d.filter_order, d.filter_frequency_range./(FS/2), d.filter_type);
+    
+end % d.apply_filter
 
 for c=1:numel(d.chans) % loop through all channels
     
@@ -79,6 +98,11 @@ for c=1:numel(d.chans) % loop through all channels
     for i=1:numel(recs)
         data(:,i) = recs{i}(:,d.chans(c));        
     end % for i=1:numel(recs)
+    
+    % Apply filter, if necessary
+    if d.apply_filter
+        data = filtfilt(b,a,data); 
+    end % if d.apply_filter
     
     % Level Test
     rmslevels(:,c) = rms(data); 
@@ -95,8 +119,14 @@ for c=1:numel(d.chans) % loop through all channels
         'fsx',  FS, ...
         'fsy',  FS);
     
-    % Store X, Y, and figure in results structure.     
-
+    % add data to the average time series
+    if isempty(average_time_series)
+        average_time_series = zeros(size(data,1), numel(d.chans));
+    end % if isempty(average_time_series)
+    
+    % Compute average time series
+    average_time_series(:,c) = mean(data,2); 
+    
 end % for c=1:size(recs{1}, 2)
 
 % CONVERT LAGS TO SECONDS
@@ -155,3 +185,15 @@ if d.plot
     ylabel('Frequency'); 
     
 end % if d.plot 
+
+% PLOT AVERAGE WAVEFORM
+if d.plot
+    
+    data = {};
+    for i=1:size(average_time_series,2)
+        data{i} = average_time_series(:,i); 
+    end % for i
+    
+    plot_waveform(data, FS); 
+    
+end % d.plot

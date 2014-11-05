@@ -69,29 +69,7 @@ function [snr_requested, snr_theoretical, snr_empirical] = analysis_Hagerman(res
 % dominate some of the routines used here (e.g., temporal alignment). Here,
 % CWB describes parameters that can be used to filter the raw recordings
 % prior to further calculation/manipulation (e.g., apply a highpass
-% filter). The filtering routines invoke MATLAB's butter and filtfilt
-% methods. Recall that filtfilt effectively doubles the order of the IIR,
-% so adjust accordingly if you care.
-%
-%   'apply_filter': bool, if true, then the filter with the following
-%                   specifications is designed and applied to the
-%                   recordings prior to any further calculations. This
-%                   proved useful at UofI which had a tremendous amount of
-%                   low-frequency drift. 
-%
-%                   Note that the fulter is designed using MATLAB's
-%                   'butter' function combined with 'filtfilt'. Thus, the
-%                   practical order of the filter is double what is
-%                   specified below. User should adjust if necessary. 
-%
-%   'filter_type':  filter type, see butter for details (e.g., 'high')
-%
-%   'filter_order': filter order, see butter for details (e.g., 4)
-%
-%   'filter_frequency_range':   corner frequency information for filter design.
-%                           This may be a one- or two-element vector
-%                           depending on filter_type. See butter for
-%                           details (e.g., 125).
+% filter). The filtering routines invoke MATLAB's butter and 
 %
 % OUTPUT:
 %
@@ -131,7 +109,7 @@ recordings = results.RunTime.sandbox.mic_recording;
 mixer = results.RunTime.player.mod_mixer; 
 
 %% GET SAMPLING RATE/NUMBER OF CHANNELS
-FS = results.RunTime.player.record.device.DefaultSampleRate;
+fs = results.RunTime.player.record.device.DefaultSampleRate;
 
 %% QUICK SAFETY CHECK
 if numel(filenames) ~= numel(recordings)
@@ -141,22 +119,8 @@ end % if numel(fnames)
 %% GROUP FILENAMES AND DATA TRACES
 %   The data traces are the recordings written to the structure
 for i=1:numel(filenames)
-    
     data{i,1} = filenames{i};
-    
-    % Do we need to design a filter?
-    %   We will only estimate filter coefficients if the user wants to apply a
-    %   filter below.
-    if d.apply_filter
-
-        % Note that frequency vector is normalized to Nyquist
-        [b, a] = butter(d.filter_order, d.filter_frequency_range./(FS/2), d.filter_type);
-
-        data{i,2} = filtfilt(b,a,recordings{i}); 
-    else
-        data{i,2} = recordings{i};
-    end % d.apply_filter
-    
+    data{i,2} = recordings{i};
 end % for i=1:numel ...
 
 %% LOOK FOR NOISE FLOOR RECORDING
@@ -255,7 +219,7 @@ snr_empirical = nan(numel(group_numbers), numel(d.channels));
 if ~isempty(d.apply_weights)
     weight_results = load(d.apply_weights); 
     weights = analysis_weight_estimation(weight_results.results, ...
-        'reference_location', 1, d); 
+        'reference_location', 1); 
 else
     % If the user does not give us any corrective weights, then set all
     % weights to 1, which effectively means no correction is applied. 
@@ -352,13 +316,13 @@ for i=1:numel(group_numbers)
     
     % Get empirical target and noise waveforms
     [target_empirical{i}, noise_empirical{i}] = process_hagerman(...
-        oo_empirical, oi_empirical, ii_empirical, io_empirical, FS, d); 
+        oo_empirical, oi_empirical, ii_empirical, io_empirical, fs, d); 
     
     % Get theoretical target and noise waveforms
     %   We have to replace d.channels with 1 since we will never have more
     %   than 1 channel    
     [target_theoretical{i}, noise_theoretical{i}] = process_hagerman(...
-        oo_theoretical, oi_theoretical, ii_theoretical, io_theoretical, FS, d); 
+        oo_theoretical, oi_theoretical, ii_theoretical, io_theoretical, fs, d); 
     
 end % for i=1:numel(grps)
 
@@ -405,7 +369,7 @@ for i=1:numel(target_empirical)
     % target. 
     [aligned_theoretical, aligned_empirical, lag] = ...
             align_timeseries(target_theoretical{i}(:,1), ...
-                target_empirical{i}, 'xcorr', 'fsx', FS, 'fsy', FS, 'pflag', d.pflag >= 2);
+                target_empirical{i}, 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
 
     % Create signal_mask for each channel and apply it to the data
     target_masked = [];

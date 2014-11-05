@@ -109,7 +109,7 @@ o=varargin2struct(varargin{:});
 % end % if isfield(o.defaults)
 
 % Get a testlist
-handles.testlist = SIN_TestSetup('testlist'); 
+handles.testlist = SIN_TestSetup('testlist', ''); 
 
 % Update handles structure
 guidata(hObject, handles);
@@ -146,7 +146,6 @@ function test_popup_Callback(hObject, eventdata, handles)
 
 % Refresh popup information
 refresh_popups(hObject, eventdata, handles);
-
 
 % --- Executes during object creation, after setting all properties.
 function test_popup_CreateFcn(hObject, eventdata, handles)
@@ -193,6 +192,9 @@ else
     % Get test options from SIN_TestSetup
     opts = SIN_TestSetup(testID, subjectID); 
 
+    % Put options in workspace for user to play with
+    assignin('base', 'opts', opts); 
+    
     post_feedback(hObject, eventdata, handles, ['Running: ' testID ], -1); % post error message to terminal
     % Run the test
     %   - Playlist automatically handled by SIN_getPlaylist (Called from
@@ -302,7 +304,7 @@ function refresh_popups(hObject, eventdata, handles)
 handles.subjectID = SIN_getsubjects; 
 
 % Get available tests
-handles.testlist = SIN_TestSetup('testlist'); 
+handles.testlist = SIN_TestSetup('testlist', ''); 
 
 % Attach updated information to figure
 guidata(hObject, handles);

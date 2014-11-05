@@ -40,6 +40,21 @@ if ~exist('testID', 'var') || isempty(testID),
     testID='testlist'; 
 end 
 
+% Assign a default subjectID
+if ~exist('subjectID', 'var'), subjectID = ''; end
+
+% This is a site specific tag used to distinguish stimuli in the rare cases
+% where stimuli *must* differ across sites. At the time of writing, the
+% MLST channel mapping differs between UofI and UW. All other stimuli,
+% however, are identical. 
+%
+% Mapping is based on the first digit of the subject ID
+if ~isempty(subjectID) && isequal(subjectID(1), '1')
+    SITE_EXT = '_UW';
+elseif ~isempty(subjectID) && isequal(subjectID(1), '2')
+    SITE_EXT = '_UofI';
+end % 
+
 switch testID
     
     case 'testlist'
@@ -115,7 +130,7 @@ switch testID
         % List of available tests
         %   This will vary by project. Field used to generate test list in
         %   SIN_GUI. CWB does not recall using it elsewhere. 
-        opts.general.testlist = SIN_TestSetup('testlist'); 
+        opts.general.testlist = SIN_TestSetup('testlist', ''); 
         
         % Set subject information
         %   - Set subject identifier (subjectID)
@@ -150,7 +165,7 @@ switch testID
                         
         opts.player.record = struct( ...
             'device', record_device, ...
-            'buffer_dur', 60); % 
+            'buffer_dur', 60*60); % use a ridiculously long buffer duration 
         
         % Set record_map
         opts.player.record_map = record_map; 
@@ -353,7 +368,11 @@ switch testID
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 'plot',     true, ... % generate plot
                 'chans',    [1 2], ...% only perform analyses on channels 1 and 2
-                'dBtol',    1)); % 1 dB tolerance is OK.        
+                'dBtol',    1, ... % 1 dB tolerance is OK.        
+                'apply_filter', true, ...   % apply a high pass filter to the data. This removes low-frequency drift. 
+                    'filter_order', 4, ...                    
+                    'filter_frequency_range',   125, ...
+                    'filter_type',  'high')); 
         
     case 'Reading Span'
         % Launch and run the reading span test provided by Thomas Lunner
@@ -524,7 +543,7 @@ switch testID
             'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
-                'channel_mask',    fillPlaybackMixer(opts(1).player.playback.device, [1;0], 0), ...   % just get data/physical channel 1                
+                'channel_mask',    fillPlaybackMixer(opts(1).player.playback_map, [1;0], 0), ...   % just get data/physical channel 1                
                 'RTSest',   'reversal_mean',  ... % specify first trial to include in average. Requires 'trial' field as well
                 'start_at_trial', opts(2).player.modcheck.startalgoat(2), ... % Only want to look at the trials that are used for the 3down1up algo
                 'start_at_reversal', 1,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
@@ -769,9 +788,11 @@ switch testID
         opts.specific.root=fullfile(opts.general.root, 'playback', 'MLST (Adult)');
         
         % Change the wav_regexp
-        %   We are using MP3 format here.
-        
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB.wav$'; 
+        %   Use the WAV files here, CWB thinks. 
+        %
+        %   Note that a site-specific tag is appended for the MLST due to
+        %   an obligatory difference in channel mapping        
+        opts.specific.wav_regexp = ['[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB' SITE_EXT  '.wav$']; 
         
         % Change list_regexp
         %   MLST has an underscore in list directories.
@@ -779,7 +800,7 @@ switch testID
         
         % Change sentence lookup information
         %   This is used for scoring purposes
-        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, 'MLST (Adult);0dB.xlsx');
+        opts.specific.hint_lookup.filename=fullfile(opts.specific.root, ['MLST (Adult);bandpass;0dB' SITE_EXT '.xlsx']);
         opts.specific.hint_lookup.sheetnum=1;   
         
         % Now reset genPlaylist information so it won't buck when called
@@ -822,7 +843,11 @@ switch testID
         %% CONTINUOUS NOISE INFORMATION
         %   Loads a file containing a 4-channel noise sample and plays the
         %   noise back from all 4 speakers. 
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST-Noise(cropped)4chan;0dB.wav'); % File name
+        %
+        %   Note that we do NOT need a site extension here because these
+        %   data are presented via SIN's player_main, which can handle
+        %   arbitrary channel mapping
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_SPSHN_4_channel;bandpass;0dB.wav'); % File name
         opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(-8 + mlst_spshn_4speaker_correction_db).*eye(4,4), 0); % Reduce noise output by -8 dB to create +8 dB SNR.
                                                                                                                   % ~ -6.05 dB corrects for level gain due to playing noise from multiple speakers.
                                                                                                                   % Together, these should target a -8 dB SNR very well. Here's hoping it does ;). 
@@ -836,6 +861,7 @@ switch testID
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)                
                 'plot', true)); % generate plot      
+            
     case 'MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)'
         
         % Just like aided 65 dB SPL test, but with different wav_regexp and
@@ -863,6 +889,7 @@ switch testID
         % Add 15 dB to account for the louder speech levels, then add 8 dB
         % to compensate for the -8 dB gain applied to noise in scaffold to
         % create +8 dB SNR.
+        warning('CWB does not understand this line anymore'); 
         opts.player.noise_mixer = opts.player.noise_mixer.*db2amp(15 + 8); % multiply to apply dB change
         
     case 'MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
@@ -888,7 +915,9 @@ switch testID
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$'; 
+        %   Just replace the file .wav file extension with .mp4 and move on
+        %   with our lives. 
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
      
     case 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)'
         
@@ -896,7 +925,7 @@ switch testID
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];[+]15dB.mp4$'; 
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
         
     case 'MLST (AV, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
         
@@ -905,7 +934,7 @@ switch testID
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];0dB.mp4$';
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
         
     case 'MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
         
@@ -913,7 +942,7 @@ switch testID
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
-        opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];[+]15dB.mp4$';
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
         
     case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'    
         
@@ -1082,7 +1111,7 @@ switch testID
                 
         % Set regular expression for wav files
         %   Use the calibration noise file 
-        opts.specific.wav_regexp = 'HINT-SPSHN;bandpass;0dB.wav'; 
+        opts.specific.wav_regexp = 'HINT-SPSHN;bandpass;0dB.wav';
 
         % Now reset genPlaylist information so it won't buck when called
         % from SIN_runTest.
@@ -1100,7 +1129,7 @@ switch testID
         
         % Create a test sequence to play (and record) the sound from each
         % speaker in turn.         
-        for i=1:opts(1).player.playback.device.NrOutputChannels
+        for i=1:opts(1).player.playback_map.channel_number
             
             temp_opts(i) = opts; 
             

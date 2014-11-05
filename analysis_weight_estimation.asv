@@ -66,8 +66,7 @@ function [weights] = analysis_weight_estimation(results, varargin)
 d=varargin2struct(varargin{:});
 
 %% GET SAMPLING RATE
-FS = results(1).RunTime.sandbox.record_fs;
-
+FS = 
 %% GET RECORDED DATA
 %   Grab recorded data from each speaker/channel as well as the sampling
 %   rate. 
@@ -82,10 +81,8 @@ if d.apply_filter
     [b, a] = butter(d.filter_order, d.filter_frequency_range./(FS/2), d.filter_type);
 
     for i=1:numel(recs)
-        for n=1:numel(recs{i})
-            recs{i}{n} = filtfilt(b, a, recs{i}{n});         
-        end % for n=1:numel(recs{i})
-    end % for i=1:numel(recs)
+        recs{i} = filtfilt(b, a, recs{i});         
+    end % 
     
 end % d.apply_filter
 %% FIND RMS FOR EACH LOCATION/CHANNEL COMBINATION

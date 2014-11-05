@@ -1168,25 +1168,26 @@ while trial <= number_of_trials
                 % The predicted latency ended up being too conservative an
                 % estimate in many cases (e.g., at UofI), so CWB wrote a
                 % condition to pick the longer of two possibilities : the
-                % sum of the predicted latencies, or the sum of the buffer
-                % lengths. With ASIO drivers, the latter will usually be
-                % larger.                 
+                % sum of the predicted latencies, or triple the length of
+                % the buffersize
+                
                 lat = max([ ...
                     pstatus.PredictedLatency + rstatus.PredictedLatency, ...
-                    (pstatus.BufferSize./playback_fs + rstatus.BufferSize./record_fs)]);
+                    pstatus.BufferSize% recording latency
                 
             elseif ~isempty(phand)
-                % As above, we want to set add an appropriate wait time. 
-                lat = max([ ...
-                    pstatus.PredictedLatency, ...
-                    pstatus.BufferSize./playback_fs]);
+                lat = pstatus.PredictedLatency;
             else 
                 lat = 0; 
             end % isempty(rhand
             
             % Convert lat (sec) to samples
-            lat = lat * playback_fs; 
-%             lat = ceil(lat*1.05 * playback_fs);             
+            %   - Add a bit to latency, since recordings are still being
+            %   clipped. 
+            %   - With M-Audio FastTrack Pro using ASIO drivers, this is a
+            %   reasonably safe buffer. If we stop much sooner than this,
+            %   we start losing some of our data. 
+            lat = ceil(lat*1.05 * playback_fs); 
             
             % Add zeros to end 
             data2play_mixed = [data2play_mixed; zeros(lat, size(data2play_mixed,2))];  %#ok<AGROW>
