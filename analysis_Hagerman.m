@@ -253,13 +253,21 @@ snr_empirical = nan(numel(group_numbers), numel(d.channels));
 
 % Load weights if the user tells us to. 
 if ~isempty(d.apply_weights)
+    
     weight_results = load(d.apply_weights); 
     weights = analysis_weight_estimation(weight_results.results, ...
-        'reference_location', 1, d); 
+        'reference_location', 1, d);     
+    
+    % Reduce weight estimates to the recording channels we'll be using for
+    % analysis
+    weights = weights(:, d.channels); 
+    
 else
+    
     % If the user does not give us any corrective weights, then set all
     % weights to 1, which effectively means no correction is applied. 
-    weights = ones(size(mixer,2), size(recordings{1}, 2));
+    weights = ones(size(mixer,2), numel(d.channels));
+    
 end % if ~isempty(d.apply_weights)
 
 for i=1:numel(group_numbers)
@@ -316,6 +324,9 @@ for i=1:numel(group_numbers)
     oo_theoretical = SIN_loaddata(data{mask(ind), 1});
     oo_empirical = data{mask(ind), 2}; 
     
+    % Only look at selected channels
+    oo_empirical = oo_empirical(:, d.channels); 
+    
     % Extract the speech mask
     %   This is a logical vector written to file that tells us at which
     %   samples the signal is nominally present. Only these samples should
@@ -327,28 +338,31 @@ for i=1:numel(group_numbers)
     %   data with the mod_mixer used in player_main, then sum over
     %   channels.
     oo_theoretical = oo_theoretical * mixer * weights; 
-    oo_theoretical = oo_theoretical(:, d.channels); 
+%     oo_theoretical = oo_theoretical(:, d.channels); 
     
     % Find +1/-1
     ind = findcell(group_filenames, [d.target_string d.original_string d.noise_string d.inverted_string]);
     oi_theoretical = SIN_loaddata(data{mask(ind), 1});
     oi_theoretical = oi_theoretical * mixer * weights; 
-    oi_theoretical = oi_theoretical(:, d.channels); 
+%     oi_theoretical = oi_theoretical(:, d.channels); 
     oi_empirical = data{mask(ind), 2}; 
+    oi_empirical = oi_empirical(:, d.channels); 
     
     % Find -1/-1
     ind = findcell(group_filenames, [d.target_string d.inverted_string d.noise_string d.inverted_string]);
     ii_theoretical = SIN_loaddata(data{mask(ind), 1});
     ii_theoretical = ii_theoretical * mixer * weights; 
-    ii_theoretical = ii_theoretical(:, d.channels); 
+%     ii_theoretical = ii_theoretical(:, d.channels); 
     ii_empirical = data{mask(ind), 2}; 
+    ii_empirical = ii_empirical(:, d.channels); 
     
     % Find -1/+1
     ind = findcell(group_filenames, [d.target_string d.inverted_string d.noise_string d.original_string]);
     io_theoretical = SIN_loaddata(data{mask(ind), 1});
     io_theoretical = io_theoretical * mixer * weights; 
-    io_theoretical = io_theoretical(:, d.channels); 
+%     io_theoretical = io_theoretical(:, d.channels); 
     io_empirical = data{mask(ind), 2};     
+    io_empirical = io_empirical(:, d.channels); 
     
     % Get empirical target and noise waveforms
     [target_empirical{i}, noise_empirical{i}] = process_hagerman(...
@@ -404,7 +418,7 @@ for i=1:numel(target_empirical)
     % Realign empirical recordings to the first channel of the theoretical
     % target. 
     [aligned_theoretical, aligned_empirical, lag] = ...
-            align_timeseries(target_theoretical{i}(:,1), ...
+            align_timeseries(target_theoretical{i}, ...
                 target_empirical{i}, 'xcorr', 'fsx', FS, 'fsy', FS, 'pflag', d.pflag >= 2);
 
     % Create signal_mask for each channel and apply it to the data
@@ -499,7 +513,7 @@ if d.pflag > 0
     % Markup
     xlabel('Theoretical SNR (dB)');
     ylabel('Empirical SNR (dB)'); 
-    legend(strvcat('Unity', [repmat('SNR: Channel ', numel(d.channels)+1, 1) strvcat(num2str(d.channels'), 'Mean')], strvcat([repmat('Channel ', numel(d.channels), 1) num2str(d.channels') repmat(' Noise Floor', numel(d.channels), 1)])), 'location', 'eastoutside')    
+    legend(strvcat('Unity', '"Perfect" SNR', [repmat('SNR: Channel ', numel(d.channels)+1, 1) strvcat(num2str(d.channels'), 'Mean')], strvcat([repmat('Channel ', numel(d.channels), 1) num2str(d.channels') repmat(' Noise Floor', numel(d.channels), 1)])), 'location', 'eastoutside')    
     grid on
     
 end % if d.pflag
@@ -552,7 +566,7 @@ if d.average_estimates
 
         % Check noise alignment
         [aligned_noise1{c}, aligned_noise2{c}, noise_lag(c,1)] = ...
-            align_timeseries(noise(:,d.channels(c)), noise(:,d.channels(c) + number_of_channels), 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
+            align_timeseries(noise(:,c), noise(:,c + number_of_channels), 'xcorr', 'fsx', fs, 'fsy', fs, 'pflag', d.pflag >= 2);
 
         % Check target alignment
         [aligned_target1{c}, aligned_target2{c}, target_lag(c,1)] = ...
@@ -572,7 +586,8 @@ if d.average_estimates
 
     else
         % Average over noise estimates
-        noise = (noise(:,d.channels) + noise(:,d.channels + number_of_channels)) ./ 2;
+        noise = mean(noise, 2); 
+%         noise = (noise(:,d.channels) + noise(:,d.channels + number_of_channels)) ./ 2;
     end % if noise_lag ~= 0
 
     if any(target_lag ~= 0)
@@ -581,7 +596,8 @@ if d.average_estimates
 
     else
         % Average over target estimates
-        target = (target(:,d.channels) + target(:,d.channels + number_of_channels)) ./ 2;
+        target = mean(target,2); 
+%         target = (target(:,d.channels) + target(:,d.channels + number_of_channels)) ./ 2;
     end % if target_lag ~= 0
 
 else
