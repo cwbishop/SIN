@@ -418,7 +418,7 @@ for i=1:numel(target_empirical)
     % Realign empirical recordings to the first channel of the theoretical
     % target. 
     [aligned_theoretical, aligned_empirical, lag] = ...
-            align_timeseries(target_theoretical{i}, ...
+            align_timeseries(target_theoretical{i}(:,1), ... % align to the first channel, this can be multiple channels, but they should be identical.
                 target_empirical{i}, 'xcorr', 'fsx', FS, 'fsy', FS, 'pflag', d.pflag >= 2);
 
     % Create signal_mask for each channel and apply it to the data
@@ -585,9 +585,9 @@ if d.average_estimates
         error('Temporal misalignment in noise estimates. No recovery coded, but it can be.')                
 
     else
-        % Average over noise estimates
-        noise = mean(noise, 2); 
-%         noise = (noise(:,d.channels) + noise(:,d.channels + number_of_channels)) ./ 2;
+        % Average over noise estimates        
+%         noise = mean(noise, 2); 
+        noise = (noise(:,1:number_of_channels) + noise(:, [1:number_of_channels] + number_of_channels)) ./ 2;
     end % if noise_lag ~= 0
 
     if any(target_lag ~= 0)
@@ -596,8 +596,8 @@ if d.average_estimates
 
     else
         % Average over target estimates
-        target = mean(target,2); 
-%         target = (target(:,d.channels) + target(:,d.channels + number_of_channels)) ./ 2;
+%         target = mean(target,2); 
+        target = (target(:,1:number_of_channels) + target(:,[1:number_of_channels] + number_of_channels)) ./ 2;
     end % if target_lag ~= 0
 
 else
