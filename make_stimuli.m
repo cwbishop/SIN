@@ -31,24 +31,6 @@ pwelch_window = FS; % pwelch_window in seconds
 pwelch_noverlap = [];
 pwelch_nfft = FS;
 
-%% SOUND CARD CHECK STIMULI
-%   These stimuli are used to run a basic soundcard check. The test itself
-%   is meant to be run in conjunction with some additional hardware,
-%   including an oscilloscope.
-tone = sin_gen(1000, 60, FS);
-
-% Write to file
-audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'calibration', '1kHz_tone.wav'), tone, FS, 'BitsperSample', audio_bit_depth);
-
-% Clear sin wave
-clear tone
-
-%% CREATE HINT + SPEECH SHAPED NOISE (SPSHN) STIMULI
-% ===================================
-% Create a calibrated HINT SPSHN file, then use this to calibrate the
-% concatenated HINT corpus. 
-% ===================================
-
 % Amplitude used for silence detection
 hint_ampthresh = 0.0001;
 
@@ -63,7 +45,48 @@ mlst_ampthresh = 0.01;
 %   hagerman_sentence_number:   number of sentences to use in hagerman
 %   recordings
 hagerman_snrs = [-15:5:15];
-hagerman_sentence_number = 5; % use 5 for testing purposes, will need to change to 50 for the experiment proper. 
+hagerman_sentence_number = 5; % use 5 for testing purposes, will need to change to 50 for the experiment proper.
+
+%% SOUND CARD CHECK STIMULI
+%   These stimuli are used to run a basic soundcard check. The test itself
+%   is meant to be run in conjunction with some additional hardware,
+%   including an oscilloscope.
+tone = sin_gen(1000, 60, FS);
+
+% Write to file
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'calibration', '1kHz_tone.wav'), tone, FS, 'BitsperSample', audio_bit_depth);
+
+% Clear sin wave
+clear tone
+
+%% MAKE A WHITE NOISE SAMPLE
+% ===================================
+% CWB wants to try using this rather than the speech shaped noise sample
+% provided with the HINT. This will be used as an alternative noise sample
+% below.
+% ===================================
+
+% go ahead and load the HINT file so we can RMS match to this. 
+[hint_spshn, hint_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
+
+% Create white noise sample of the same duration
+white_noise = detrend(rand(size(hint_spshn,1), 1), 'constant');
+
+% RMS scale to match the HINT-Noise
+white_noise_scale = rms(hint_spshn(:,1))./rms(white_noise); 
+white_noise = white_noise .* white_noise_scale;
+
+% Duplicate channels
+white_noise = [white_noise white_noise]; 
+
+% Write to file 
+audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav'), white_noise, FS, 'BitsperSample', audio_bit_depth);
+
+%% CREATE HINT + SPEECH SHAPED NOISE (SPSHN) STIMULI
+% ===================================
+% Create a calibrated HINT SPSHN file, then use this to calibrate the
+% concatenated HINT corpus. 
+% ===================================
 
 % ===================================
 % Match the long-term spectrum of the spshn spectrum to the long-term
@@ -83,7 +106,9 @@ opts.specific.wav_regexp = '[0-9]{2}.wav$';
 hint_audio_files = concatenate_lists(hint_audio_files); 
 
 % Load the speech shaped noise file
-[hint_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
+warning('CWB substituted white noise for SPSHN'); 
+[hint_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav')); 
+% [hint_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
 % Just use channel 1 of hint_spshn
 hint_spshn = hint_spshn(:,1); 
@@ -95,7 +120,7 @@ hint_spshn = hint_spshn(:,1);
     'mixer', [0;1]); 
 
 % sample rate check
-if spshn_fs ~= hint_fs, error('Mismatched sample rates'); end 
+if spshn_fs ~= FS, error('Mismatched sample rates'); end 
 
 % We need to create a SPSHN stimulus that is spectrally-matched to the HINT
 % speech corpus (concatenated sentences). We just need to spectrally match
@@ -281,7 +306,7 @@ clear ists_filt ists
 if ists_fs ~= FS, error('Mismatched sample rates'); end 
 
 % Plot PSDs of calibrated files
-plot_psd({ hint_time_series hint_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+plot_psd({ hint_time_series hint_spshn ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
 legend('Concatenated Sentences', 'SPSHN', 'ISTS', 'location', 'NorthOutside')
 title('HINT PSDs')
 set(gca, 'XScale', 'log')
@@ -401,7 +426,9 @@ hagerman_time_series = hagerman_time_series .* (rms(hint_spshn)./rms(hagerman_ti
 %   version of HINT-SPSHN and filtered that, then our filter order would be
 %   twice what we expect it to be here. So some recreating the wheel is
 %   necessary. 
-[hagerman_spshn, hagerman_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
+warning('CWB using white noise to start rather than HINT-Noise'); 
+[hagerman_spshn, hagerman_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav')); 
+% [hagerman_spshn, hagerman_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
 % Just use channel 1 of hint_spshn
 hagerman_spshn = hagerman_spshn(:,1); 
