@@ -18,7 +18,7 @@ filter_type = 'bandpass';
 bandpass_filter_order = 4; 
 
 % Spectral matching filter information
-spectral_match_filter_order = 800; 
+spectral_match_filter_order = 3000; 
 
 % Bitdepth for audio files. This should be used in all subsequent write
 % calls as well. 
@@ -624,7 +624,9 @@ mlst_audio_files = concatenate_lists(mlst_audio_files);
 % mlst_audio_files = {mlst_audio_files{(cellfun(@isempty, strfind(mlst_audio_files, 'C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4')))}}';
 
 % Load the speech shaped noise file
-[mlst_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
+warning('Changed SPSHN sample')
+[mlst_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav')); 
+% [mlst_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
 % Just use channel 1 of mlst_spshn
 mlst_spshn = mlst_spshn(:,1); 

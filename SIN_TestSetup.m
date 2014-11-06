@@ -51,6 +51,8 @@ if ~isempty(subjectID) && isequal(subjectID(1), '1')
     SITE_EXT = '_UW';
 elseif ~isempty(subjectID) && isequal(subjectID(1), '2')
     SITE_EXT = '_UofI';
+else
+    SITE_EXT = '';
 end % 
 
 switch testID
