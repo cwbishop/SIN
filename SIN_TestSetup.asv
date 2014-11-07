@@ -812,19 +812,8 @@ switch testID
         
         % Change testID
         for i=1:numel(opts)
-            opts(i).specific.testID = testID; 
+            opts(i).
         end % for i=1:numel(opts)
-        
-    case 'MLST (AV, Practice)'
-        
-        % Practice session based on 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
-        
-        % Change testID
-        for i=1:numel(opts)
-            opts(i).specific.testID = testID; 
-        end % for i=1:numel(opts)
-        
     case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
         % Configured to administer the (audio only) MLST. This serves as
