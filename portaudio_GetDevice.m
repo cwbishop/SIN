@@ -136,6 +136,15 @@ elseif isa(X, 'char')
     % Run check on device
     D = portaudio_GetDevice(D, opts); 
     
+    % Save the loaded information b ack to file.
+    %   This is a necessary step when we recover a device (i.e., call
+    %   SIN_recoverDevice) since it will save the device without the map
+    %   information.
+    device = D; 
+    save(X, 'device', 'map'); 
+    
+    clear device
+    
 elseif isa(X, 'numeric') 
     D=PsychPortAudio('GetDevices', [], X); 
     return
