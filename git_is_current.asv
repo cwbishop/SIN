@@ -1,0 +1,4 @@
+function git_is_current(repo)
+%% DESCRIPTION:
+%
+%   Functio

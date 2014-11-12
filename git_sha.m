@@ -40,4 +40,4 @@ command = ['git --git-dir "' repo '" rev-parse HEAD'];
 [status, sha] = system(command); 
 
 % Throw an error if we could not retrieve the repository SHA key. 
-if ~status, error(['Could not retrive SHA key for ' repo]); end
+if status, error(['Could not retrive SHA key for ' repo]); end

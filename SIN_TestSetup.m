@@ -123,7 +123,7 @@ switch testID
         % List SHA-1 key for SIN's Git repository
         %   This may prove useful when trying to recreate specific testing
         %   circumstances to recreate errors. 
-        opts.general.git.sha = git_sha(opts.general.root);         
+        opts.general.git.sha = git_sha(opts.general.root);        
         
         % List of available tests
         %   This will vary by project. Field used to generate test list in
