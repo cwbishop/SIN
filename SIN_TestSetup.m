@@ -116,16 +116,14 @@ switch testID
         % Subject directory
         opts.general.subjectDir = fullfile(opts.general.root, 'subject_data'); 
         
-        % Calibration information
-%         opts.general.noiseDir = fullfile(opts.general.root, 'playback', 'Noise'); 
-%         opts.general.noise_regexp = '.wav'; % get wav files
-        
-%         opts.general.calibrationDir = fullfile(opts.general.root, 'calibration');
-%         opts.general.calibration_regexp = '.mat$'; % 
-        
         % subject ID motif. Described using regexp. Used in
         % SIN_register_subject.m
         opts.general.subjectID_regexp='^[1 2][0-9]{3}$';
+        
+        % List SHA-1 key for SIN's Git repository
+        %   This may prove useful when trying to recreate specific testing
+        %   circumstances to recreate errors. 
+        opts.general.git.sha = git_sha(opts.general.root);         
         
         % List of available tests
         %   This will vary by project. Field used to generate test list in
