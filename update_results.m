@@ -1,4 +1,4 @@
-function update_results
+function update_results(subjects)
 %% DESCRIPTION:
 %
 %   Function loads all results for all subjects and rewrites them by
@@ -10,7 +10,8 @@ function update_results
 %
 % INPUT:
 %
-%   None
+%   subjectID:  cell array of subject IDs to update. (default =
+%               SIN_getsubjects)
 %
 % OUTPUT:
 %
@@ -25,7 +26,9 @@ function update_results
 %   11/14
 
 % Get a list of subjects
-subjects = SIN_getsubjects; 
+if ~exist('subjects', 'var')
+    subjects = SIN_getsubjects; 
+end % if ~exist ...
 
 % For all subjects, update all tests
 for i=1:numel(subjects)
