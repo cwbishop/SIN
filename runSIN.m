@@ -487,8 +487,8 @@ end
 post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
 
 % Load the test
-results = load(test2review);
-results = results.results;
+results = SIN_load_results({test2review}); 
+results = results{1}; 
 
 % Load the corresponding test results
 post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
@@ -516,8 +516,8 @@ end
 post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
 
 % Load the test
-results = load(test2review);
-results = results.results;
+results = SIN_load_results({test2review}); 
+results = results{1}; 
 
 % Load the corresponding test results
 post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
@@ -554,8 +554,8 @@ end
 post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
 
 % Load the test
-results = load(test2review);
-results = results.results;
+results = SIN_load_results({test2review}); 
+results = results{1}; 
 
 % Assign to workspace
 assignin('base', 'results', results); 

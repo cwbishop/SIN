@@ -1,4 +1,4 @@
-function SIN_saveResults(results)
+function SIN_saveResults(results, varargin)
 %% DESCRIPTION:
 %
 %   Basic function to save results. This was originally written to save
@@ -17,6 +17,12 @@ function SIN_saveResults(results)
 %               determining the order of multipart tests more robustly and
 %               to keep the parts grouped together a more convenient way. 
 %
+% Parameters:
+%
+%   'force_overwrite':  bool, if set to true, then forces an overwrite. If
+%                       false then prompts user for information (default =
+%                       false)
+%
 % OUTPUT:
 %
 %   Saved mat file
@@ -26,6 +32,12 @@ function SIN_saveResults(results)
 % Christopher W. Bishop
 %   University of Washington
 %   6/14
+
+%% GATHER PARAMETERS
+d=varargin2struct(varargin{:}); 
+
+% Set defaults
+if ~isfield(d, 'force_overwrite') || isempty(d.force_overwrite), d.force_overwrite = false; end
 
 %% GET RUNTIME OPTIONS
 %   - This will return the most "up-to-date" information. It's possible
@@ -52,7 +64,7 @@ fname = opts.specific.saveData2mat;
 % Check to see if the file exists. If it does, ask the user if he wants to
 % overwrite it. If yes, proceed. If not, then return control without
 % writing file. 
-if logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))
+if (logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))) && ~d.force_overwrite
     
     response = '';
     while ~isequal(response, 'y') && ~isequal(response, 'n')
@@ -71,6 +83,20 @@ if logical(exist(fname, 'file')) || logical(exist([fname '.mat'], 'file'))
     
 end % if logical(exist(fname ...
     
-    
 %% SAVE RESULTS
-save(fname, 'results');
+%
+%   We need to save files as version 7.3 to allow partial loading. Partial
+%   loading may speed things up considerably, particularly in functions
+%   like SIN_gettests which sorts based on data stored in the results
+%   struture itself. 
+%
+%   CWB cannot figure out a way to grab a subfield of a structure, so we
+%   need to save the most likely informative (and small) fields as
+%   independent variables in the mat file. This approach has worked
+%   resonably well for CWB thus far.
+%
+%   Note: if the saved information is changed, try running update_results.m
+%   to modify the saved data. 
+start_time = results(end).RunTime.sandbox.start_time; 
+end_time = results(end).RunTime.sandbox.end_time; 
+save(fname, 'start_time', 'end_time', 'results', '-v7.3');

@@ -1139,6 +1139,22 @@ switch testID
         % ============================
         % Analysis        
         % ============================
+        
+        % Get the most recent weight estimation function
+        %   This should return a time-sorted list of weight estimations for
+        %   this subject. Then all we have to do is fine the one that
+        %   precedes this test most recently. That's the job for a second
+        %   function 
+        weight_estimation = SIN_gettests(opts, 'regexp', 'Weight Estimation');
+        [~, ~, weight_estimation] = sort_results_by_time(weight_estimation, 'time_reference', now); 
+        
+        % Error checking for weight estimation
+        %   If this hasn't been done yet, then the cell array will be empty
+        %   and we'll need to inform the user.
+        if isempty(weight_estimation) || isempty(weight_estimation{1})
+            error('No appropriate weight estimation file found. Have you run weight estimation?');
+        end % if isempty ...
+        
         opts.analysis = struct( ...
             'fhand',    @analysis_Hagerman, ...  % functioin handle to analysis function
             'run',  false, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
@@ -1151,7 +1167,7 @@ switch testID
                 'absolute_noise_floor', '(noise floor)', ...
                 'average_estimates', true, ...
                 'channels', [1 2], ...
-                'apply_weights', 'C:\Users\Public\GitHub\SIN\subject_data\2005\2005-Weight Estimation (cb8b051a-774c-435c-a537-1e6ec1dfced3).mat', ...
+                'apply_weights',  weight_estimation{1}, ... % use the most recent weight-estimation file for this subject
                 'apply_filter', true, ...
                 'filter_type', 'high', ...
                 'filter_order', 4, ...

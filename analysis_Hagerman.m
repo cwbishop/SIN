@@ -57,6 +57,12 @@ function [snr_requested, snr_theoretical, snr_empirical] = analysis_Hagerman(res
 %                       estimates. This, in "theory", will produce a better
 %                       match between theoretical and empirical estimates. 
 %
+%                       This has a special value 'auto' that will
+%                       automatically select the best matched weights file.
+%                       This is done in the function
+%                       Hagerman_find_weight_estimation.m. See that
+%                       function for more details. 
+%
 %   'channels': integer array, contains channel numbers to include in
 %               Hagerman analysis. Note that the user should EXCLUDE all
 %               channels that have no data (all zeros). On the Amp Lab PC,

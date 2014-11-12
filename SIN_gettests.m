@@ -1,4 +1,4 @@
-function [tests, dtimes] = SIN_gettests(varargin)
+function [all_tests, test_times] = SIN_gettests(varargin)
 %% DESCRIPTION:
 %
 %   Function to return tests for a given subject.
@@ -7,17 +7,34 @@ function [tests, dtimes] = SIN_gettests(varargin)
 %
 %   'subjectID':   string, subject identifier
 %
+%   'regexp':   a regular expression used to filter the tests. This may
+%               prove useful when the user wants all the lists of a
+%               specific species. (default = '.mat'); 
+%
+%   'time_reference':   see sort_results_by_time for more information. 
+%
 %   Alternatively, can pass in SIN options structure. Opts must contain the
 %   opts.subject.subjectID subfield. 
 %
 % OUTPUT:
 %
-%   tests:  cell array, list of tests
+%   tests:  cell array, list of tests temporally sorted by the file date
+%           time. This may pose some problems when copying data to
+%           different systems. 
+%
+%   test_times: time of each test used for sorting purposes. For more
+%               details, see sort_results_by_time.m
 %
 % Development:
 %
 %   1) Make compatible with command line inputs rather than options
 %   structure.
+%
+%   2) Add option to sort based on results structure write time. Not sure
+%   how best to go about this yet, but we'll need this sorting option when
+%   copying data to different machines. The file creation time will not
+%   necessarily be preserved and we want the files to load the same on
+%   different machines. 
 %
 % Christopher W Bishop
 %   University of Washington
@@ -32,17 +49,20 @@ if ~isfield(d, 'subject')
     d = SIN_TestSetup('Defaults', d.subjectID); 
 end % isstruct
 
+% Set defaults
+if ~isfield(d, 'regexp'), d.regexp = '.mat'; end
+
 %% GET TEST INFORMATION
-tests = regexpdir(d.subject.subjectDir, '.mat', false);
+all_tests = regexpdir(d.subject.subjectDir, d.regexp, false);
 
 %% GET RID OF "USEDLIST"
 %   This will also return the "UsedList" since that's stored in the subject
 %   directory, but this is not a test. So remove it. 
-mask = true(numel(tests), 1); 
-if ~isempty(tests)
+mask = true(numel(all_tests), 1); 
+if ~isempty(all_tests)
     
     % Find and remove the "used lists"
-    ind = findcell(tests, 'UsedList'); 
+    ind = findcell(all_tests, 'UsedList'); 
     
     if ~isempty(ind)
         mask(ind) = false;
@@ -51,22 +71,12 @@ if ~isempty(tests)
 end % if ~isempty(tests)
 
 % Separate wheat from chaff. 
-tests = {tests{mask}};
+all_tests = {all_tests{mask}};
 
 %% SORT TESTS BY DATE, WITH NEWEST FIRST
-
-% Get test creation dates
-dtimes = [];
-for i=1:numel(tests)
-    finfo = dir(tests{i});
-    dtimes(i,1) = finfo.datenum;
-end % for i=1:numel(tests)
-
-% Sort test creation times
-[dtimes, ind] = sort(dtimes, 'descend'); 
-
-% Reorder tests
-tests = {tests{ind}}'; 
+%   This functionality was modularized since CWB needed it elsewhere as
+%   well. 
+[test_times, all_tests] = sort_results_by_time(all_tests); 
 
 %% CONVERT DATENUMS TO DATE STRING
-dtimes = datestr(dtimes);
+test_times = datestr(test_times);

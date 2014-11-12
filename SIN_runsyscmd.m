@@ -37,9 +37,17 @@ if ~isfield(d, 'player')
     d.player = d; % force it to look like a SIN options structure
 end % if ~isfield( ...
 
+%% RESULTS
+results.UserOptions = d;
+
+%% ADD START_TIME
+d.sandbox.start_time = now; 
+
 %% RUN SYSTEM COMMAND
 system(d.player.cmd); 
 
-%% RESULTS
-results.UserOptions = d;
+%% ADD END TIME
+d.sandbox.end_time = now;
+
+%% ASSIGN TO RunTime field. 
 results.RunTime = d; 
