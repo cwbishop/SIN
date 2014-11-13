@@ -562,6 +562,10 @@ if d.average_estimates
     noise    = [Hagerman_getsignal(oo, io, 'fsx', fs, 'fsy', fs, 'pflag', d.pflag>=2) Hagerman_getsignal(oi, ii, 'fsx', fs, 'fsy', fs, 'pflag', false).*-1 ]; 
 
     % Check alignment of each channel
+    %   Intuitively, this gives us a measure of how well-aligned the two
+    %   estimates are within each channel. If the lags are estimated to any
+    %   non-zero value, then the same two computed estimates are misaligned
+    %   in the corresponding channel. 
     target_lag = [];
     noise_lag = [];
     aligned_noise1 = {};
@@ -586,25 +590,19 @@ if d.average_estimates
     % align_timeseries.
 
     % Verify that the targets and noise estimates are well-aligned
-    if any(noise_lag ~= 0) 
-
-        error('Temporal misalignment in noise estimates. No recovery coded, but it can be.')                
-
+    if any(noise_lag ~= 0) || any(target_lag ~= 0) 
+%         error('Temporal misalignment in noise estimates. No recovery coded, but it can be.');
+        
+        warning('Temporal misalignment in noise estimates. Single recording trace will be used rather than the temporal average of two.')
+        
+        target = target(:, 1:number_of_channels); 
+        noise = noise(:, 1:number_of_channels); 
     else
         % Average over noise estimates        
 %         noise = mean(noise, 2); 
+        target = (target(:,1:number_of_channels) + target(:,[1:number_of_channels] + number_of_channels)) ./ 2;
         noise = (noise(:,1:number_of_channels) + noise(:, [1:number_of_channels] + number_of_channels)) ./ 2;
     end % if noise_lag ~= 0
-
-    if any(target_lag ~= 0)
-
-        error('Temporal misalignment in target estimates. No recovery coded, but it can be.')
-
-    else
-        % Average over target estimates
-%         target = mean(target,2); 
-        target = (target(:,1:number_of_channels) + target(:,[1:number_of_channels] + number_of_channels)) ./ 2;
-    end % if target_lag ~= 0
 
 else
     error('Unsupported option ... see development'); 
