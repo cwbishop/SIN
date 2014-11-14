@@ -919,7 +919,7 @@ opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
 % files that do NOT have the noise added to the second channel. 
-opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB.mp4$';
+opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UW.mp4$';
 
 [~, mlst_mp4_files] = SIN_stiminfo(opts); 
 mlst_mp4_files = concatenate_lists(mlst_mp4_files); 
@@ -932,7 +932,7 @@ mlst_mp4_files = concatenate_lists(mlst_mp4_files);
 
 % Change the regular expression used to search for audio files; we want the
 % files that do NOT have the noise added to the second channel. 
-opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB.wav$';
+opts.specific.wav_regexp = '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UW.wav$';
 
 [~, mlst_audio_files] = SIN_stiminfo(opts); 
 mlst_audio_files = concatenate_lists(mlst_audio_files); 
@@ -999,6 +999,7 @@ ists_filt = filtfilt(b, a, ists);
 % Need to RMS scale the filtered ISTS to match our calibration stimulus.
 % This will produce a single-channel, 1-talker ISTS stimulus that is
 % calibrated to ~0 dB relative to the calibration stimulus. 
+hint_spshn = SIN_loaddata(calibration_file);
 ists_scale = rms(hint_spshn) ./ rms(ists_filt);
 ists_filt = ists_filt .* ists_scale;
 
