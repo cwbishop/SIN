@@ -44,8 +44,8 @@ mlst_ampthresh = 0.01;
 %   hagerman_snrs: the SNRs to test
 %   hagerman_sentence_number:   number of sentences to use in hagerman
 %   recordings
-hagerman_snrs = [-15:5:15];
-hagerman_sentence_number = 50; % use 5 for testing purposes, will need to change to 50 for the experiment proper.
+hagerman_snrs = [-10:5:15];
+hagerman_sentence_number = 40; % use 5 for testing purposes, will need to change to 40 for the experiment proper.
 
 %% SOUND CARD CHECK STIMULI
 %   These stimuli are used to run a basic soundcard check. The test itself

@@ -31,7 +31,7 @@ function opts=SIN_TestSetup(testID, subjectID)
 % multi-channel maskers is the Hagerman, but the correction factor is dealt
 % with implicitly in the call to createHagerman (see line 292 of
 % createHagerman). 
-mlst_ists_4speaker_correction_db = -6.011;
+mlst_ists_4speaker_correction_db = -6.0147;
 mlst_spshn_4speaker_correction_db = -6.0262;
 
 if ~exist('testID', 'var') || isempty(testID), 
