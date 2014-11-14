@@ -1185,7 +1185,7 @@ while trial <= number_of_trials
             end % isempty(rhand
             
             % Convert lat (sec) to samples
-            lat = lat * playback_fs; 
+            lat = ceil(lat * playback_fs); 
 %             lat = ceil(lat*1.05 * playback_fs);             
             
             % Add zeros to end 
