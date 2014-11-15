@@ -657,7 +657,7 @@ switch testID
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.  
             'startplaybackat',    0, ...  % start playback at beginning of files
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [db2amp(-20); 0] [0; 1] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [db2amp(-20); 1] [0; 0] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'state',    'run'); % Start in run state
             
