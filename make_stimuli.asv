@@ -750,6 +750,18 @@ cmd = ['ffmpeg -y -i '...
 
 system(cmd, '-echo')
 
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UW.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UW.mp4"'];
+
+system(cmd, '-echo')
+                
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UofI.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UofI.mp4"'];
+
+system(cmd, '-echo')
+
 % Plot PSD and levels
 %   Before we do this, we'll want to reload all of the data from file, just
 %   in case there's some wonkiness in the way the files are written.
@@ -910,6 +922,18 @@ system(cmd, '-echo')
 cmd = ['ffmpeg -y -i '...
     '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;+15dB_UofI.wav"' ...
                     ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_06\2_T9_060_HS;bandpass;+15dB_UofI.mp4"'];
+
+system(cmd, '-echo')
+
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;+15dB_UW.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UW.mp4"'];
+
+system(cmd, '-echo')
+                
+cmd = ['ffmpeg -y -i '...
+    '"C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS.mp4" -i "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UofI.wav"' ...
+                    ' -map 0:0 -map 1 "C:\Users\Public\GitHub\SIN\playback\MLST (Adult)\List_19\9_T9_227_LS;bandpass;0dB_UofI.mp4"'];
 
 system(cmd, '-echo')
 
