@@ -1388,7 +1388,15 @@ d.sandbox.end_time=now;
 %   might be useful to kick back the data that are actually presented - so
 %   we have a record of what was actually fed to the sound card after all
 %   filtering, etc. is done. 
-% d.sandbox.stim = stim; 
+%
+%   CWB decided this would be a good idea since the files on disk might
+%   CHANGE. If they change, we're hosed. So, attach the actual data to the
+%   structure and use that. This was a particularly glaring issue with
+%   Hagerman recordings. 
+d.sandbox.stim = stim; 
+
+% Clear stim for memory saving
+clear stim
 
 % Attach (modified) structure to results
 %   This is returned to the user. 
