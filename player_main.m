@@ -1379,6 +1379,7 @@ PsychPortAudio('Close');
 
 % Copy over recordings
 d.sandbox.mic_recording = mic_recording; 
+clear mic_recording; 
 
 % Attach end time
 d.sandbox.end_time=now; 
