@@ -979,7 +979,7 @@ switch testID
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
         
         % Swap out continuous noise with ISTS
-        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'ISTS-V1.0_60s_24bit (4chan4MLST);0dB.wav'); % File name
+        opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'); % File name
         
     case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
         
