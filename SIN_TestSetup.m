@@ -441,9 +441,11 @@ switch testID
        opts = SIN_TestSetup('ANL (Practice)', subjectID);
        
        % Change testID
-       for i=1:numel(opts)
-           opts(i).specific.testID = testID; 
-       end % for i=1:numel(opts) 
+       %    We do NOT want to change the test ID here or SIN_runTest won't
+       %    be able to track the buffer position.
+%        for i=1:numel(opts)
+%            opts(i).specific.testID = testID; 
+%        end % for i=1:numel(opts) 
 
     case 'HINT (Practice)'
         
