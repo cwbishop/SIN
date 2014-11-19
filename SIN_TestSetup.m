@@ -577,8 +577,14 @@ switch testID
         
         % Change wav_regexp and lookup table
         for i=1:numel(ists_opts)
+            
+            % Lookup table changes
             opts(i).specific.genPlaylist = ists_opts(i).specific.genPlaylist;
             opts(i).specific.hint_lookup = ists_opts(i).specific.hint_lookup;
+            
+            % wav file changes
+            opts(i).specific.wav_regexp = ists_opts(i).specific.wav_regexp;
+            
         end % for i=1:nuem(ists_opts)       
         
     case 'HINT (SNR-50, SPSHN)'
