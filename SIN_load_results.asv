@@ -1,0 +1,75 @@
+function [results] = SIN_load_results(filenames, varargin)
+%% DESCRIPTION:
+%
+%   This function loads SIN results structures listed in file_names.
+%
+% INPUT:
+%
+%   filenames: cell array of file names pointing to results structures.
+%
+%   Note: currently only supports single file loading due to time
+%   limitations in testing. CWB needs more time to check multi-file
+%   loading. Most of this is written to support multifile loading
+%   implicitly, but CWB has not error checked it. Needs more time than CWB
+%   has at present. 
+%
+% Parameters:
+%
+%   'smart_load':   bool, if set, then we run some basic tests to see if
+%                   the results structure loaded in the work space is the
+%                   same as the structure we are trying to load. If it
+%                   appears to be the same, then we won't load it again. If
+%                   there appears to be a difference, then we'll reload.
+%                   The "true" option was primarily designed to work with
+%                   runSIN; users want to minimize load time and are likely
+%                   only running a single subject and this helps to achieve
+%                   that goal. 
+%
+%                   If false, then the results structure will always be
+%                   loaded. (default = false).                        
+%
+% OUTPUT:
+%
+%   results:    a cell array, where each element is the results data loaded
+%               from the corresponding cell of the file_name input
+%
+% Development:
+%
+%   None (yet)
+%
+% Christopher W. Bishop
+%   University of Washington
+%   11/14
+
+%% GATHER PARAMETERS
+d=varargin2struct(varargin{:}); 
+
+%% SET DEFAULTs
+if ~isfield(d, 'smart_load') || isempty(d.smart_load), d.smart_load = false; end
+
+%% INITIALIZE RETURN VARIABLE
+results = cell(numel(filenames),1); 
+
+%% LOOP THROUGH AND LOAD
+
+% For now, make sure this only works with 1 results file. CWB not sure how
+% "smart_load" will behave with several files. Once he has time to deal
+% with this, he will reimplement the multi-file loading scheme. 
+if numel(filenames) ~= 1, error('Only one results file name supported'); end 
+
+% Assume we don't have to load the data by default
+load_bool = false;
+
+for i=1:numel(filenames)
+    
+    % If we aren't doing smart loading, then just load the fil
+    if ~d.smart_load
+        load_bool = true;
+    end 
+    % Load the results structure
+    loaded_results = load(filenames{i}, 'results'); 
+    
+    % Assign to return variable
+    results{i} = loaded_results.results; 
+    
+end % for i=1:numel(filenames)

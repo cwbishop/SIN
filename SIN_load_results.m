@@ -9,7 +9,7 @@ function [results] = SIN_load_results(filenames, varargin)
 %
 % Parameters:
 %
-%   None (yet)
+%   None (yet)                       
 %
 % OUTPUT:
 %
