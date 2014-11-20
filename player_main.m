@@ -216,6 +216,14 @@ function [results, status]=player_main(playback_list, varargin)
 %   'record_map':   mapping parameters for the recording device. For more
 %                   details, see help for map_channels.m 
 %
+%   'wait_playback_stop':   bool, if set then player will wait for playback
+%                           to stop before returning control to
+%                           player_main. This proved useful in 'ptb
+%                           (standard)' when running the HINT. We want to
+%                           set this to FALSE, since the scoring GUI itself
+%                           serves as a "stop", albeit a poorly controlled
+%                           one. Wu and Elizabeth asked for this feature. 
+%
 %   'state':    player state when first launched. States may change, but
 %               currently include :
 %                   'run':  run the test/playback
@@ -1220,7 +1228,9 @@ while trial <= number_of_trials
             %   playback. In other instances (e.g., Hagerman), we want to
             %   sit here until the sound stops playing. So, set an optional
             %   flag. 
-            PsychPortAudio('Stop', phand, 1);             
+            if d.player.wait_for_stop
+                PsychPortAudio('Stop', phand, 1);                         
+            end % if d.player.wait_for_stop
             
         case {'wmp'}  
             

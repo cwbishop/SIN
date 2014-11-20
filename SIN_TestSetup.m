@@ -339,6 +339,7 @@ switch testID
             'startplaybackat',    0, ...  % start playback at beginning of files
             'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [1], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'wait_for_stop',    true, ... % wait for sound playback to stop before returning control to player_main. 
             'state',    'run'); % Start in run state
             
         % ============================
@@ -667,6 +668,7 @@ switch testID
             'startplaybackat',    0, ...  % start playback at beginning of files
             'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [db2amp(-20); 1] [0; 0] ], 0), ... % play HINT target speech to first channel, spshnoise to second channel. Start with -10 dB SNR
             'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'wait_for_stop',    false,  ... % return control to player_main while sound playback is happening. This will bring up the scoring GUI.
             'state',    'run'); % Start in run state
             
         % ============================
@@ -1139,6 +1141,7 @@ switch testID
             'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'wait_for_stop',    true,   ... % Wait for sound playback to end before returning control to player_main
             'state',    'run'); % Start in run state
             
         % ============================
