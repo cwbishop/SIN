@@ -1214,6 +1214,12 @@ while trial <= number_of_trials
             end % if isDuplex
             
             % Stop, but only after sound is complete. 
+            %   Should set this to an optional flag to wait for sound
+            %   playback to stop before proceeding. In tests like HINT, we
+            %   want to post the scoring GUI before the sound complese
+            %   playback. In other instances (e.g., Hagerman), we want to
+            %   sit here until the sound stops playing. So, set an optional
+            %   flag. 
             PsychPortAudio('Stop', phand, 1);             
             
         case {'wmp'}  

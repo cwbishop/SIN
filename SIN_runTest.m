@@ -56,6 +56,16 @@ for t=1:length(testID)
                 %% GET PLAYLIST
                 % Must get the playlist for each test in case individual
                 % tests require a different test list
+                
+                % Append the data at run time. 
+                %   Only append the "list" (if you can call it that) for
+                %   the first section of the test. 
+                if i == 1
+                    opts(i).specific.genPlaylist.Append2UsedList = true;
+                else
+                    opts(i).specific.genPlaylist.Append2UsedList = false;
+                end % 
+                    
                 [playlist, lists] = SIN_getPlaylist(opts(i));
                 
                 % Copy over relevant sections from previous tests.
@@ -85,13 +95,23 @@ for t=1:length(testID)
                 
             end % for i=1:length(opts)
         
-        case {'HINT (First Correct)', 'HINT (Perceptual Test, SPSHN)', 'HINT (SNR-50, SPSHN)', 'HINT (SNR-80, SPSHN)', 'HINT (SNR-50, ISTS)', 'HINT (SNR-80, ISTS)'};
+        case {'HINT (Practice)', 'HINT (First Correct)', 'HINT (Perceptual Test, SPSHN)', 'HINT (SNR-50, SPSHN)', 'HINT (SNR-80, SPSHN)', 'HINT (SNR-50, ISTS)', 'HINT (SNR-80, ISTS)'};
             
             % Run HINT for SIN
             for i=1:numel(opts)
+                
                 %% GET PLAYLIST
                 % Must get the playlist for each test in case individual
                 % tests require a different test list
+                
+                % Conditional statement here handles used list tracking for
+                % this specific set of tests. We only want to add when we
+                % make it to the second test. 
+                if i == 1
+                    opts(i).specific.genPlaylist.Append2UsedList = true;
+                else
+                    opts(i).specific.genPlaylist.Append2UsedList = false;
+                end % 
                 [playlist, ~] = SIN_getPlaylist(opts(i));
                 
                 % Every other test should inherit the mod_mixer from the
@@ -120,6 +140,12 @@ for t=1:length(testID)
                 
                 % Create playlist. Do this for each stage of the test
                 % separately. 
+                 if i == 1
+                    opts(i).specific.genPlaylist.Append2UsedList = true;
+                else
+                    opts(i).specific.genPlaylist.Append2UsedList = false;
+                end % 
+                    
                 [playlist, ~] = SIN_getPlaylist(opts(i));
                 
                 % Run the stage

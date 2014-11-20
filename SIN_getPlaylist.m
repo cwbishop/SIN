@@ -1,4 +1,4 @@
-function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
+function [playlist, used_lists, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %% DESCRIPTION:
 %
 %   Function to return a playlist for a specific test. This is essentially
@@ -18,6 +18,12 @@ function [playlist, lists, wavfiles] = SIN_getPlaylist(opts, varargin)
 %   'files':        cell array, a list of file names (must be full paths).
 %                   If provided, then the function will use this as a file
 %                   list rather than the output from SIN_stiminfo.
+%
+%   'lists':    cell array, a list of lists. This is only required of the
+%               'files' field is not empty. This should contain the lists
+%               used to generate the file list. This proved useful when
+%               generating a list of files before a test is run, but only
+%               appending the lists at run time. 
 %
 %   'NLists':   number of lists to concatenate for playbacklist. This
 %               proved useful when administering tests that require more
@@ -122,11 +128,17 @@ playlist = {};
 if isfield(d, 'files') && ~isempty(d.files)
     % If the user provides a specific stimulus set to use, then use those
     % files. Otherwise, grab default information from SIN_stiminfo. 
-    lists = {};
+    %
+    % Files must be accompanied with a stored set of 'lists' for clean
+    % tracking. 
+    lists = d.lists;
     wavfiles = d.files;
+    playlist = wavfiles; 
     
 else
+    
     [lists, wavfiles]=SIN_stiminfo(opts); 
+    
 end % if isfield ...
 
 %% RETURN WAVFILES
@@ -234,6 +246,15 @@ end % if ~isempty(strmatch ...
 %% SELECT LISTS TO USE
 lists2use = listmask(1:d.NLists);
 
+% Assign list paths to return variable
+%   A special case here if files has been provided. If so, then we already
+%   have the list information. 
+if ~isfield(d, 'files') || isempty(d.files)
+    used_lists = {lists{lists2use}}';
+else
+    used_lists = lists; 
+end % if 
+
 %% CONSTRUCT PLAYLIST
 %   - Append the correct file names to the play list
 %   - Also, if the user wants stimuli shuffled "within" list, then shuffle
@@ -266,5 +287,5 @@ end % playlist
 %   mat file.
 %   - This is really only intended for debugging purposes. Not recommended.
 if d.Append2UsedList
-    SIN_UsedListInfo(d.UsedList, 'task', {{'add'}}, 'lists', {lists(lists2use)}, 'testID', opts.specific.testID);
+    SIN_UsedListInfo(d.UsedList, 'task', {{'add'}}, 'lists', {used_lists}, 'testID', opts.specific.testID);
 end % if d.Append2UsedList

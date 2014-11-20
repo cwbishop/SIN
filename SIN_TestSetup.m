@@ -309,7 +309,7 @@ switch testID
         opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % Get playlist so we can repeat the same recording many times
-        playlist = SIN_getPlaylist(opts); 
+        [playlist, opts.specific.genPlaylist.lists] = SIN_getPlaylist(opts); 
         
         opts.specific.genPlaylist.files = repmat({playlist{1}}, 10, 1); 
         
@@ -545,7 +545,7 @@ switch testID
         opts(2).player.modifier{end}.NLists = 1; 
         opts(2).player.modifier{end}.Randomize = 'lists';
         opts(2).player.modifier{end}.Repeats = 'allbefore'; 
-        opts(2).player.modifier{end}.Append2UsedList = true; 
+        opts(2).player.modifier{end}.Append2UsedList = false; 
         opts(2).player.modifier{end}.files = {};   
         
         % Add analysis
@@ -611,7 +611,7 @@ switch testID
         % root directory.
         %   Look for all directories beginning with "List" and ending in
         %   two digits. 
-        opts.specific.list_regexp='List[0-9]{2}'; 
+        opts.specific.list_regexp = 'List[0-9]{2}'; 
                 
         % Set regular expression for wav files
         opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$'; % Use calibrated noise files (calibrated to 0 dB)
@@ -629,12 +629,12 @@ switch testID
         opts.specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
         opts.specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
         opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % Get the stimulus list that we need. We need to populate this
         % field here so we know which stimulus will be FIRST for the roving
         % part.
-        opts.specific.genPlaylist.files = SIN_getPlaylist(opts); 
+        [opts.specific.genPlaylist.files, opts.specific.genPlaylist.lists] = SIN_getPlaylist(opts); 
         
         % Now reset genPlaylist information so it won't buck when called
         % from SIN_runTest.
@@ -776,7 +776,8 @@ switch testID
         for i=1:numel(opts)
             opts(i).specific.testID = testID;
             opts(i).specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]4talker_ists.wav$'; % Use calibrated noise files (calibrated to 0 dB)
-            opts(i).specific.genPlaylist.files = {};          
+            opts(i).specific.genPlaylist.files = {};  
+            opts(i).specific.genPlaylist.lists = {}; 
             
             % Change hint lookup file so we're looking at the ISTS stimuli
             opts(i).specific.hint_lookup.filename = strrep(opts(i).specific.hint_lookup.filename, '+spshn', '+4talker_ists');
@@ -790,12 +791,17 @@ switch testID
         opts(2).specific.genPlaylist.NLists = 2; % The number of lists to include in the playlist. Most lists have a fixed number of stimuli, so multiply by that number to get the total number of stims.
         opts(2).specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
         opts(2).specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts(2).specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts(2).specific.genPlaylist.Append2UsedList = false; % don't append the lists here, that will be handled in SIN_runTest.
         
         % Get the stimulus list that we need. We need to populate this
         % field here so we know which stimulus will be FIRST for the roving
         % part.
-        opts(2).specific.genPlaylist.files = SIN_getPlaylist(opts(2)); 
+        [opts(2).specific.genPlaylist.files, opts(2).specific.genPlaylist.lists] = SIN_getPlaylist(opts(2)); 
+        
+        % need to add lists to roving section of test
+        opts(1).specific.genPlaylist.lists = opts(2).specific.genPlaylist.lists;
+        
+%         opts(2).specific.genPlaylist.files = SIN_getPlaylist(opts(2)); 
         
         % Now reset genPlaylist information so it won't buck when called
         % from SIN_runTest.
@@ -809,7 +815,7 @@ switch testID
         
         % Now remove first stimulus from playback list. HINT manual says we
         % should move onto second stimulus
-        opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }; 
+        opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }'; 
       
     case 'MLST (Audio, Practice)'
         
@@ -874,7 +880,7 @@ switch testID
         opts.specific.genPlaylist.NLists = 2; % Set to 1, we'll just use the one "list"
         opts.specific.genPlaylist.Randomize = 'lists'; % just shuffle the lists, present stimuli in fixed order within each list.
         opts.specific.genPlaylist.Repeats = 'allbefore'; % All lists must be used before we repeat any.         
-        opts.specific.genPlaylist.Append2UsedList = true; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
+        opts.specific.genPlaylist.Append2UsedList = false; % append list to UsedList file. We might need to create an option to remove the items from the list if an error occurs
         
         % Change mod_mixer to work with single channel data
         %   Scale speech track to full volume, assuming we calibrate to 65
@@ -966,6 +972,8 @@ switch testID
         % Just swapping out the masker type.
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
         
+        opts.specific.testID = testID; 
+        
         % Swap out continuous noise with ISTS
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'); % File name
     
@@ -977,6 +985,9 @@ switch testID
         
          % Just swapping out the masker type.
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
+        
+        % Replace test ID
+        opts.specific.testID = testID; 
         
         % Swap out continuous noise with ISTS
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'); % File name
@@ -1020,22 +1031,22 @@ switch testID
     case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'    
         
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
-        opts.specific.testID; 
+        opts.specific.testID = testID; 
         
     case 'MLST (Audio, Unaided, SSN, 80 dB SPL, +0 dB SNR)'    
         
         opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
-        opts.specific.testID;     
+        opts.specific.testID = testID;     
         
     case 'MLST (Audio, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'    
         
         opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID);
-        opts.specific.testID;
+        opts.specific.testID = testID; 
         
     case 'MLST (Audio, Unaided, ISTS, 80 dB SPL, +0 dB SNR)'    
         
         opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID);
-        opts.specific.testID;  
+        opts.specific.testID = testID; 
         
     case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
         
@@ -1502,7 +1513,7 @@ switch testID
         opts.specific.genPlaylist.NLists = 1; % Has to be set to 1 in order to work with SIN_getPlaylist. We're just playing a single item "list"
         opts.specific.genPlaylist.Randomize = 'any'; % No stimuli to randomize
         opts.specific.genPlaylist.Repeats = 'any'; % irrelevant since there aren't any lists        
-        opts.specific.genPlaylist.Append2UsedList = true; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
+        opts.specific.genPlaylist.Append2UsedList = false; % don't append the generated lists to the USedList file by default. We'll want SIN_runTest to handle this and only do so if the test exits successfully. 
         
         % ============================
         % Playback configuration
