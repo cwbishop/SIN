@@ -402,6 +402,8 @@ set(handles.feedback_text, 'ForegroundColor', color2colormap({col}));
 % Set string
 set(handles.feedback_text, 'String', str); 
 
+% Post the changes to the figure. 
+refresh(handles.figure1); 
 
 % --- Executes on selection change in list_popup.
 function list_popup_Callback(hObject, eventdata, handles)
@@ -465,9 +467,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-% Get list of completed tests for given subject
-
-
 % --- Executes on button press in review_results_button.
 function review_results_button_Callback(hObject, eventdata, handles)
 % hObject    handle to review_results_button (see GCBO)
@@ -489,7 +488,8 @@ end
 load_results_button_Callback(hObject, eventdata, handles)
 
 % Replot results
-evalin('base', 'results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);');
+% evalin('base', 'results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);');
+evalin('base', 'SIN_runAnalysis(results);'); 
 
 % --- Executes on button press in review_recordings_button.
 function review_recordings_button_Callback(hObject, eventdata, handles)

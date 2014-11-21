@@ -465,9 +465,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-% Get list of completed tests for given subject
-
-
 % --- Executes on button press in review_results_button.
 function review_results_button_Callback(hObject, eventdata, handles)
 % hObject    handle to review_results_button (see GCBO)
@@ -483,20 +480,14 @@ catch
     return
 end 
 
-% Post to terminal
-post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
-
 % Load the test
 %   We want to call the callback button (as if the user had pressed "Load
 %   Results") so the behavior is identical without CWB having to think. 
 load_results_button_Callback(hObject, eventdata, handles)
 
-% Load the corresponding test results
-post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
-
 % Replot results
-results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
-
+% evalin('base', 'results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);');
+evalin('base', 'analysis_output = SIN_runAnalysis(results);'); 
 
 % --- Executes on button press in review_recordings_button.
 function review_recordings_button_Callback(hObject, eventdata, handles)
@@ -513,18 +504,13 @@ catch
     return
 end 
 
-% Post to terminal
-post_feedback(hObject, eventdata, handles, ['Loading: ' test2review  ], -1); % post error message to terminal
-
 % Load the test
-results = SIN_load_results({test2review}); 
-results = results{1}; 
-
-% Load the corresponding test results
-post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
+%   We want to call the callback button (as if the user had pressed "Load
+%   Results") so the behavior is identical without CWB having to think. 
+load_results_button_Callback(hObject, eventdata, handles)
 
 % Now review the recordings
-SIN_review_recordings(results, 'assign_to_workspace', true); 
+evalin('base', ['SIN_review_recordings(results,' '''assign_to_workspace''' ', true);']); 
 
 
 % --- Executes on button press in button_stop.
@@ -597,9 +583,6 @@ if load_results
     post_feedback(hObject, eventdata, handles, ['Loading complete'], 1); % post error message to terminal
     
 else
-    post_feedback(hObject, eventdata, handles, ['Results already loade'], 1); % post error message to terminal
+    post_feedback(hObject, eventdata, handles, ['Results already loaded.'], 1); % post error message to terminal
+    
 end % 
-
-
-
-
