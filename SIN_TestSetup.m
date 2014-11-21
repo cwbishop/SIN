@@ -821,8 +821,8 @@ switch testID
       
     case 'MLST (Audio, Practice)'
         
-        % Practice session based on 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        % Practice session based on 'MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
         
         % Change testID
         for i=1:numel(opts)
@@ -831,15 +831,15 @@ switch testID
         
     case 'MLST (AV, Practice)'
         
-        % Practice session based on 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        % Practice session based on 'MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
+        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
         
         % Change testID
         for i=1:numel(opts)
             opts(i).specific.testID = testID; 
         end % for i=1:numel(opts)
         
-    case 'MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+    case 'MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
         
         % Configured to administer the (audio only) MLST. This serves as
         % the basic setup file for all MLST files, so changes here will
@@ -935,11 +935,11 @@ switch testID
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)                
                 'plot', true)); % generate plot      
             
-    case 'MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)'
         
         % Just like aided 65 dB SPL test, but with different wav_regexp and
         % lookup
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID);
         
         opts.specific.testID = testID; 
         
@@ -972,7 +972,7 @@ switch testID
     case 'MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
         
         % Just swapping out the masker type.
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID);
         
         opts.specific.testID = testID; 
         
@@ -986,7 +986,7 @@ switch testID
     case 'MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
         
          % Just swapping out the masker type.
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID);
         
         % Replace test ID
         opts.specific.testID = testID; 
@@ -994,10 +994,10 @@ switch testID
         % Swap out continuous noise with ISTS
         opts.player.contnoise = fullfile(opts.general.root, 'playback', 'Noise', 'MLST_ISTS_4_talker;bandpass;0dB.wav'); % File name
         
-    case 'MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)'
+    case 'MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
         
         % Start with the audio condition
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
@@ -1005,9 +1005,9 @@ switch testID
         %   with our lives. 
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
      
-    case 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Aided, SPSHN, 80 dB SPL, +0 dB SNR)'
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
@@ -1030,14 +1030,14 @@ switch testID
         % Change wav_regexp to pull in MP4s
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
         
-    case 'MLST (Audio, Unaided, SSN, 65 dB SPL, +8 dB SNR)'    
+    case 'MLST (Audio, Unaided, SPSHN, 65 dB SPL, +8 dB SNR)'    
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID);
         opts.specific.testID = testID; 
         
-    case 'MLST (Audio, Unaided, SSN, 80 dB SPL, +0 dB SNR)'    
+    case 'MLST (Audio, Unaided, SPSHN, 80 dB SPL, +0 dB SNR)'    
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID);
         opts.specific.testID = testID;     
         
     case 'MLST (Audio, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'    
@@ -1050,16 +1050,16 @@ switch testID
         opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID);
         opts.specific.testID = testID; 
         
-    case 'MLST (AV, Unaided, SSN, 65 dB SPL, +8 dB SNR)'
+    case 'MLST (AV, Unaided, SPSHN, 65 dB SPL, +8 dB SNR)'
         
         % Start with the audio condition
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
-    case 'MLST (AV, Unaided, SSN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Unaided, SPSHN, 80 dB SPL, +0 dB SNR)'
         
         % Start with the audio condition
-        opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
     case 'MLST (AV, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'
@@ -1074,7 +1074,7 @@ switch testID
         opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
-    case 'Hagerman (SPSHN)'
+    case 'Hagerman (Unaided, SPSHN)'
         
         %% SETUP FOR HAGERMAN STYLE RECORDINGS
         %   This specific experiment has some basic needs. 
@@ -1193,10 +1193,10 @@ switch testID
                 'filter_order', 4, ...
                 'filter_frequency_range', 125 ... 
                 )); 
-    case 'Hagerman (ISTS)'       
+    case 'Hagerman (Unaided, ISTS)'       
         
         % Use Hagerman (SPSHN) as a base
-        opts = SIN_TestSetup('Hagerman (SPSHN)', subjectID); 
+        opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID); 
         
         % Change test ID
         opts.specific.testID = testID; 
@@ -1204,6 +1204,21 @@ switch testID
         % Change the file filter
         opts.specific.wav_regexp = 'ists;bandpass;0dB';
     
+    case 'Hagerman (Aided, SPSHN)'       
+        
+        % Use unaided as a base
+        opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID); 
+        
+        % Change test ID
+        opts.specific.testID = testID; 
+        
+    case 'Hagerman (Aided, ISTS)'
+        
+        opts = SIN_TestSetup('Hagerman (Unaided, ISTS)', subjectID); 
+        
+        % Change test ID
+        opts.specific.testID = testID; 
+        
     case 'Weight Estimation'
         
         % This test is used to estimate the relative weights that must be
