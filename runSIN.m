@@ -403,7 +403,7 @@ set(handles.feedback_text, 'ForegroundColor', color2colormap({col}));
 set(handles.feedback_text, 'String', str); 
 
 % Post the changes to the figure. 
-refresh(handles.figure1); 
+refresh(handles.runSIN); 
 
 % --- Executes on selection change in list_popup.
 function list_popup_Callback(hObject, eventdata, handles)

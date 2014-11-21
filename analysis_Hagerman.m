@@ -414,7 +414,7 @@ for i=1:numel(group_numbers)
     %   loosely thought of as "attenuation due to summation". Intuitively,
     %   we're comparing the signal loss due to summing two signals together.
     %
-    %   Our reference point is the loudest signal in each channel. Note
+    %   Our reference point is the quietest signal in each channel. Note
     %   that this may result in the db(rms()) of channel 1 from oo and
     %   channel 2 from ii. This is just an example, all combinations
     %   possible. CWB decided to do this because it would be the most
