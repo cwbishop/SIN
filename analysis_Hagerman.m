@@ -203,6 +203,11 @@ end
 
 % Save the noise floor recording for further analysis below
 noise_floor_recording = recordings{noise_floor_mask}(:,d.channels); 
+
+% Apply filter if use tells us to.
+if d.apply_filter
+    noise_floor_recording = filtfilt(b,a,noise_floor_recording);
+end % if d.apply_filter
 noise_floor_rms = rms(noise_floor_recording); 
 
 %% CLEAN FILENAMES FOR MATCHING
