@@ -24,6 +24,11 @@ function varargout = SIN_runAnalysis(results, varargin)
 %% GET INPUT PARAMETERS
 d = varargin2struct(varargin{:});
 
+% Does the analysis structure need to be updated?
+%   Get the current analysis and replace the old analysis.
+opts = SIN_TestSetup(results(1).RunTime.specific.testID, results(1).RunTime.subject.subjectID); 
+results(1).RunTime.analysis = opts(1).analysis; 
+
 % Get function handle
 function_handle = results(1).RunTime.analysis.fhand;
 
