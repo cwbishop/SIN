@@ -283,6 +283,60 @@ elseif isa(X, 'cell')
         clear dtype; 
     end % if isstruct 
     
+
+    
+elseif iserpstruct(X)
+    DTYPE=3;
+    % Defaults
+    
+    % Load all channels by default
+    try p.chans; catch p.chans=1:size(X(1).bindata, 1); end  
+    
+    % Load all bins by default
+    try p.bins; catch p.bins=1:size(X(1).bindata, 3); end 
+    
+    % Load entire time window by default
+    try p.time_window; catch p.time_window = [-inf inf]; end 
+    
+    % Set sampling rate
+    %   Assumes all sampling rates are equal
+    %   Also assumes that bin labels are the same across all ERP
+    %   structures. Reasonably safe.
+    FS=X(1).srate;   
+    p.fs=FS; 
+    LABELS={X(1).bindescr{p.bins}}; % bin description labels
+    
+    % Get time stamps 
+    %   This will be used for temporal windowing below.
+    time_stamps = X(1).times; 
+    
+    % Create a logical mask for time domain
+    temporal_mask = SIN_maskdomain(time_stamps, p.time_window); 
+    
+    for n=1:length(X)
+    
+        % Truncate data
+        for c=1:length(p.chans)
+            tx=squeeze(X(n).bindata(p.chans(c), temporal_mask, p.bins)); 
+        
+            % Sommersault to reset data dimensions if necessary
+            [tx]=SIN_loaddata(tx, p); 
+            
+            % Assign to growing data structure
+            x(c,:,:,n)=tx; 
+        end % c=p.chans
+        
+    end % for n=1:length(X)
+    
+    % Reassign to return variable X
+    X=x; 
+    clear x; 
+    
+elseif iseegstruct(X)
+    DTYPE=4;
+    warning('EEG structure loading is underdeveloped'); 
+    ODAT=X;    
+    
 elseif iscntstruct(X)
     DTYPE=5; 
     % If we're dealing with a CNT structure
@@ -318,47 +372,6 @@ elseif iscntstruct(X)
     
     % Reassign and return
     X=x; 
-    
-elseif iserpstruct(X)
-    DTYPE=3;
-    % Defaults
-    
-    % Load all channels by default
-    try p.chans; catch p.chans=1:size(X(1).bindata, 1); end  
-    
-    % Load all bins by default
-    try p.bins; catch p.bins=1:size(X(1).bindata, 3); end 
-    
-    % Set sampling rate
-    %   Assumes all sampling rates are equal
-    %   Also assumes that bin labels are the same across all ERP
-    %   structures. Reasonably safe.
-    FS=X(1).srate;   
-    p.fs=FS; 
-    LABELS={X(1).bindescr{p.bins}}; % bin description labels
-    for n=1:length(X)
-    
-        % Truncate data
-        for c=1:length(p.chans)
-            tx=squeeze(X(n).bindata(p.chans(c), :, p.bins)); 
-        
-            % Sommersault to reset data dimensions if necessary
-            [tx]=SIN_loaddata(tx, p); 
-            
-            % Assign to growing data structure
-            x(c,:,:,n)=tx; 
-        end % c=p.chans
-        
-    end % for n=1:length(X)
-    
-    % Reassign to return variable X
-    X=x; 
-    clear x; 
-    
-elseif iseegstruct(X)
-    DTYPE=4;
-    warning('EEG structure loading is underdeveloped'); 
-    ODAT=X;    
 else
     error('Dunno what this is, kid.');
 end  % if ...
