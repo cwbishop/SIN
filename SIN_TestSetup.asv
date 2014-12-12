@@ -432,11 +432,9 @@ switch testID
         
         % Setup list selection
         %   Need to remove some specific crap from setting up HINT
-        %   playlists before run time. We'll randomize list selection
-        %   across listeners. 
+        %   playlists before run time. 
         opts.specific.genPlaylist.NLists = 1;
-        opts.specific.genPlaylist.Repeats = 'allbefore';
-        opts.specific.genPlaylist.Randomize = 'lists';
+        opts.specific.genPlaylist.
         opts.specific.genPlaylist = rmfield(opts.specific.genPlaylist, 'files');
         opts.specific.genPlaylist = rmfield(opts.specific.genPlaylist, 'lists');
         

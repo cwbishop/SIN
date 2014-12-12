@@ -107,7 +107,15 @@ words = words';
 alphabet = alphabet'; 
 
 % Append suffix to track names
-track_name = [num2str(track_number) repmat(d.suffix, numel(track_number), 1)]; 
-
+track_name = [];
+for i=1:numel(track_number)
+    track_name = strvcat(track_name, ['''' sprintf('%02d', track_number(i)) d.suffix]);
+end % for i=1:numel(track_number) 
+    
 % Write data to table
+%   Have to write to txt file to allow for leading zeros in file names. 
+% Note: Excel is dumb and does not like leading zeros. So we have to put an
+% apostrophe there (lame).
+%
+%   Here's where I learned this http://www.mathworks.com/matlabcentral/answers/93656-why-is-the-leading-zero-dropped-when-i-write-a-string-of-numbers-to-excel
 writetable(table(track_name, words, alphabet), fullfile(wordspan_dir, ['WordSpan' d.suffix '.xlsx'])); 
