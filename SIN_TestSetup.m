@@ -447,7 +447,12 @@ switch testID
         
         % Clear the modifiers
         %   We don't need to track anything for this test, really. 
-        opts.player.modifiers = []; 
+        opts.player.modifier = {}; 
+        
+        % Set volume to 1
+        %   These files are two-channel at present, with just a signal in
+        %   channel 1, channel 2 is all zeros.
+        fillPlaybackMixer(opts.player.playback_map, [1 0], 0);
         
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the

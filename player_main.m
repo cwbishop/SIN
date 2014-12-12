@@ -651,18 +651,22 @@ while trial <= number_of_trials
 %                         break
 %                     end % isequal(d.player.state, 'exit');
 %                 end % if d.player.checkaftermodifier
-                
+            
             end % if modifier
     
         end % for modifier_num                
 
+        % If we don't have any modifiers, we need to assign X to Y.
+        if isempty(d.player.modifier)
+            Y = X; 
+        end % if isempty ...
     else
         % Assign X (raw data) to second variable for playback 
         Y=X; 
     end % isequal(d.player.adaptive_mode, 'bytrial')     
     
     % Safeguard for basic sound playback when there are no modchecks or
-    % modifiers.     
+    % modifiers.
     if ~exist('Y', 'var'), Y=X; end 
     
     % We'll update this on every iteration just in case a modifier has

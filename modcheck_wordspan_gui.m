@@ -52,12 +52,16 @@ if ~isfield(d.player.modcheck, 'initialized'), d.player.modcheck.initialized = f
 if ~d.player.modcheck.initialized
     
     % Load lookup table
-    d.player.modcheck.table = load_lookup_table( d.player.specific.lookup_table);
+    d.player.modcheck.table = load_lookup_table( d.specific.lookup_table);
 %         'path_to_table', d.player.specific.lookup_table, ...
 %         'Sheet',    d.player.specific.lookup_table.sheet_number); 
     
     % Initialize the score_data subfield
-    d.player.modcheck.score_data = struct(); 
+    d.player.modcheck.score_data = struct(... 
+        'recognition',  {}, ...
+        'recall',   {}, ...
+        'judgment', [], ...
+        'is_scored', []); 
     
     % Set initialized to true
     d.player.modcheck.initialized = true; 
@@ -72,13 +76,13 @@ filename = d.sandbox.playback_list{trial};
 
 % Digest filename into file parts. We'll use this to filter the table
 % below.
-[PATHSTR, NAME, EXT] = filepath(filename); 
+[PATHSTR, NAME, EXT] = fileparts(filename); 
 
 % Filter the table to get trial-specific entry
 filtered_table = filter_table(d.player.modcheck.table, 'track_name', NAME); 
 
 % Put the words into a GUI friendly version (that is, a cell array)
-key_words = cellstr(filtered_table.words{1}); 
+key_words = {cellstr(strsplit(filtered_table.words{1}))}; 
 
 % Call the scoring GUI
 score_data = WordSpan_Scoring('words', key_words); 

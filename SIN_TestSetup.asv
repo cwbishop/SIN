@@ -432,9 +432,11 @@ switch testID
         
         % Setup list selection
         %   Need to remove some specific crap from setting up HINT
-        %   playlists before run time. 
+        %   playlists before run time. We'll randomize list selection
+        %   across listeners. 
         opts.specific.genPlaylist.NLists = 1;
-        opts.specific.genPlaylist.
+        opts.specific.genPlaylist.Repeats = 'allbefore';
+        opts.specific.genPlaylist.Randomize = 'lists';
         opts.specific.genPlaylist = rmfield(opts.specific.genPlaylist, 'files');
         opts.specific.genPlaylist = rmfield(opts.specific.genPlaylist, 'lists');
         
@@ -445,8 +447,9 @@ switch testID
         
         % Clear the modifiers
         %   We don't need to track anything for this test, really. 
-        opts.player.modifiers = []; 
+        opts.player.modifier = {}; 
         
+        % Set volume to 1
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
         % following:

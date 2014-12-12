@@ -9,7 +9,8 @@ function [mod_code, d] = modcheck_wordspan_gui(varargin)
 %
 % Parameters:
 %
-%   
+%   None(yet) ...
+%
 % OUTPUT:
 %
 %   mod_code:   modification code. Always returns a 0 since no
@@ -27,7 +28,8 @@ function [mod_code, d] = modcheck_wordspan_gui(varargin)
 
 %% INPUT CHECK AND DEFAULTS
 
-% initialize mod_code to zero (do nothing) 
+% Initialize mod_code
+%   mod_code will always be 0 for this modification check. 
 mod_code=0;
 
 %% INPUT ARGS TO STRUCTURE
@@ -45,12 +47,17 @@ if ~isfield(d.player.modcheck, 'initialized'), d.player.modcheck.initialized = f
 % Have we initialized the modcheck yet? If not, do the following ...
 %   - Load the lookup table
 %   - set initialized to true
+%   - Initialize score_data field, which will hold the scored data
+%   information on a trial-by-trial basis
 if ~d.player.modcheck.initialized
     
     % Load lookup table
-    d.player.modcheck.table = load_lookup_table( ...
-        'path_to_table', d.player.specific.hint_lookup.filename, ...
-        'Sheet',    d.player.specific.hint_lookup.sheetnum); 
+    d.player.modcheck.table = load_lookup_table( d.specific.lookup_table);
+%         'path_to_table', d.player.specific.lookup_table, ...
+%         'Sheet',    d.player.specific.lookup_table.sheet_number); 
+    
+    % Initialize the score_data subfield
+    d.player.modcheck.score_data = struct(); 
     
     % Set initialized to true
     d.player.modcheck.initialized = true; 
@@ -71,4 +78,10 @@ filename = d.sandbox.playback_list{trial};
 filtered_table = filter_table(d.player.modcheck.table, 'track_name', NAME); 
 
 % Put the words into a GUI friendly version (that is, a cell array)
-key_words = cellstr(fil
+key_words = cellstr(filtered_table.words{1}); 
+
+% Call the scoring GUI
+score_data = WordSpan_Scoring('words', key_words); 
+
+% Stick the scoring data in the results structure
+d.player.modcheck.score_data(trial) = score_data; 

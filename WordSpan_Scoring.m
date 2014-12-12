@@ -189,10 +189,12 @@ for i=1:handles.max_set_size
     %   - judgment radio button (reset below)
     %   - Recall list (update_recall_dropdown_list)
     %   - Recall text entries (reset here) 
+    %   - Recall drop down box needs to be reset as well.
     set(handles.(['text_recognition_' num2str(i)]), 'String', ''); 
     set(handles.(['button_alphabet_first_' num2str(i)]), 'Value', 0);
     set(handles.(['button_alphabet_second_' num2str(i)]), 'Value', 0);
     set(handles.(['text_recall_' num2str(i)]), 'String', '');     
+    set(handles.(['popup_recall_' num2str(i)]), 'Value', 1); 
     
     % We want to set all scoring boxes <= handles.set_size as visible, but
     % those greater than handles.set_size as invisible.
