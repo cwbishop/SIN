@@ -1,0 +1,11 @@
+*Disconnect all speakers/headphones!!!*
+
+The sound that is about to play will be *very* loud. 
+
+A 1-kHz tone will be presented from each channel in turn. 
+
+Hook up the sound card output to an oscilloscope.
+
+For each channel, verify that all other channels zero.
+
+- Is there cross-channel contamination?

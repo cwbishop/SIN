@@ -1,0 +1,13 @@
+*Disconnect all speakers/headphones!!!*
+
+The sound that is about to play will be *very* loud. 
+
+A 1-kHz tone will be presented from all channels simultaneously. 
+
+Hook up the sound card output to an oscilloscope.
+
+Verify that all channels are a perfect match. 
+
+- Are there time delays?
+
+- Are there level differences?

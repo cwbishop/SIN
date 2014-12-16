@@ -450,6 +450,10 @@ switch testID
         opts.player.modifier = {}; 
         
         % Set volume to 1
+        %   These files are two-channel at present, with just a signal in
+        %   channel 1, channel 2 is all zeros.
+        fillPlaybackMixer(opts.player.playback_map, [1 0], 0);
+        
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
         % following:
@@ -1330,28 +1334,77 @@ switch testID
         
     case 'Sound Card Test'
         
-        % This tests plays a sound from all mapped channels of the sound
-        % card at once. The user should then use an oscilloscope to verify
-        % a good match between each channel tested. 
-        
+        % This is a multi-stage validation process designed to ensure that
+        % the sound card being used is adequate. These tests must be
+        % conducted with an oscilloscope and requires some technical know
+        % how to get done. 
+        %
+        % Stage 1: Matched outputs between channels
+        %
+        %   In most cases, it's absolutely critical to have perfectly
+        %   matched outputs between all channels. More concretely, the
+        %   outputs must be matched in terms of timing and output levels.
+        %
+        %   To do this, we will play a tone from all channels
+        %   simultaneously. The user must then observe each channel pair
+        %   and confirm that timing and output levels are matched. We are
+        %   looking for a *point-by-point* match (with some slop due to
+        %   noise in the oscilloscope itself). Precisely what the tolerance
+        %   limits are will depend on the user's needs and preferences.
+        %   There's no clear way to automate this. 
+        %   
+        % Stage 2: Channel isolation (output)
+        %
+        %   The next check is to make sure that when we play sound out of
+        %   ONE channel that all other channels are SILENT. This is
+        %   particularly important in cases when independent noise samples
+        %   will be presented to each channel. 
+        %
+        % Stage 3: Channel isolation (input) 
+
+        %% STAGE 1
         % Use ANL base as a starting point since we'll get continuous,
         % looped sound playback
-        opts = SIN_TestSetup('ANL (base)', subjectID); 
+        stage1 = SIN_TestSetup('ANL (base)', subjectID); 
         
         % Change test ID
-        opts.specific.testID = testID; 
+        stage1.specific.testID = testID; 
         
         % Change the stimulus directory, wav filter, and task instructions.
-        opts.specific.root = fullfile(opts.general.root, 'playback', 'calibration'); 
-        opts.specific.wav_regexp = '1kHz_tone.wav'; 
+        stage1.specific.root = fullfile(stage1.general.root, 'playback', 'calibration'); 
+        stage1.specific.wav_regexp = '1kHz_tone.wav'; 
         
         % Change the mixer so we pipe the calibration tone to all channels
         % simultaneously.        
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, 0.5.*ones(1,4), 0);
+        stage1.player.mod_mixer = fillPlaybackMixer(stage1.player.playback_map, 0.5.*ones(1,4), 0);
         
         % We don't need to record, so set flag to false
-        opts.player.record_mic = false; 
+        stage1.player.record_mic = false; 
         
+        % Change instructions and title
+        stage1.player.modcheck.instructions = fileread(fullfile(stage1.general.instruction_dir, 'soundcard_test_stage_01.txt')); 
+        stage1.player.modcheck.title = [testID ': Stage 01']; 
+        
+        %% STAGE 2
+
+        % Change mixer
+        for i=1:stage1.player.playback_map.channel_number
+            
+            % Copy stage1 as a scaffold 
+            stage2(end+1) = stage1; 
+            
+            % Change instructions and title
+            stage2(end).player.modcheck.instructions = fileread(fullfile(stage1.general.instruction_dir, 'soundcard_test_stage_02.txt')); 
+            stage2(end).player.modcheck.title = [testID ': Stage 02 : Channel ' num2str(i)]; 
+            
+            % Reset mixer to zeros
+            mixer = zeros(ones(1,4)); 
+            mixer(i) = 0.5; 
+            stage2(end).player.mod_mixer = fillPlayBackMixer(stage2.player.playback_map, mixer, 0) ;
+            
+        end % for i=1:opts ...
+        
+        % Append stage 2 to growing 
     case 'HINT (First Correct)'
         
         % This is the first segment in HINT testing during which we present
