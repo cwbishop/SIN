@@ -1104,3 +1104,73 @@ legend('MLST WAV Files (0dB)', 'MLST MP4 Files (0dB)', 'MLST WAV Files (+15dB)',
 figure, hold on
 plot(1, [db(rms(mlst_audio_time_series_0dB)) db(rms(mlst_mp4_time_series_0dB)) db(rms(mlst_audio_time_series)) db(rms(mlst_mp4_time_series)) db(rms(mlst_spshn_4channel)) db(rms(mlst_ists_4talker))] - db(rms(hint_spshn)), 's')
 legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutside')
+
+%% WORD SPAN
+%
+%   Below we calibrate the word span by loading the carrier phrase and
+%   calibrating relative to our calibration sound. CWB talked to Christi
+%   Miller on 12/16/14 and she suggested doing the calibration this way,
+%   which is simpler and closer to what is typically done for tests of this
+%   type in the clinic. CWB was very happy to do less work ;). 
+
+% Load a file with the carrier phrase in it.
+%   We'll use a predefined file here so we can hard code the time windows.
+[word_span_carrier, word_span_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Word Span', 'List01', '00.wav')); 
+
+% Sampling rate sanity check
+if word_span_fs ~= FS, error('Word span sampling rate does not match'); end
+
+% Bandpass filter the file
+[b, a] = butter(bandpass_filter_order, filter_frequency_range./(FS/2), filter_type);
+word_span_carrier = filtfilt(b, a, word_span_carrier); 
+
+% Extract the carrier phrase. 
+word_span_carrier = word_span_carrier([44316:85994],1); 
+
+% % Write carrier phrase as a temporary file
+% audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'calibration', 'WordSpan_carrier.wav'), word_span_carrier, FS, 'BitsperSample', audio_bit_depth);
+
+% Load calibration file 
+hint_spshn = SIN_loaddata(calibration_file); 
+
+% Calculate scaling factor
+word_span_scale = rms(hint_spshn)./rms(word_span_carrier); 
+
+% Load word span play lists
+opts = SIN_TestSetup('Word Span', ''); 
+
+% Change regular expression for wav file selection
+opts.specific.wav_regexp = '[0-9]{2}.wav$';
+
+% Load get file names
+[~, word_span_files] = SIN_stiminfo(opts); 
+
+% Concatenate file names
+word_span_files = concatenate_lists(word_span_files); 
+
+% Loop through all files, scale, write new files
+for i = 1:numel(word_span_files)
+    
+    % Get the file name and path
+    [PATHSTR, NAME, EXT] = fileparts(word_span_files{i}); 
+    
+    % Load the data and bandpass filter it.
+    [word_span_data, fs] = SIN_loaddata(word_span_files{i}); 
+    word_span_data = filtfilt(b, a, word_span_data);     
+    
+    % Apply scaling factor to data
+    word_span_data = word_span_data .* word_span_scale; 
+    
+    % Sampling rate check
+    if fs ~= FS, error('Sampling rate mismatch'); end 
+    
+    outfile = fullfile(PATHSTR, [NAME ';bandpass;0dB' EXT]); 
+    
+    % Write new file to disk
+    %   Write as a single channel file. 
+    audiowrite(outfile, word_span_data(:,1), FS, 'BitsperSample', audio_bit_depth);
+    
+end % for i=1:numel(word_span_files)
+
+% Create the lookup table
+create_wordspan_lookup('suffix', ';bandpass;0dB');
