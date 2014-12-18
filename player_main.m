@@ -535,7 +535,7 @@ d.sandbox.modcheck_num=1; % hard-coded for now since code only allows a single m
 %   device initialized).
 
 % Call modcheck
-if ~isempty(fieldnames(d.player.modcheck))
+if ~isempty(d.player.modcheck) && ~isempty(fieldnames(d.player.modcheck))
     [mod_code, d]=d.player.modcheck.fhandle(d);
 else
     % Catch in case we don't have a modcheck, but we do have modifiers.
@@ -1324,7 +1324,7 @@ while trial <= number_of_trials
     if isequal(d.player.adaptive_mode, 'bytrial')
 
         % Call modcheck, but only if there's one to call
-        if ~isempty(fieldnames(d.player.modcheck))
+        if ~isempty(d.player.modcheck) && ~isempty(fieldnames(d.player.modcheck))
             [mod_code, d]=d.player.modcheck.fhandle(d);
         end
     end % if isequal( ...     

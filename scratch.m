@@ -1,17 +1,14 @@
-vid = av.vid;
-whichScreen=max(Screen('Screens'));
-[window,screenRect] = Screen('OpenWindow',whichScreen);
-d.window = window;
-% textures = cell(numel(X), 1); % preallocate
-% Map to texture in window
-tindex = nan(size(vid,4),1); % preallocate, set to NaN
-tic
-for n=1:size(vid,4)
-    tindex(n) = Screen( 'MakeTexture', d.window, vid(:,:,:,n) );
-end % for n=1:
-toc
-% Now copy tindex over to a cell array
-% textures = tindex;
-% runtime = GetSecs - start
+for i=1:numel(bad_mlst_files)
+    
+    % Need to get the original file name for the conversion below
+    [PATHSTR, NAME, EXT] = fileparts(bad_mlst_files{i}); 
+    NAME = NAME(1:findstr(NAME, ';bandpass;')-1); 
+    
+    orig_file = fullfile(PATHSTR, [NAME EXT]); 
+    
+    cmd = ['ffmpeg -y -i "'...
+    orig_file '" -i "' strrep(bad_mlst_files{i}, '.mp4', '.wav')...
+                    '" -map 0:0 -map 1 "' bad_mlst_files{i} '"'];
 
-Screen('CloseAll'); 
+    system(cmd, '-echo'); 
+end % for i=:numel(bad_mlst_files)

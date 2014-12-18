@@ -1,4 +1,4 @@
-function [snr_requested, snr_theoretical, snr_empirical, target_empirical, noise_empirical, target_theoretical, noise_theoretical] = analysis_Hagerman(results, varargin)
+function [snr_requested, snr_theoretical, snr_empirical, target_empirical, attenuation, noise_empirical, target_theoretical, noise_theoretical] = analysis_Hagerman(results, varargin)
 %% DESCRIPTION:
 %
 %   This function analyzes Hagerman-style (that is, phase inversion
@@ -425,7 +425,9 @@ for i=1:numel(group_numbers)
     %   possible. CWB decided to do this because it would be the most
     %   conservative estimate of "attenuation due to summation" we can
     %   calculate. 
-    attenuation(i, :) = db(rms(residual_track{i})) - min([db(rms(oo_empirical)); db(rms(ii_empirical))]); 
+    attenuation(i, :) = db(rms(residual_track{i})) - min([db(rms(oo_empirical)); db(rms(ii_empirical))]);
+%     attenuation(i, :) = db(rms(residual_track{i})) - min([db(rms(target_empirical{i})); db(rms(noise_empirical{i}))]);
+    attenuation(i,:) = attenuation(i,:).*-1; % flip sign; 
     
 end % for i=1:numel(grps)
 

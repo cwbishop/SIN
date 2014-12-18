@@ -990,7 +990,7 @@ for i=1:numel(bad_mlst_files)
 end % for i=:numel(bad_mlst_files)
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', '');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 75 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -1040,16 +1040,14 @@ legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutsid
 % Create lookup tables for MLST SPSHN
 %   Need separate lookup talbes for 0 dB and +15 dB case
 % =================
-createMLSTlookup('suffix', ';bandpass;0dB_UW', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UW.mp4$');
-createMLSTlookup('suffix', ';bandpass;0dB_UofI', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UofI.mp4$');
-createMLSTlookup('suffix', ';bandpass;+10dB_UW', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UW.mp4$');
-createMLSTlookup('suffix', ';bandpass;+10dB_UofI', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UofI.mp4$');
+createMLSTlookup('suffix', ';bandpass;0dB_UW', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UW.mp4$');
+createMLSTlookup('suffix', ';bandpass;0dB_UofI', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UofI.mp4$');
+createMLSTlookup('suffix', ';bandpass;+10dB_UW', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UW.mp4$');
+createMLSTlookup('suffix', ';bandpass;+10dB_UofI', 'testID', 'MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UofI.mp4$');
 
 %% CREATE MLST + 4-talker ISTS STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + 4 channels of the
-%   ISTS. Recall that we will use the SAME speech track materials (mp4 and
-%   wav files made for speech shaped noise version). All we need to make
-%   that's "new" is a 4-channel ISTS stimulus. 
+%   ISTS. Recall that the 
 
 % Load original ISTS
 [ists, ists_fs] = SIN_loaddata((fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'ISTS-V1.0_60s_24bit.wav'))); 
@@ -1111,7 +1109,7 @@ audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'MLST_ISTS_
 mlst_ists_correction_db = db(rms(hint_spshn)./rms(sum(mlst_ists_4talker,2)))
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', '');
+opts = SIN_TestSetup('MLST (AV, Aided, SSN, 80 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Just grab the UW files - U of I are identical, just with the channels

@@ -1041,7 +1041,7 @@ switch testID
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)                
                 'plot', true)); % generate plot      
             
-    case 'MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (Audio, Aided, SPSHN, 75 dB SPL, +0 dB SNR)'
         
         % Just like aided 65 dB SPL test, but with different wav_regexp and
         % lookup
@@ -1053,7 +1053,7 @@ switch testID
         % playback that have a +15 dB gain relative to our calibration file
         %   Note the brackets around the "+" sign to distinguish it from
         %   the + operator in regexp.
-        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, ';0dB', ';[+]15dB');
+        opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, ';0dB', ';[+]10dB');
         
         % Change lookup table 
         %   We have to have slightly different versions of the lookup table
@@ -1063,7 +1063,7 @@ switch testID
         %   Note: Unlike wav_regexp below, we don't have to out the "+" in
         %   brackets since this is a simple string and not a regular
         %   expression. 
-        opts.specific.hint_lookup.filename = strrep(opts.specific.hint_lookup.filename, ';0dB', ';+15dB');
+        opts.specific.hint_lookup.filename = strrep(opts.specific.hint_lookup.filename, ';0dB', ';+10dB');
         
         % Add 15 dB to account for the louder speech levels, then add 8 dB
         % to compensate for the -8 dB gain applied to noise in scaffold to
@@ -1089,10 +1089,10 @@ switch testID
         % factor. 
         opts.player.noise_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(-8 + mlst_ists_4speaker_correction_db).*eye(4,4), 0);
         
-    case 'MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (Audio, Aided, ISTS, 75 dB SPL, +0 dB SNR)'
         
          % Just swapping out the masker type.
-        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', subjectID);
         
         % Replace test ID
         opts.specific.testID = testID; 
@@ -1111,9 +1111,9 @@ switch testID
         %   with our lives. 
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
      
-    case 'MLST (AV, Aided, SPSHN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)'
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
@@ -1128,9 +1128,9 @@ switch testID
         % Change wav_regexp to pull in MP4s
         opts.specific.wav_regexp = strrep(opts.specific.wav_regexp, '.wav', '.mp4'); 
         
-    case 'MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Aided, ISTS, 75 dB SPL, +0 dB SNR)'
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
         % Change wav_regexp to pull in MP4s
@@ -1141,9 +1141,9 @@ switch testID
         opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID);
         opts.specific.testID = testID; 
         
-    case 'MLST (Audio, Unaided, SPSHN, 80 dB SPL, +0 dB SNR)'    
+    case 'MLST (Audio, Unaided, SPSHN, 75 dB SPL, +0 dB SNR)'    
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', subjectID);
         opts.specific.testID = testID;     
         
     case 'MLST (Audio, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'    
@@ -1151,9 +1151,9 @@ switch testID
         opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID);
         opts.specific.testID = testID; 
         
-    case 'MLST (Audio, Unaided, ISTS, 80 dB SPL, +0 dB SNR)'    
+    case 'MLST (Audio, Unaided, ISTS, 75 dB SPL, +0 dB SNR)'    
         
-        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID);
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID);
         opts.specific.testID = testID; 
         
     case 'MLST (AV, Unaided, SPSHN, 65 dB SPL, +8 dB SNR)'
@@ -1162,10 +1162,10 @@ switch testID
         opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
-    case 'MLST (AV, Unaided, SPSHN, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Unaided, SPSHN, 75 dB SPL, +0 dB SNR)'
         
         % Start with the audio condition
-        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
     case 'MLST (AV, Unaided, ISTS, 65 dB SPL, +8 dB SNR)'
@@ -1174,10 +1174,10 @@ switch testID
         opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 65 dB SPL, +8 dB SNR)', subjectID); 
         opts.specific.testID = testID;  
         
-    case 'MLST (AV, Unaided, ISTS, 80 dB SPL, +0 dB SNR)'
+    case 'MLST (AV, Unaided, ISTS, 75 dB SPL, +0 dB SNR)'
         
         % Start with the audio condition
-        opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 80 dB SPL, +0 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
     case 'Hagerman (Unaided, SPSHN)'
@@ -1463,6 +1463,59 @@ switch testID
         
         % Create options structure
         opts = [stage1, stage2]; 
+        
+    case 'Play and Record Sound (from file)'   
+        
+        % This is a basic scenario that allows the user to playback and
+        % record a file or files. 
+        
+        % Start with HINT since this is basically what we want to do. Will
+        % need to remove modifiers and modchecks.
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID); 
+        
+        % Just use roving phase - should give us what we need.
+        opts = opts(1); 
+        
+        % Replace test ID
+        opts.specific.testID = testID; 
+        
+        % Remove modcheck and modifier
+        opts.player.modcheck = {};
+        opts.player.modifier = {}; 
+        
+        % Get the files to play
+        [playback_files, PathName, FilterIndex] = uigetfile(fullfile('playback', '.wav'), 'Multiselect', 'on');
+        
+        % Append pathname to all files
+        if iscell(playback_files)
+            n_files = numel(playback_files);
+        else
+            n_files = size(playback_files,1);
+        end % 
+        
+        for i=1:n_files
+            if iscell(playback_files)
+                playback_files{i} = fullfile(PathName, playback_files{i}); 
+            else
+                playback_files = {fullfile(PathName, playback_files)}; 
+            end 
+        end % for i=1:numel ...
+        
+        % Remove lists from genPlaylist
+        opts.specific.genPlaylist.lists = {}; 
+        
+        % Replace files for playback
+        opts.specific.genPlaylist.files = playback_files; 
+        clear playback_files PathName FilterIndex; 
+        
+        % Estimate the mixer
+        %   This should be more flexible in the future, but will be
+        %   hard-coded for now assuming we are using hagerman stimuli.
+%         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0); % play stimuli at full amplitude. They are already scaled in the files. 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] ] , 0); 
+        
+        % Wait for stop of playback
+        opts.player.wait_for_stop = true; 
         
     case 'HINT (First Correct)'
         
