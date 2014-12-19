@@ -216,7 +216,6 @@ pip-log.txt
 
 #Custom
 *.wav
-*.xlsx
 *.mp4
 *.mp3
 *.f4v
