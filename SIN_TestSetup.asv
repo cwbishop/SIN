@@ -642,18 +642,18 @@ switch testID
         
         % Allow dynamic updating up the playlist if we reach the end.        
         %   Start by copying the specific.genPlaylist field over here
-%         opts(2).player.modifier{end+1} = opts(2).specific.genPlaylist;
-%         
-%         % Add function handle
-%         opts(2).player.modifier{end}.fhandle = @modifier_append2playlist; 
-%         
-%         % Modify genPlaylist settings
-%         %   - Append a single list at a time. 
-%         opts(2).player.modifier{end}.NLists = 1; 
-%         opts(2).player.modifier{end}.Randomize = 'lists';
-%         opts(2).player.modifier{end}.Repeats = 'allbefore'; 
-%         opts(2).player.modifier{end}.Append2UsedList = false; 
-%         opts(2).player.modifier{end}.files = {};   
+        opts(2).player.modifier{end+1} = opts(2).specific.genPlaylist;
+        
+        % Add function handle
+        opts(2).player.modifier{end}.fhandle = @modifier_append2playlist; 
+        
+        % Modify genPlaylist settings
+        %   - Append a single list at a time. 
+        opts(2).player.modifier{end}.NLists = 1; 
+        opts(2).player.modifier{end}.Randomize = 'lists';
+        opts(2).player.modifier{end}.Repeats = 'allbefore'; 
+        opts(2).player.modifier{end}.Append2UsedList = false; 
+        opts(2).player.modifier{end}.files = {};   
         
         % Add analysis
         opts(1).analysis = struct();
@@ -819,7 +819,10 @@ switch testID
             'header', sprintf('Instructions'), ... % header
             'mod_stage', '');         
         
+        % We want to add lists until we reach the exit criteria. 
+        opts.player.modifier{end+1}.fhandle = @modifier_append2playlist;     
         
+                
             
         % ============================
         % Analysis        
@@ -889,31 +892,15 @@ switch testID
                 'function_parameters',  {{...
                     ... % Options for exit_after_nreversals
                     struct( ...
-                        'data_channels',    opts(1).player.modcheck.data_channels, ...
-                        'physical_channels',    opts(1).player.modcheck.physical_channels, ...
-                        'max_revs', 7, ...
+                        'data_channels',    opts.player.modcheck.data_channels, ...
+                        'physical_channels',    opts.player.modcheck.physical_channels, ...
+                        'max_revs', 2, ...
                         'start_trial', 1), ...
                     ... % Options for exit_trials 
                     struct( ...
-                        'trial_number', 19, ... 
-                        'trial_operator',   '>')}} ); 
-          
-        % We need to setup the rules for appending files if we run out of
-        % stimuli to play before the exit criterion(a) are met. Start by
-        % copying over the genPlaylist information. 
-        opts(2).player.modifier{end+1} = opts(2).specific.genPlaylist;
-        
-        % We want to add lists until we reach the exit criteria. 
-        opts(2).player.modifier{end}.fhandle = @modifier_append2playlist;     
-        
-        % Modify genPlaylist settings
-        %   - Append a single list at a time. 
-        opts(2).player.modifier{end}.NLists = 1; 
-        opts(2).player.modifier{end}.Randomize = 'lists';
-        opts(2).player.modifier{end}.Repeats = 'allbefore'; 
-        opts(2).player.modifier{end}.Append2UsedList = false; 
-        opts(2).player.modifier{end}.files = {};                   
-        
+                        'trial_number', 3, ...
+                        'trial_operator',   '>=')}} ); 
+                    
     case 'HINT (SNR-50, ISTS)'
         
         % ISTS version of HINT test

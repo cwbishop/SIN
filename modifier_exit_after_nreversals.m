@@ -94,12 +94,14 @@ if trial >= start_trial
 
     %% HOW MANY REVERSALS?
     [~, nrevs] = is_reversal(data(start_trial:end), 'plot', false); 
-    display(num2str(nrevs)); 
+    display(['Reversals: ' num2str(nrevs)]); 
 
     %% SET PLAYER STATE
     %   If we've encountered the desired number of reversals, then set the
     %   player state to exit. 
-    if nrevs == max_revs
+    %
+    %   Had to change logic here so we exit if have have max_revs or more.   
+    if nrevs >= max_revs
         d.player.state = 'exit';
     end % if nrevs 
 end % if trial >= start_trial 
