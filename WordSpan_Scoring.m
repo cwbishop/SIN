@@ -22,7 +22,7 @@ function varargout = WordSpan_Scoring(varargin)
 
 % Edit the above text to modify the response to help WordSpan_Scoring
 
-% Last Modified by GUIDE v2.5 10-Dec-2014 14:45:14
+% Last Modified by GUIDE v2.5 18-Dec-2014 14:38:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -193,6 +193,7 @@ for i=1:handles.max_set_size
     set(handles.(['text_recognition_' num2str(i)]), 'String', ''); 
     set(handles.(['button_alphabet_first_' num2str(i)]), 'Value', 0);
     set(handles.(['button_alphabet_second_' num2str(i)]), 'Value', 0);
+    set(handles.(['button_alphabet_nr_' num2str(i)]), 'Value', 0);
     set(handles.(['text_recall_' num2str(i)]), 'String', '');     
     set(handles.(['popup_recall_' num2str(i)]), 'Value', 1); 
     
@@ -619,7 +620,9 @@ for i=1:handles.set_size
     % Judgment check
     %   Judgment should be either 1 or 2. 0s indicate the field is blank
     %   and nan indicates the field is unscored. 
-    if handles.return_variables.judgment(i) ~= 1 && handles.return_variables.judgment(i) ~= 2
+    %
+    %   Judgment can also be 3 now for "no response" (NR). 
+    if ~ismember(handles.return_variables.judgment(i), [1 2 3])
         judgment_status(i) = false;
     else
         judgment_status(i) = true;
@@ -1190,15 +1193,20 @@ for i=1:handles.set_size
     % string matching ...
     is_first = get(handles.(['button_alphabet_first_' num2str(i)]), 'Value');
     is_second = get(handles.(['button_alphabet_second_' num2str(i)]), 'Value');
+    is_nr = get(handles.(['button_alphabet_nr_' num2str(i)]), 'Value');
+    
+    response = logical([is_first is_second is_nr]);
     
     % Basic error checks to make sure multiple selections have not been
     % made.
-    if logical(is_first) && logical(is_second)
+    if numel(find(response)) > 1 
         error(['Multiple judgments for word ' num2str(i)]);
     elseif is_first
         judgment = 1;
     elseif is_second
         judgment = 2; 
+    elseif is_nr
+        judgment = 3; 
     else
         % Encode empty judgments as a 0.
         judgment = 0; 
@@ -1280,3 +1288,12 @@ function panel_judgment_6_SelectionChangeFcn(hObject, eventdata, handles)
 % Call a centralized function to add the specified judgment value to the
 % return_variables field of data handles.
 update_judgment(hObject, eventdata, handles); 
+
+
+% --- Executes on button press in button_alphabet_nr_1.
+function button_alphabet_nr_1_Callback(hObject, eventdata, handles)
+% hObject    handle to button_alphabet_nr_1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of button_alphabet_nr_1

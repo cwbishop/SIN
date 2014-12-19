@@ -793,6 +793,9 @@ switch testID
         % Modifier configuration        
         % ============================
         
+        % Add a modifier to add on more files if we run out of files to
+        % play before we reach the "exit" status. 
+        
         % Modifier to scale mixing information
         opts.player.modifier{end+1} = struct( ...
             'fhandle',  @modifier_dBscale_mixer, ... % use a decibel scale, apply to mod_mixer setting of player
@@ -1509,13 +1512,36 @@ switch testID
         clear playback_files PathName FilterIndex; 
         
         % Estimate the mixer
-        %   This should be more flexible in the future, but will be
-        %   hard-coded for now assuming we are using hagerman stimuli.
-%         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0); % play stimuli at full amplitude. They are already scaled in the files. 
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] ] , 0); 
+        %   For now, this will simply map each channel in order to the
+        %   corresponding speaker number. So data channel 1 goes to speaker
+        %   1, 2 to 2, and so on.
         
+        % Load the first file to determine the data size
+        data = SIN_loaddata(opts.specific.genPlaylist.files{1}); 
+        
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, eye(size(data, 2)) , 0); % play stimuli at full amplitude. They are already scaled in the files.         
+       
         % Wait for stop of playback
         opts.player.wait_for_stop = true; 
+    
+    case '[Project AD] Hagerman (from file)' 
+        
+        % Start with HINT since this is basically what we want to do. Will
+        % need to remove modifiers and modchecks.
+        opts = SIN_TestSetup('Play and Record Sound (from file)', subjectID); 
+        
+        % Just use roving phase - should give us what we need.
+        opts = opts(1); 
+        
+        % Replace test ID
+        opts.specific.testID = testID; 
+        
+        % Change mixer
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] ] , 0);
+        
+        % Add the analysis from hagerman, whatever it currently is
+        hag = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID);         
+        opts.analysis = hag.analysis; 
         
     case 'HINT (First Correct)'
         

@@ -617,7 +617,7 @@ if d.pflag > 0
     plot(snr_theoretical, attenuation, '*', 'linewidth', 1, 'markersize', 10); 
     plot(mean(snr_theoretical,2), mean(attenuation,2), 'sk', 'linewidth', 2); 
     xlabel('Theoretical SNR (dB)');
-    ylabel('Attenuation (more negative is better)');
+    ylabel('Attenuation (more positive is better)');
     grid on
     
 end % if d.pflag
