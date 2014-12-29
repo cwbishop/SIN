@@ -214,8 +214,16 @@ elseif isa(X, 'cell')
                 % First, try loading the ERP, then try loading the EEG data
                 % set.
                 try 
-                    DTYPE=3;
-                    x(n)=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
+                    DTYPE=3;                    
+                    
+                    % Conditional statements for assignment class
+                    % compatability. 
+                    if isempty(x)
+                        x=pop_loaderp('filename', [name ext], 'filepath', pathstr); 
+                    else
+                        x(n) = pop_loaderp('filename', [name ext], 'filepath', pathstr);
+                    end % if isempty(x)
+                    
                 catch
                     DTYPE=4;
                     x(n)=pop_loadset('filename', [name ext], 'filepath', pathstr); 
@@ -270,7 +278,9 @@ elseif isa(X, 'cell')
     % here will either be a time series or a structure. So a simple check
     % is possible. If SIN_loaddata continues to grow, this may no longer
     % work.     
-    if ~isstruct(X)
+    %
+    % Had to code an exception for ERP structure loading 
+    if iserpstruct(x) || ~isstruct(X)
         % If we know the sampling rate, then pass hold it constant in
         % sommersault. 
         if ~isempty(FS), p.fs=FS; end 
@@ -278,7 +288,7 @@ elseif isa(X, 'cell')
         p.datatype=[];   
 
         [X, FS, LABELS]=SIN_loaddata(X, p); 
-        p.datatype=dtype;
+        p.datatype = dtype;
 
         clear dtype; 
     end % if isstruct 
@@ -334,8 +344,45 @@ elseif iserpstruct(X)
     
 elseif iseegstruct(X)
     DTYPE=4;
-    warning('EEG structure loading is underdeveloped'); 
+        
     ODAT=X;    
+    
+    % Labels will be the channel names
+    LABELS = {X(1).chanlocs(:).labels};
+    
+    % Get sampling rate
+    FS = X(1).srate; 
+    
+    % Load all channels by default
+    try p.chans; catch p.chans = 1:size(X.data,1); end
+    
+    % Only return labels for requested channel(s)
+    LABELS = {LABELS{p.chans}}; 
+    
+    % Load all time points by default
+    try p.time_window; catch p.time_window = [-inf inf]; end
+    
+    % Load all bins by default
+    try p.bins; catch p.bins = unique(cell2mat({X(1).epoch(:).eventbini})); end
+    
+    time_stamps = X(1).times; 
+    temporal_mask = SIN_maskdomain(time_stamps, p.time_window); 
+    
+    for n=1:length(X)
+        
+        % Create an event mask
+        %   We will only return trials that match the specified bin information
+        event_labels = cell2mat({X(n).epoch(:).eventbini});
+        
+        event_mask = ismember(event_labels, p.bins); 
+        
+        x(:,:,:,n) = X(n).data(p.chans, temporal_mask, event_mask); 
+       
+    end % for n=1:length(X)
+        
+    % Reassign to return variable X
+    X=x; 
+    clear x; 
     
 elseif iscntstruct(X)
     DTYPE=5; 
