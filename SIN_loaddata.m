@@ -354,13 +354,13 @@ elseif iseegstruct(X)
     FS = X(1).srate; 
     
     % Load all channels by default
-    try p.chans; catch p.chans = 1:size(X.data,1); end
+    try p.chans; catch, p.chans = 1:size(X.data,1); end
     
     % Only return labels for requested channel(s)
     LABELS = {LABELS{p.chans}}; 
     
     % Load all time points by default
-    try p.time_window; catch p.time_window = [-inf inf]; end
+    try p.time_window; catch, p.time_window = [-inf inf]; end
     
     % Load all bins by default
     try p.bins; catch p.bins = unique(cell2mat({X(1).epoch(:).eventbini})); end
