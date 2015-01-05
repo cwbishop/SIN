@@ -507,6 +507,12 @@ switch testID
             'header',   'Six Word Set', ...
             'body', fileread(fullfile(opts.general.instruction_dir, 'wordspan_six_words.txt'))); 
         
+        % Analysis
+        opts.analysis = struct( ...
+            'fhand',    @analysis_WordSpan, ...  % functioin handle to analysis function
+            'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
+            'params',   struct()); % no input parameters for this test (yet). 
+        
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
         % following:
@@ -626,19 +632,19 @@ switch testID
         opts(2).player.modcheck.algo = {@algo_HINT1up1down @algo_HINT3down1up}; 
         opts(2).player.modcheck.startalgoat=[1 5]; 
         
-        % Append modifier to terminate after a specific number of reversals
-        % have been encountered. For this test, stop after 7 reversals, I
-        % guess? Should this be decreased by 1 since we essentially
-        % encounter a reversal during the roving phase of the HINT?
+        % Modify the termination conditions to track reversals after at
+        % trial 5.
+        modifier_index = getMatchingStruct(opts(2).player.modifier, 'fhandle', @modifier_exit_after);
         
-        % We'll need to know the data/physical channel mapping for the
-        % mod_check
-        opts(2).player.modifier{end+1} = struct(...
-            'fhandle',  @modifier_exit_after_nreversals, ...
-            'data_channels',    opts(2).player.modcheck.data_channels, ...
-            'physical_channels',    opts(2).player.modcheck.physical_channels, ...
-            'max_revs', 7, ...
-            'start_trial', opts(2).player.modcheck.startalgoat(2)); 
+        % Now find the correct termination function
+        for i =1:numel(opts(2).player.modifier{modifier_index}.function_handles)
+            if isequal(opts(2).player.modifier{modifier_index}.function_handles{i}, @modifier_exit_after_nreversals)
+                function_index = i;
+            end
+        end %
+        
+        % Modify the reversal tracking start point (trial ~5)
+        opts(2).player.modifier{modifier_index}.function_parameters{function_index}.start_trial = opts(2).player.modcheck.startalgoat(2);
         
         % Allow dynamic updating up the playlist if we reach the end.        
         %   Start by copying the specific.genPlaylist field over here
@@ -658,7 +664,7 @@ switch testID
         % Add analysis
         opts(1).analysis = struct();
         opts(1).analysis = struct( ...
-            'fhand',    @analysis_HINT, ...  % functioin handle to analysis function
+            'fhand',    @analysis_HINT, ...  % function handle to analysis function
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct(...  % parameter list for analysis function (analysis_HINT)
                 'channel_mask',    fillPlaybackMixer(opts(1).player.playback_map, [1;0], 0), ...   % just get data/physical channel 1                

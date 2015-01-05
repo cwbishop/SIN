@@ -32,6 +32,9 @@ function results = analysis_WordSpan(results, varargin)
 %   heard). This seems incorrect to CWB, but will score this way for
 %   consistency. 
 %
+%   2) Need to handle special "NR" responses which stand for "no response".
+%   These should be excluded from scoring in recall portion of study. 
+%
 % Christopher W Bishop
 %   University of Washington
 %   12/14
@@ -128,20 +131,11 @@ if d.plot
     bar(y');
     
     % Legend and labels
-    legend('Recnognition', 'Judgment', 'Recall', 'location', 'eastoutside');     
+    legend('Recnognition', 'Judgment', 'Recall');     
     ylabel('Percentage Correct');
     xlabel('Set Size'); 
     
     % Set x-ticks and tick labels
-    set(gca, 'XTick', 2:numel(recognition_correct) + 1)
-    
-    % Get current labels
-    l = get(gca, 'XTickLabel'); 
-    
-    for i=1:numel(l)
-        l_new{i} = num2str(l(i));
-    end
-    l_new{end} = 'Average';
-    set(gca, 'XTickLabel', l_new);    
+    set(gca, 'XTick', 2:6)
     
 end % if d.plot

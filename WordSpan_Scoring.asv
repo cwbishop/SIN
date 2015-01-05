@@ -370,15 +370,11 @@ function update_recall_word_list(hObject, eventdata, handles)
 for i=1:handles.set_size
     
     % Get the recall word
-    the_word = upper(get(handles.(['text_recall_' num2str(i)]), 'String'));
-    
-    % Set the word again to make sure the word in the text box is
-    % capitalized.
-    set(handles.(['text_recall_' num2str(i)]), 'String', the_word);
+    the_word = get(handles.(['text_recall_' num2str(i)]), 'String');
     
     % Update handles structure
     %   Force words to be all uppercase. Will make scoring easier later.
-    handles.return_variables.recall{i} = the_word; 
+    handles.return_variables.recall{i} = upper(the_word); 
     
 end % for i=1:handles.set_size
 
@@ -408,11 +404,6 @@ for i=1:handles.set_size
     % Get the word from the corresponding text field
     the_word = upper(get(handles.(['text_recognition_' num2str(i)]), 'String')); 
 
-    % Set the word again.
-    %   This is necessary to ensure that the text in the field is
-    %   capitalized. 
-    set(handles.(['text_recognition_' num2str(i)]), 'String', the_word);
-    
     % Add word to recognition return field
     %   Force words to be upper case
     handles.return_variables.recognition{i} = the_word;     
