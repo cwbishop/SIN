@@ -511,7 +511,8 @@ switch testID
         opts.analysis = struct( ...
             'fhand',    @analysis_WordSpan, ...  % functioin handle to analysis function
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
-            'params',   struct()); % no input parameters for this test (yet). 
+            'params',   struct( ...
+                'plot', true)); % make summary plots. 
         
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
