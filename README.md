@@ -83,10 +83,12 @@ To illustrate a typical development work flow for a new test, consider the (abbr
 Function List
 ------
 
+_Core SIN Functions_ 
+
 |Function | Description|
 |---------|------------|
-|addnoise2HINT.m| |
-|algo_HINT1up1down.m| |
+|addnoise2HINT.m|Function to add noise to HINT stimuli. User must provide a wav file with the noise. Assumes HINT stimuli are in the ../playback/HINT directory (hard coded for ease).|
+|algo_HINT1up1down.m| Function to generate 1 up 1 down algorithm behavior for Hearing in Noise Test (HINT). This is essentially a wrapper for algo_staircase, which makes the actual decisions. algo_HINT1up1down just massages the   'score' returned by modcheck_HINT_GUI into an appropriate format and creates a (hard-coded) decision matrix for use with algo_staircase.|
 |algo_HINT3down1up.m| |
 |algo_HINT4down1up.m| |
 |algo_HINTnochange.m| |
@@ -182,9 +184,9 @@ Function List
 |SIN_keywords.m| |
 |SIN_load_results.m| |
 |SIN_loaddata.m| |
-|SIN_makeFilter.m| (not used)|
+|SIN_makeFilter.m| This function is no longer used by anything in SIN. |
 |SIN_maskdomain.m| |
-|SIN_matchspectra.m| (use match_spectra.m instead)|
+|SIN_matchspectra.m| Spectrally match two time-series in the frequency domain. The algorithm is horribly inefficient and prohibitively slow with even modest time series. I recommend using match_spectra.m instead.|
 |SIN_recoverDevice.m| |
 |SIN_register_subject.m| |
 |SIN_removepunctuation.m| |
