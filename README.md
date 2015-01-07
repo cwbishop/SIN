@@ -154,77 +154,66 @@ _Core SIN Functions_
 |modcheck_ANLGUI.m| Modcheck function coupled with ANL_GUI. ANL_GUI is a simple "run", "pause", "stop" GUI. This function returns codes compatible with modifier_PlayControl based on toggled buttons|
 |modcheck_HINT_GIU.m| Modcheck for HINT.|
 |modcheck_wordspan_gui.m| Modcheck for Word Span. |
-|modifier_append2playlist.m| %   Appends new playback data to the playback list in player_main. This
-%   proved useful when using adaptive algorithms (e.g., 3down1up for
-%   SNR-80 estimation) that may require more stimuli than originally
-%   specified by the user.
-%
-%   This essentially just calls SIN_getPlaylist with the user-provided
-%   settings as written the SIN options structure. These values are then
-%   appended to the 'stim' variable in player_main. 
-%
-%   Note: This function intentionally ignores values in the "files" field
-%   of specific.genPlaylist. The assumption is that we're looking for a
-%   *new* playlist to append to the playback list in player_main|
-|modifier_dBscale_mixer.m| |
-|modifier_exit_after.m| |
-|modifier_exit_after_nreversals.m| |
-|modifier_exit_trials.m| |
-|modifier_exitAfter.m| |
-|modifier_instructions_by_trial.m| |
-|modifier_NALscale_mixer.m| |
-|modifier_PlaybackControl.m| |
-|modifier_ShowInstructions.m| |
-|modifier_trackMixer.m| |
-|player_main.m| |
-|plot_psd.m| |
-|plot_waveform.m| |
-|portaudio_GetDevice.m| |
-|recordings_to_file.m| |
-|regexpdir.m| |
-|remixaudio.m| |
-|runSIN.m| |
-|Selection_GUI.m| |
-|sem| |
-|SIN_assignUUID.m| |
-|SIN_CalAudio.m| |
-|SIN_ClearErrors.m| |
-|sin_gen.m| |
-|SIN_getPlaylist.m| |
-|SIN_getsubjects.m| |
-|SIN_gettests.m| |
-|SIN_keywords.m| |
-|SIN_load_results.m| |
-|SIN_loaddata.m| |
+|modifier_append2playlist.m| Appends new playback data to the playback list in player_main. This proved useful when using adaptive algorithms (e.g., 3down1up for SNR-80 estimation) that may require more stimuli than originally specified by the user. This essentially just calls SIN_getPlaylist with the user-provided settings as written the SIN options structure. These values are then appended to the 'stim' variable in player_main. Note: This function intentionally ignores values in the "files" field of specific.genPlaylist. The assumption is that we're looking for a  *new* playlist to append to the playback list in player_main|
+|modifier_dBscale_mixer.m|Function is designed to apply a decibel scaling factor to the invoking player's mod_mixer. It's designed to be used with the portaudio_adaptiveplay player. The function ultimately modifies the d.player.mod_mixer field.|
+|modifier_exit_after.m| This is sort of a wrapper used to check multiple exit criteria (modifiers). For instance, if the user wants to exit only after 7 reversals and a minimum of 20 trials, then this is the function to use.|
+|modifier_exit_after_nreversals.m| This function will set the player state to 'exit' after a specific number of reversals are encountered in a specific data/physical channel combination. This *must* be paired with modifier_trackMixer in order to work since it relies on the subfield created by _trackMixer to compute the number of reversals. |
+|modifier_exit_trials.m| This will set the player state to exit based on the number of trials. Several possible parameters available, including : trial minimum, trial maximum.|
+|modifier_exitAfter.m|  Function that sets player status to "exit" after an arbitrary expression evaluates to "true". This is designed to work with "player_main.m". Note: users should use modifier_exit_after.m instead. |
+|modifier_instructions_by_trial.m|Presents instructions using the "Instructions" GUI on a specific trial.|
+|modifier_NALscale_mixer.m| Function to query and apply the appropriate decibel (dB) scaling factor from the (currently running) algo_NALadaptive function to the appropriate elements of the player's mod_mixer. No longer used.|
+|modifier_PlaybackControl.m|  Function designed to handle basic playback control requests. At time of writing, this includes "pause", "run/resume", and "exit/quit". |
+|modifier_ShowInstructions.m| Wrapper to present basic instructions during player startup. Designed to be paired with Instructions.fig. This specific "modifier" is a bit of a misnomer. It doesn't actually modify anything. It just presents instructions at the beginning of each test.|
+|modifier_trackMixer.m| Function to track mod_mixer settings. This is done by appending the current state of the mod_mixer to a variable established in d.sandbox.|
+|player_main.m| This is the main work horse of SIN. It coordinates all playback/recording/modchecks/modifiers. It's the GLUE!|
+|plot_psd.m| Plot the power spectral density (PSD) of a time series or multiple time series. Spectral estimation computed using Welch's periodogram (see doc PWELCH for details). |
+|plot_waveform.m| Simple function to plot a time varying waveform in MATLAB.|
+|portaudio_GetDevice.m| Function to find and return device based on input information. Input information can <http://docs.psychtoolbox.org/GetDevices>. Function also provides a basic device check to make sure the device  information is not out of date. |
+|recordings_to_file.m| This function accepts a results structure from player_main and writes the recordings to file with the write parameters provided by the user. Recordings are written to file in the .wav format at the sampling rate used for the recordings during stimulus testing. |
+|regexpdir.m| Borrowed from matlab file exchange.|
+|remixaudio.m| This function is designed to remix audio (e.g., create arbitrary linear combinations of channels in an existing file). Also supports other features during remixing, including introducing arbitrary temporal shifts in the data (using circshift). The latter was especially useful when converting 1 noise channel into multiple, uncorrelated channels for Hagerman recordings. |
+|runSIN.m| Main SIN GUI. Run this at the command line to get started. |
+|Selection_GUI.m| A simple selection GUI. Used in lots of contexts.  |
+|sem| Compute standard error of the mean of X. CWB performs this computation frequently and decided to write a function to do it (finally) to save the copy and pasting job he's been doing for half a decade. If DIM is not defined, sem will operate on the first non-singleton dimension. Note that STD is estimated using an unbiased estimator (flag=0). See doc STD for more information.|
+|SIN_assignUUID.m|SIN uses a Universally Unique IDentifier (UUID) to track individual tests and test sequences. This function assigns UUIDs in a semi-intelligent way by ensuring that individual tests receive a UUID and all tests within a test sequence share a common UUID. This should allow the user some unimbiguous information to quickly pool results.Uses uuidgen.m to generate the UUID. uuidgen can be downloaded here: <http://www.mathworks.com/matlabcentral/fileexchange/21709-uuid-generation/content/uuidgen.m> |
+|SIN_CalAudio.m| The calibration procedure for SIN sets the HINT-Noise.wav (a speech shaped noise sample) to 0 dB and scales all other stimuli or stimulus sets to also rest at 0 dB. The user can then present the HINT-Noise stimulus through their sound playback system and adjust (via hardware) the sound pressure level (SPL) to the desired level. Following this procedure, all stimuli/stimulus sets should be have a nearly identical SPL, provided that the frequency response of the playback/recording loop is flat (enough). CWB recommends using hardware (e.g., a graphical equalizer) to flatten the frequency response of your playback/recording loop. |
+|SIN_ClearErrors.m| Function to assist in clearing and recovering from errors. This will likely grow as SIN does and more and more error types are encountered. For now, though, SIN will simply clear PsychPortAudio, close figures,and close open 'Screens'|
+|sin_gen.m| Generate a sine wave. Borrowed from Jess Kerlin.|
+|SIN_getPlaylist.m|Function to return a playlist for a specific test. This is essentially a wrapper for SIN_stiminfo, which returns directory and file information. |
+|SIN_getsubjects.m| Query existing subjects. Query based on existing directories. If the directories don't exist,  then we have to assume that no subject data has been collected. Code modified from: <http://stackoverflow.com/questions/8748976/list-the-subfolders-in-a-folder-matlab-only-subfolders-not-files>|
+|SIN_gettests.m| Function to return tests for a given subject.|
+|SIN_keywords.m| In SIN, key words are capitalized and word options are enclosed in square brackets and separated by a forward spash (e.g., [are/were] or [ARE/WERE]). Words are separated by white space. |
+|SIN_load_results.m| This function loads SIN results structures listed in file_names.|
+|SIN_loaddata.m| Generalized function to load data from common file types used in project AA (and probably others) as well as generate standardized data format for data matrices, provided some sensible assumptions are met. CWB wanted a function that would accept virtually any commonly used input data type (file names, data structures, etc.) of known format and massage the data into a common format that can be used by other functions for analysis and plotting. |
 |SIN_makeFilter.m| This function is no longer used by anything in SIN. |
-|SIN_maskdomain.m| |
+|SIN_maskdomain.m| Function returns a logical mask of the domain within the specified bounds. This is something CWB had to do repeatedly when computing SNR in frequency and time domains. CWB preferred to have one central function do the masking so the masking is always done the same way and it's easy to introduce the operation into new functions.|
 |SIN_matchspectra.m| Spectrally match two time-series in the frequency domain. The algorithm is horribly inefficient and prohibitively slow with even modest time series. I recommend using match_spectra.m instead.|
-|SIN_recoverDevice.m| |
-|SIN_register_subject.m| |
-|SIN_removepunctuation.m| |
-|SIN_review_recordings.m| |
-|SIN_runAnalysis.m| |
-|SIN_runsyscmd.m| |
-|SIN_runTest.m| |
-|SIN_saveRestuls.m| |
-|SIN_select.m| |
-|SIN_stiminfo.m| |
-|SIN_TestSetup.m| |
-|SIN_UsedListInfo.m| |
-|sort_results_by_time.m| |
-|struct2keyval.m| |
-|threshclipaudio.m| |
-|timestamps.m| |
-|update_results.m| |
-|uuidgen.m| |
-|uuidgen_cimp.cpp| |
-|uuidgen_cimp.mexa64| |
-|uuidgen_cimp.mexglx| |
-|uuidgen_cimp.mexw32| |
-|varargin2struct.m| |
-|wordspan_find_keywords.m| |
-|wordspan_rename_files.m| |
-|WordSpan_Scoring.m| |
+|SIN_recoverDevice.m| This function attempts to recover a sound playback/recording device in the event that its DeviceIndex field has changed. This occurs frequently and most notably when sound hardware is added or removed (e.g., a USB device) or (I think) when users change their sound playback/recording settings through Windoze. |
+|SIN_register_subject.m| Function that will (hopefully) handle subject registration cleanly. This should be rewritten as OOP.|
+|SIN_removepunctuation.m| Function to remove punctuaion from a string. Currently removes the following characters|
+|SIN_review_recordings.m| This routine uses a GUI to select and plot out recordings acquired saved in a results structure from player_main.|
+|SIN_runAnalysis.m| Function to run SIN analyses using the analysis subfield of the SIN options structure.|
+|SIN_runsyscmd.m| Wrapper function to handle and run system commands. This is used as a "player" to run executables and the like.|
+|SIN_runTest.m| Master control function to run various tests associated with SIN. The basic idea is to pass the function a unique test identifier (CWB is thinking a string) that can be used to execute a specific set of instructions. The upshot of this approach is that the same test can be executed with ease from the commandline or via a GUI. |
+|SIN_saveRestuls.m| Basic function to save results. This was originally written to save results from portaudio_adaptiveplay, but shouldn't be difficult to expand to various results formats.|
+|SIN_select.m| This creates a simple GUI to aid the selection of various types of options. Originally designed as a helper function for the dynamic selection of playback and recording devices through PsychToolBox.|
+|SIN_stiminfo.m| Function to return stimulus lists (directories, filenames) for the tests used in the SIN suite.|
+|SIN_TestSetup.m|Function to return test information. This will vary based on the test. Alternatively, this can also return a list of available tests (default). |
+|SIN_UsedListInfo.m| Function to track and return information regarding the used list structure. Most methods below load, modify, or save a structure containing information on which lists have been used and with which tests. This   structure is described here as the "UserList structure". This is, however, a n N x 2 cell array, where N is the number of lists that have been used. The first column contains the directory name of the list. This is how lists are "tagged". Each list must be in its own directory. If the directories are MOVED and previous calls use an absolute path, then the function will think the same stimuli are different lists. Silly, but it's the most robust way CWB could come up with in a hurry. Note: Should be rewritten as OOP.|
+|sort_results_by_time.m| Sort SIN results structures by time. This function proved useful when trying to find the most recent preceding file relative to a moment in time. |
+|struct2keyval.m|  Converts a structure into key/value inputs. This is essentially the counter part to varargin2struct. Function is still a bit basic, but should be able to expand on this to work with many data types.|
+|threshclipaudio.m| Function designed to remove silent periods from beginning and end of a sound file. To do this, the code removes all samples preceding the first sample that exceeds the provided (absolute) amplitude threshold.   The end is clipped such that all samples following the last sample that meets or exceeds the provided amplitude threshold are discarded.|
+|timestamps.m| Creates time stamps for a time series of length N. |
+|update_results.m|Function loads all results for all subjects and rewrites them by calling SIN_saveResults. This in effect updates the saved results structures to match whatever the current format is. This has proved useful when adding additional variables to save to the results structure (e.g., end_time). |
+|uuidgen.m| Borrowed from MATLAB file exchange. |
+|uuidgen_cimp.cpp|Borrowed from MATLAB file exchange. |
+|uuidgen_cimp.mexa64|Borrowed from MATLAB file exchange. |
+|uuidgen_cimp.mexglx|Borrowed from MATLAB file exchange. |
+|uuidgen_cimp.mexw32|Borrowed from MATLAB file exchange. |
+|varargin2struct.m| This function massages input parameter pairs (e.g., 'dbStep', [1 23]) into a structure with the appropriate field names. Function will also handle various input types, such as pairing structures and input parameters. This proved useful for the Speech In Noise (SIN) suite CWB wrote.|
+|wordspan_find_keywords.m| This will load the provided word span stimulus files and return just the time trace of the keywords within each sentence. This proved useful when trying to calibrate the word span since the carrier phrase does not vary (much) from one sentence to the next. We will need to build in some sanity checks on the carrier phrase from sentence to sentence to make sure it hasn't changed fundamentally in some way (e.g., through error or other machinations).|
+|wordspan_rename_files.m|Renames all files used for word span. |
+|WordSpan_Scoring.m| Scoring GUI for Word Span|
 
 
 
