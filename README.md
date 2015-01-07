@@ -14,14 +14,24 @@ Why Use SIN?
 Motivation and Development Goals
 ------
 
-SIN was initially developed for a multi-site project between the University of Washington and University of Iowa. The project required experimenters to administer approximately 30 - 40 individual audio or audiovisual tasks in a highly reproducible way with minimal inter-experimenter variance across 250 patients. While there were procedures and, in rare instances, applications to administer individual tests, many of these procedures require the experimenter to make real-time decisions; thus, mistakes are likely, difficult to recover from, and, more importantly, often go unnoticed. 
+SIN was initially developed for a multi-site project between the University of Washington and University of Iowa. The project required experimenters to administer approximately 30 - 40 individual audio or audiovisual tasks in a highly reproducible way with minimal inter-experimenter variance across 250 patients. While there are procedures and, in rare instances, applications to administer individual tests, many of these procedures require the experimenter to make real-time decisions and manual adjustments; thus, mistakes are likely, difficult to recover from, and, more importantly, often go unnoticed. In our specific application, it would approximately 500 unique decision points for each participant. That's 500 potential mistakes that would be untraceable and uncorrectable using established procedures.
 
-Thus, the goal SIN was to create a flexible and uniform platform upon which all tests could be administered, scored, and stored with as much automaticity as possible.
+Thus, the goal SIN was to create a flexible and uniform platform upon which all tests could be administered, scored, and stored with minimal experimenter input.
 
 Design
 ------
 
-SIN is comprised of four major types of functions.
+_Front End_
+
+As mentioned above, one of my primary goals in writing SIN was to create something that is easy to use for experimenters of all shapes, sizes, ages, and abilities. While I generally prefer command-line work and batch scripting for analyses, this specific application required an easy-to-use GUI based front end.
+
+For most experimenters, **runSIN.m** is the only function you'll ever need to invoke explicitly. This will launch a simple GUI outfitted with all the functionality you need to register new subjects, run tests, explore results, run analyses, etc. 
+
+A detailed walkthrough of the GUI is forthcoming. For immediate questions, please e-mail me directly as this will help shape the walkthrough.
+
+_Under the Hood_
+
+SIN is comprised of four major types of functions:
 
 1. _Players_
   + A player generally accepts a set of stimuli and parameters to configure playback, recording, modification checks, modifiers, etc. 
@@ -34,8 +44,11 @@ SIN is comprised of four major types of functions.
 4. _Analyses_
   + Analyses accept the returned data structure(s) from a player and analyze the data in some way. The nature of the analysis will depend on the experimenter's desired metrics. 
  
-  
+In addition to these, SIN comes packaged with many higher-level functions for test control, subject creation, data handling, etc. 
 
+_Why mod checks and mofifiers?_
+
+The decision to use a two-step modification procedure was made to allow users to mix and match test behaviors more easily. For example, the HINT scoring GUI and accompanying modification check were recycled with the MLST. The only difference between the two tests is the player parameters and the modifiers employed. 
 
 Installation Dependencies
 ------
@@ -47,37 +60,87 @@ http://www.evernote.com/l/AWGfHzxf2PNGJ6j1YIb7q57vsgzQtCPZ56c/
 Available Tests
 ------
 
+Currently, there are 48 individual tests or test segments designed and vetted in SIN. However, all of these tests fall into the following major categories. For a detailed description of each, please see SIN_TestSetup.m.
+
 1. _Hearing in Noise Test (HINT)_
-2. _Perceptual Performance Test_
 2. _Multimodal Lexical Sentence Test (MLST)_
 3. _Reading Span_
-3. _Word Span_
-4. _Acceptable Noise Level_
-
+4. _Word Span_
+5. _Acceptable Noise Level_
+6. _Hagerman-Style Phase-Inversion Recordings_
 
 Developing New Tests
 ------
 
-Applications
-------
+To illustrate a typical development work flow for a new test, consider the (abbreviated) development of the Hearing in Noise Test (HINT)
+
+- Create a GUI that can be used to score each sentence of the HINT (see HINT_GUI)
+- Create a mod check that calls the GUI and uses its output to decide if any actionable event is required (e.g., increase the SNR on the subsequent trial). See modcheck_HINT_GUI
+- Create a modifier to implement the designed modification. In this case, modifier_dBscale_mixer changes the mixing matrix to alter the SNR in the next trial.
+- Select a playback list. In this case, the playback list is one or more HINT lists. 
+- After all items in the playback list have been presented, analyze the data using an analysis script. See analysis_HINT. 
 
 Function List
 ------
 
+|Function | Description|
+|---------|------------|
+|addnoise2HINT.m| |
+|algo_HINT1up1down.m| |
+|algo_HINT3down1up.m| |
+|algo_HINT4down1up.m| |
+|algo_HINTnochange.m| |
+|algo_NALadaptive.m| |
+|algo_staircase.m| |
+|align_timeseries.m| |
+|amp2db.m| |
+|analysis_ANL.m| |
+|analysis_AudioTest.m| |
+|analysis_Hagerman.m| |
+|analysis_HINT.m| |
+|analysis_MLST.m| |
+|analysis_weight_estimation.m| |
+|analysis_WordSpan.m| |
+|ANL_GUI.m | |
+|ANL_modcheck_keypress.m | |
+|aw_rms.m| |
+|calcBandSNR_v2.m| |
+|class2txt.m | |
+|color2colormap.m| |
+|comp_struct.m| |
+|concat_and_match_spectra.m| |
+|concat_audio_files.m| |
+|concatenate_lists.m| |
+|create_signaltag.m| |
+|create_wordspan_lookup.m| |
+|createHagerman.m| |
+|createHINTlookup.m| |
+|createMLSTlookup.m| |
+
 _Core_
 
+
+
 _Stimulus Generation_
+|Function | Description|
+|addnoise2HINT.m | |
 
 _Stimulus Calibration_
+|Function | Description|
 
 _Modification Checks_
+|Function | Description|
 
 _Modifiers_
+|Function | Description|
 
 _Analysis_
+|Function | Description| 
 
 _Signal Processing_
+|Function | Description|
 
 _Behavioral Algorithms_
-
+|Function | Description|
+|algo_HINT1up1down.m | |
 _Other_
