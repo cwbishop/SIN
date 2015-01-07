@@ -111,51 +111,61 @@ _Core SIN Functions_
 |calcBandSNR_v2.m| Donated by James Lewis.|
 |class2txt.m | convert various classes to a descriptive text string. Designed to be used in combination with Selection_GUI and SIN_select.|
 |color2colormap.m| Simple lookup table to create a colormap from typical 'color' values from plot, etc. (e.g., 'r', 'b', 'k', ...). This proved useful when creating bar plots that follow the same color scheme as ERPLAB's plotting functions.|
-|comp_struct.m| |
-|concat_and_match_spectra.m| |
-|concat_audio_files.m| |
-|concatenate_lists.m| |
-|create_signaltag.m| |
-|create_wordspan_lookup.m| |
-|createHagerman.m| |
-|createHINTlookup.m| |
-|createMLSTlookup.m| |
-|db2amp.m| |
-|erplab_linespec.m| |
-|fade.m| |
-|fftplot.m| |
-|fillPlaybackMixer.m| |
-|filter_table.m| |
-|filterA.m| |
-|findcell.m| |
-|getCases.m| |
-|getMatchingStruct.m| |
-|git_is_current.m| |
-|git_sha.m| |
-|Hagerman_find_weight_estimation.m| |
-|Hagerman_getsignal.m| |
-|Hagerman_record.m| |
-|HINT_chooseAlgo.m| |
-|HINT_GUI.m| |
-|HINT_score2binary.m| |
-|importHINT.m| |
-|Instructions.m| |
-|is_reversal.m| |
-|iseegstruct.m| |
-|iserpstruct.m| |
-|label_datapoint.m| |
-|lineplot2d.m| |
-|load_lookup_table.m| |
-|make_stimuli.m| |
-|map_channels.m| |
-|match_spectra.m| |
-|mex_uuid.m| |
-|mixer2pan.m| |
-|MLST_makemono.m| |
-|modcheck_ANLGUI.m| |
-|modcheck_HINT_GIU.m| |
-|modcheck_wordspan_gui.m| |
-|modifier_append2playlist.m| |
+|comp_struct.m| Compare two structures. Borrowed from MATLAB file exchange.|
+|concat_and_match_spectra.m| No longer used since it implicitly calls SIN_matchspectra, which has been replaced by match_spectra.m|
+|concat_audio_files.m|This function will load and concatenate all audio files. Parameters below apply some control over stimulus processing (e.g., trimming silence from beginning and end of sound, etc.).|
+|concatenate_lists.m| This function converts a LIST x N cell array to a (LIST x N) x 1 cell array. This proved useful when converting the output from SIN_stiminfo to a single file list.|
+|create_signaltag.m|  Function to create a repetitive train of a given signal with a specified SOA. Originally written for use with Hagerman-style recordings.|
+|create_wordspan_lookup.m| Creates an XLSX lookup table to be used with SIN.|
+|createHagerman.m| Function to create stimuli for Hagerman recordings. The basic idea is to provide a method of estimating SNR, a flag for holding the noise or speech track constant, and a naming scheme to use to save the output files. Hagerman stimuli for Project AD: HA SNR are comprised of ~1 minute of concat_target_trackenated HINT sentences (e.g., List01 - List03) paired with one of several noise types (speech-shaped noise (SSN) and ISTS). Other flags provide information regarding the number of noise channels to create and what time delay should be applied to each of the noise channels - recall that SSN and ISTS are single channel files.|
+|createHINTlookup.m|Very basic function to create a lookup table for HINT. This basically uses Wu's originaly HINT lookup table (well, a manually edited version of it anyway ... CWB removed some of the file name information), and appends a suffix to the file names. This allows modcheck_HINT_GUI to successfully lookup sentence information.|
+|createMLSTlookup.m| This function creates a suitable lookup table for MLST stimuli. This uses the provided MLST word list (sent to CWB by Wu) to create something closer to the HINT lookup table that is more robust. |
+|db2amp.m| Convert decibels to amplitude (magnitude)|
+|erplab_linespec.m| Function to kick back default color and line style values similar to ERPLAB. Not tested to see whether or not colors actually match precisely, so take color with a grain of salt. Code cannibalized from ploterps.m (part of ERPLAB).|
+|fade.m|Function to fade sounds in/out by applying a window over a specified time range. Uses MATLAB's "window" function to create the fade in/fade out ramps.|
+|fftplot.m| Plot amplitude spectrum of time series. |
+|fillPlaybackMixer.m| Function to create a mixer of appropriate size for the playback device. This proved useful when using SIN on machines with different devices (e.g., 8-channel playback using the Halo Claro and two-channel sound playback using standard two channel cards).|
+|filter_table.m|  This function returns a filtered version of the original table that satisfies all user-specified criteria. The criteria are essentially fields and their corresponding acceptable values. Note: this is a more generalized version of import_HINT.m|
+|filterA.m| Not used by SIN. |
+|findcell.m| Borrowed from ERPLAB's deprecated functions. Thanks to Javier! |
+|getCases.m| Borrowed from MATLAB file exchange.|
+|getMatchingStruct.m| Function to find structures that match fieldnames and values provided by the user. This proved useful when trying to identify a specific modifier within a group of modifiers, but can be used to match any field within any set of structures.|
+|git_is_current.m| Function determines if a repository is fully up to date with all changes committed or not.|
+|git_sha.m|This function returns the SHA key for a GIT repository using the git.exe. Note that git.exe must be in the system path for this to work properly. |
+|Hagerman_getsignal.m| Function to extract a signal from a pair of (phase inverted) Hagerman recordings. The non-phase inverted signal is returned along with its samppling rate. Note that the function assumes that the data are already time aligned. If this is not the case, then call align_timeseries.m before calling Hagerman_getsignal.m. If the signals are not temporally aligned, the output will be meaningless. |
+|Hagerman_record.m| One of the first files developed for SIN. This was intended to be a standalone script to perform Hagerman-like recordings. CWB later modularized these routines to play nicely with player_main.m This is no longer used. |
+|HINT_chooseAlgo.m| Function to select the current algorithm being used for spech in noise testing (e.g., HINT, MLST) on a given trial.|
+|HINT_GUI.m| HINT scoring GUI. Recycled for MLST.|
+|HINT_score2binary.m| Function to convert scoring arrays to a binary outcome for use with HINT and other similar tests. This is designed to work specifically with the scoring matrix generated by modcheck_HINT_GUI, but should be adaptable to other circumstances without too much trouble.|
+|importHINT.m| Function to import HINT information from XLSX file. Can also return information specific satisfying search criteria (under development). If not search criteria are provided, then information for the entire list is returned. Note: CWB recommends using load_lookup_table.m instead.|
+|Instructions.m| Code for Instructions GUI. |
+|is_reversal.m|  This function takes a time series, data, and determines which points are likely reversals (e.g., a reversal in the direction of change). This was written and intended to be used in combination with tests like the HINT (SNR-80 ...) and other adaptive algorithms that are required to terminate after a specific number of reversals.|
+|iseegstruct.m| Borrowed from ERPLAB|
+|iserpstruct.m| Borrowed from ERPLAB|
+|label_datapoint.m| Adds a text label to a point in a figure. Does some basic checks to make sure the text is generally visible, but uses some plausible hard-coded values to do so. Might need to be more dynamic. |
+|lineplot2d.m|  Function to create two-dimensional line plots complete with error bars (if specified). CWB found that he was recycling a lot of code to create similar line plots in various functions for project AA, so decided to centralize the plotting routines. |
+|load_lookup_table.m| Load a lookup table and return a table structure. This is how CWB should have written importHINT, but he didn't have the time to do it properly. SO, now he gets to rewrite it and deal. |
+|make_stimuli.m| Script to make calibrated stimuli for all (current) SIN Tests. |
+|map_channels.m| This function creates a channel mapping matrix used by PsychPortAudio to do appropriate sound mappings. Use iterative calls for playback/recording sound setup since these are currently handled in different mat files. |
+|match_spectra.m| This function can be used to match the spectra of two time series. Below is an approximate outline of the procedure implemented here. Please note that there are *many* ways to do spectral matching and this may not be the best solution for your specific circumstance. This function uses a spectral estimator (pwelch) to estimate the PSDs of two time series and then attempts to filter these time series such that the PSDs are a close approximation of each other. Note that SIN_matchspectra provides an alternative method, but tends to be very slow and generally oerfits the data. CWB wrote this as a faster, more streamlined, and more principled alternative. |
+|mex_uuid.m| Borrowed from MATLAB file exchange.|
+|mixer2pan.m| Function to convert a DxP mixer to a pan string used by the pan parameter in FFmpeg. No longer used. |
+|MLST_makemono.m| Function to set one of the audio channels in MLST MP4 files to 0. MP4s associated with MLST are stereo by default. We only want the audio to play speech out of a single speaker. To do this, we'll edit the MP4s  using FFmpeg. No longer used.|
+|modcheck_ANLGUI.m| Modcheck function coupled with ANL_GUI. ANL_GUI is a simple "run", "pause", "stop" GUI. This function returns codes compatible with modifier_PlayControl based on toggled buttons|
+|modcheck_HINT_GIU.m| Modcheck for HINT.|
+|modcheck_wordspan_gui.m| Modcheck for Word Span. |
+|modifier_append2playlist.m| %   Appends new playback data to the playback list in player_main. This
+%   proved useful when using adaptive algorithms (e.g., 3down1up for
+%   SNR-80 estimation) that may require more stimuli than originally
+%   specified by the user.
+%
+%   This essentially just calls SIN_getPlaylist with the user-provided
+%   settings as written the SIN options structure. These values are then
+%   appended to the 'stim' variable in player_main. 
+%
+%   Note: This function intentionally ignores values in the "files" field
+%   of specific.genPlaylist. The assumption is that we're looking for a
+%   *new* playlist to append to the playback list in player_main|
 |modifier_dBscale_mixer.m| |
 |modifier_exit_after.m| |
 |modifier_exit_after_nreversals.m| |
