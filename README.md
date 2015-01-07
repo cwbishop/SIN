@@ -82,10 +82,8 @@ To illustrate a typical development work flow for a new test, consider the (abbr
 - Select a playback list. In this case, the playback list is one or more HINT lists. 
 - After all items in the playback list have been presented, analyze the data using an analysis script. See analysis_HINT. 
 
-Function List
+Function List and Descriptions
 ------
-
-_Core SIN Functions_ 
 
 |Function | Description/Notes|
 |---------|------------|
@@ -214,34 +212,3 @@ _Core SIN Functions_
 |wordspan_find_keywords.m| This will load the provided word span stimulus files and return just the time trace of the keywords within each sentence. This proved useful when trying to calibrate the word span since the carrier phrase does not vary (much) from one sentence to the next. We will need to build in some sanity checks on the carrier phrase from sentence to sentence to make sure it hasn't changed fundamentally in some way (e.g., through error or other machinations).|
 |wordspan_rename_files.m|Renames all files used for word span. |
 |WordSpan_Scoring.m| Scoring GUI for Word Span|
-
-
-
-
-_Core_
-
-
-
-_Stimulus Generation_
-|Function | Description|
-|addnoise2HINT.m | |
-
-_Stimulus Calibration_
-|Function | Description|
-
-_Modification Checks_
-|Function | Description|
-
-_Modifiers_
-|Function | Description|
-
-_Analysis_
-|Function | Description| 
-
-_Signal Processing_
-|Function | Description|
-
-_Behavioral Algorithms_
-|Function | Description|
-|algo_HINT1up1down.m | |
-_Other_
