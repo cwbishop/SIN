@@ -50,26 +50,66 @@ _Why mod checks and mofifiers?_
 
 The decision to use a two-step modification procedure was made to allow users to mix and match test behaviors more easily. For example, the HINT scoring GUI and accompanying modification check were recycled with the MLST. The only difference between the two tests is the player parameters and the modifiers employed. 
 
-Installation Dependencies
+Installation and Software Dependencies
 ------
 
 Step-by-step installation instructions of all core SIN software and dependencies are available at the link below. If you have any difficulty with insallation, please contact Chris Bishop at cwbishop@uw.edu.
 
 http://www.evernote.com/l/AWGfHzxf2PNGJ6j1YIb7q57vsgzQtCPZ56c/
 
-Available Tests
+Required Hardware
 ------
 
+SIN can be run on any system running MATLAB using standard auditory equipment already present in many psychacoustic and clinical testing environments. 
+
+_Required Hardware_
+1. A sound card with stereo in/out. ASIO drivers are a must. 
+2. Minimum of two stereo outputs. 
+3. Analog amplifiers (e.g., speaker or headphone amplifiers). These don't need to be terribly beefy, but DO need to have more power than you'd expect. We used CROWN XLS1000 speaker amplifiers and Tannoy Di5c speakers. 
+4. A computer running MATLAB v 2013b with a **minimum** of 12 GB of RAM. SIN is terribly inefficient in places and stores all data at double precision (32 bit). Thus memory requirements can be very high for lengthy tests. 
+
+_Recommended Hardware_
+1. Equalizer(s) to flatten the frequency response of the playback loop. 
+2. A way to measure the SPL of the audio drivers being used (e.g., a SLM). 
+
+Available Tests
+------
 Currently, there are 48 individual tests or test segments designed and vetted in SIN. However, all of these tests fall into the following major categories. For a detailed description of each, please see SIN_TestSetup.m.
 
 1. _Hearing in Noise Test (HINT)_
+
+  + Several variants of the HINT are available.
+  
 2. _Multimodal Lexical Sentence Test (MLST)_
+
+  + Auditory and audiovisual testing conditions are available and handled automatically through command line calls to Windows Media Player. CWB attempted to use more universal media players (e.g., VLC), but the command line execution routines had significant issues for testing purposes. For instance, VLC launches a new viewer with each command line call rather than piping a new stream to an existing window.
+  
 3. _Reading Span_
+
+  + The Reading Span is available through SIN, but uses a 3rd party EXE. The source is not available for the EXE so this test is more or less a "black box" in SIN's eyes. 
+  
 4. _Word Span_
-5. _Acceptable Noise Level_
+
+  + An auditory working memory task implemented completely in SIN. 
+  
+5. _Acceptable Noise Level (ANL)_
+
+  + ANL is a clinical noise tolerance test that has been implemented fully in SIN. All amplification and adjustments are handled digitally using a simple user interface. 
+  
 6. _Hagerman-Style Phase-Inversion Recordings_
+
+  + Hagerman style inversion recordings are implemented fully in SIN. 
+  + Note that as written this test requires a four-speaker setup. But it can be easily modified to accomodate fewer speakers. If this is something you'd like to do, contact CWB and he will point you to the line of code that must be altered in SIN_TestSetup. 
+  
 7. _System Calibration_
-  + Weight Estimation: used to estimate the relative power levels between each speaker (or other audio driver) and recording channel. If two microphones are positioned in a listener's ear canals, then this is approximately equivalent to a binaural room impulse response (BRIR) collapsed across time and frequency. 
+
+  + Sound Card Test: the goal of this test is to ensure that the output of each sound card channel is identical to all others and to provide a qualitative test for channel-cross talk. To do this, a standardized tone is played from all channels first, then each channel in turn. The user can use an independent signal monitor (an oscilloscope or perhaps even another sound card) to ensure that the signals are identical. In my experience, cross-talk is difficult to detect using hardware, but can typically be detected manually be cranking up the output on channels that should be "quiet" and listening to the output. CWB has used this approach to qualitatively test for channel cross-talk in CROWN amplifiers and FocusRite products. 
+  
+  + Calibrate Speaker Levels: this routine plays a sound file from each speaker in turn. The user can use calibration equipment and other hardware to ensure that this "standardized" sound is at the desired level. This absolute SPL then becaomse "0 dB" in SIN. All other stimuli should be calibrated relative to this calibration file. As written, SIN plays a speech-shaped noise sample used with the HINT. 
+  
+  + Audio Test (10 Hz click train): tests the relative levels and timing precision of the recording loop. With symmetical microphones, the levels should be matched to within tolerance limits (1 dB in SIN, but this may be impractical in some testing environments). To ensure the timing of playback/recording loops is adequate, a 10 click train is presented 10 times. These individual sweeps are then realigned. If realignment is necessary (i.e., there's jitter in the system), a warning is provided. Tolerance limits for timing precision should generally be very low (0 sample jitter in SIN). This may not be possible with all hardware/software setups. 
+  
+  + Weight Estimation: used to estimate the relative power levels between each speaker (or other audio driver) and recording channel. If two microphones are positioned in a listener's ear canals, then this is approximately equivalent to a binaural room impulse response (BRIR) collapsed across time and frequency. This procedure proved useful in Hagerman style signal extraction routines to adjust the theoretical SNR to account for head shadowing effects in multi-speaker arrays. 
 
 Developing New Tests
 ------
