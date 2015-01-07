@@ -182,7 +182,37 @@ Function List
 |SIN_keywords.m| |
 |SIN_load_results.m| |
 |SIN_loaddata.m| |
-|SIN_makeFilter.m| |
+|SIN_makeFilter.m| (not used)|
+|SIN_maskdomain.m| |
+|SIN_matchspectra.m| (use match_spectra.m instead)|
+|SIN_recoverDevice.m| |
+|SIN_register_subject.m| |
+|SIN_removepunctuation.m| |
+|SIN_review_recordings.m| |
+|SIN_runAnalysis.m| |
+|SIN_runsyscmd.m| |
+|SIN_runTest.m| |
+|SIN_saveRestuls.m| |
+|SIN_select.m| |
+|SIN_stiminfo.m| |
+|SIN_TestSetup.m| |
+|SIN_UsedListInfo.m| |
+|sort_results_by_time.m| |
+|struct2keyval.m| |
+|threshclipaudio.m| |
+|timestamps.m| |
+|update_results.m| |
+|uuidgen.m| |
+|uuidgen_cimp.cpp| |
+|uuidgen_cimp.mexa64| |
+|uuidgen_cimp.mexglx| |
+|uuidgen_cimp.mexw32| |
+|varargin2struct.m| |
+|wordspan_find_keywords.m| |
+|wordspan_rename_files.m| |
+|WordSpan_Scoring.m| |
+
+
 
 
 _Core_
