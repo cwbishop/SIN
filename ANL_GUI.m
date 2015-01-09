@@ -71,7 +71,10 @@ handles.output = hObject;
 % clear SimKey; 
 
 % Assign test configuration
-handles.opts=varargin{1}; 
+%   CWB removed the options structure. This has GROWN a whole lot since I
+%   wrote this and this is now prohibitively large. 
+% handles.opts=varargin{1}; 
+
 % Update handles structure
 guidata(hObject, handles);
 

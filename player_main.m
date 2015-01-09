@@ -341,7 +341,10 @@ d.sandbox.data2play_mixed=[];
 % Note: We want to load all the data ahead of time to minimize
 % computational load during adaptive playback below. Hence why we load data
 % here instead of within the loop below. 
-t.datatype=[2 6];
+%
+% Note: CWB extended data type support to include raw data traces. This
+% ASSUMES, however, that the sampling rate is correct. 
+t.datatype=[1 2 6];
 
 % Store time series in cell array (stim)
 stim=cell(length(playback_list),1); % preallocate for speed.
@@ -350,6 +353,13 @@ if d.player.preload
     for i=1:length(playback_list)    
 
         [tstim, fsx]=SIN_loaddata(playback_list{i}, t);
+        
+        % If fsx is not defined (the case when raw data traces are
+        % provided), then *assume* that the sampling rate is correct
+        if isempty(fsx)
+            warning('Could not determine sampling rate of file, assuming playback sampling rate is correct');
+            fsx = playback_fs;
+        end % if isempty(q)
         stim{i}=resample(tstim, playback_fs, fsx); 
 
         % Check against mixer

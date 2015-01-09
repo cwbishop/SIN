@@ -62,11 +62,20 @@ for t=1:length(testID)
                 %   the first section of the test. 
                 if i == 1
                     opts(i).specific.genPlaylist.Append2UsedList = true;
+                    [playlist, lists] = SIN_getPlaylist(opts(i));                
+                    opts(i).specific.genPlaylist.Append2UsedList = false;                    
                 else
-                    opts(i).specific.genPlaylist.Append2UsedList = false;
-                end % 
                     
-                [playlist, lists] = SIN_getPlaylist(opts(i));
+                    % Once we've loaded in the audio track ONCE, use the
+                    % raw data as the playlist rather than the file name.
+                    % This will save in file read/write times substantially
+                    % since this is a large file.
+                    %
+                    % Christi asked CWB to speed up ANL, this is part of
+                    % that solution. 
+                    playlist = results(1).RunTime.sandbox.stim;
+                    
+                end % 
                 
                 % Copy over relevant sections from previous tests.
                 if i > 1
@@ -92,6 +101,24 @@ for t=1:length(testID)
                 
                 % Check for errors after every step of test. 
                 results(i) = errorCheck(results(i), playlist); 
+                
+                % Stimulus cleanup
+                %   We need to remove a few things from the data structure
+                %   to decrease file size. 
+                %       1. Remove sandbox.stim from RunTime. This is now
+                %       redundant with sandbox.stim from first test
+                %       segment.
+                %
+                %       2. Remove playback_list from RunTime. This is now
+                %       100% redundant with stim in UserOpts.
+                %
+                %       3. Remove data2play_mixed. This is huge.
+                %
+                %       4. 
+                if i > 1
+                    results(i).RunTime.sandbox.playback_list = {}; 
+                    results(i).RunTime.sandbox.stim = {};
+                end % if i > 1 
                 
             end % for i=1:length(opts)
         
