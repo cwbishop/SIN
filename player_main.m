@@ -1263,6 +1263,9 @@ while trial <= number_of_trials
                 %   Mix using noise_mixer field
                 [noise, nfs] = SIN_loaddata(d.player.contnoise); 
                 
+                % Resample the continuous noise sample.
+                noise = resample(noise, playback_fs, nfs); 
+                
                 %% MULTIPLY NOISE BY NOISE MIXER
                 data2play_mixed = noise*d.player.noise_mixer; 
                 

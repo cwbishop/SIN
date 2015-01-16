@@ -1580,7 +1580,7 @@ switch testID
         opts.specific.testID = testID; 
         
         % Change mixer
-        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] ] , 0);
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [ [1;1;0;0;0;0] [0;0;1;0;0;0] [0;0;0;1;0;0] [0;0;0;0;1;0] ] , 0);
         
         % Add the analysis from hagerman, whatever it currently is
         hag = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID);         
