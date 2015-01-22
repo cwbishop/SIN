@@ -401,7 +401,7 @@ switch testID
         opts.specific.genPlaylist.Repeats = 'any';
         opts.specific.genPlaylist.Append2UsedList = false; % there's nothing to append to the used list mat file, so just tell it not to.             
         
-    case 'Word Span'    
+    case 'Word Span (70 dB SPL)'    
         
         % This administers the Word Span, an auditory analog of the Reading
         % Span. This should be reasonably straight forward to do; it will
@@ -419,8 +419,10 @@ switch testID
         opts.specific.root = fullfile(opts.general.root, 'playback', 'Word Span'); 
         
         % Change the list regular expression and wav reg expression
+        %   Note: CWB had an error in the wav_regexp. He was grabbing the
+        %   uncalibrated sounds! Silly!
         opts.specific.list_regexp = 'List[0-9]{2}';
-        opts.specific.wav_regexp = '[0-9]{2}.wav$';
+        opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB.wav$';
         
         % Remove the hint lookup table
         %   CWB has *finally* removed this poorly named field with
@@ -450,9 +452,10 @@ switch testID
         opts.player.modifier = {}; 
         
         % Set volume to 1
-        %   These files are two-channel at present, with just a signal in
-        %   channel 1, channel 2 is all zeros.
-        fillPlaybackMixer(opts.player.playback_map, [1 0], 0);
+        %   The calibrated sounds are single-channel files. These should be
+        %   scaled to db(1) + db(+gain) where gain is the difference
+        %   between the desired output level and 65 dB SPL. 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(+5), 0);
         
         % Replace analysis
         %   Currently does not require any parameters. 
@@ -513,6 +516,29 @@ switch testID
             'run',  true, ... % bool, if set, analysis is run from SIN_runTest after test is complete.
             'params',   struct( ...
                 'plot', true)); % make summary plots. 
+    case 'Word Span (80 dB SPL)'
+        
+        % This is *identical* to the Word SPan 70 dB test, except at 80 dB.
+        % This is intended for users with PTA < 40 dB HL
+        opts = SIN_TestSetup('Word Span (70 dB SPL)', subjectID); 
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change modmixer 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(+15), 0);
+        
+    case 'Word Span (90 dB SPL)'
+        
+        % This is *identical* to the Word SPan 70 dB test, except at 90 dB.
+        % This is intended for users with PTA < 40 dB HL
+        opts = SIN_TestSetup('Word Span (70 dB SPL)', subjectID); 
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change modmixer 
+        opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(+25), 0);
         
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
