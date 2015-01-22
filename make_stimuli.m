@@ -8,8 +8,21 @@
 % clear all;
 
 %% VARIABLES THAT APPLY ACROSS MORE THAN ONE STIMULUS SET
-% Frequency range for IIR filtering below. This frequency range should be
-% used in all subsequent stimulus sets as well. 
+
+%% Band pass filter settings
+%   Wu, Christi, and Bishop decided it would be a good idea to band pass
+%   filter all of our sounds between 125 and 10 kHz. This will preserve
+%   much of the information important to speech. Also, we cannot
+%   practically match the spectra below ~100 Hz using our systems; the
+%   playback/recording loop has substantial noise in this frequency range
+%   and the speakers are generally unable to produce sound in this
+%   low-frequency range.
+%
+%   The 10-kHz low-pass cutoff was selected based on what we think
+%   listener's hearing aids are doing. Miller and Wu mention that few (if
+%   any) hearing aids represent sounds above 8 kHz. So low-pass filter at
+%   10 kHz to remove much of the (typically unused) higher frequency
+%   information.
 filter_frequency_range = [125 10000];
 
 % We want a 4th order bandpass filter (really 8th order since we're using
@@ -17,40 +30,65 @@ filter_frequency_range = [125 10000];
 filter_type = 'bandpass';
 bandpass_filter_order = 4; 
 
-% Spectral matching filter information
+%% Spectral matching filter information
+%   Spectral matching is done using SIN's match_spectra function. This
+%   function uses fir2 to estimate the ideal frequency response. The filter
+%   order of 3000 was selected to ensure that we had sufficient potential
+%   in our filter to reshape frequencies down to <125 kHz (our high pass
+%   cutoff). 
 spectral_match_filter_order = 3000; 
 
 % Bitdepth for audio files. This should be used in all subsequent write
 % calls as well. 
+%
+% Bit depth of 24 used because we are running 24-bit sound cards with ASIO
+% drivers. Which means we can't achieve better than 24-bit precision. 
+%
+% Both sound cards are set to use a playback rate of 44.1 kHz, so all files
+% will be written at 44.1 kHz. 
 audio_bit_depth = 24; % used when writing WAV files
 audio_bit_rate = 192; % Note that 192 is the highest bitrate available on Windows 7. 
 FS = 44100; % sampling rate of all audio files
 
-% Periodogram parameters
-pwelch_window = FS; % pwelch_window in seconds
-pwelch_noverlap = [];
-pwelch_nfft = FS;
+% Spectral estimation paramters
+%   Spectral estimation is used in many instances below to estimate the
+%   long-term spectra of sounds or speech corpuses (e.g., HINT). MATLAB's
+%   pwelch function is the primary work horse here. The parameters below
+%   define the required arguments for the spectral estimation process.
+pwelch_window = FS; % number of samples to include in each pwelch window
+pwelch_noverlap = []; % Use default section overlap (50% according to matlab 2013b)
+pwelch_nfft = FS; % Number of FFT points to use in each section. 
 
-% Amplitude used for silence detection
+% Amplitude used for HINT signal detection
+%   CWB empirically determined that the original HINT stimuli provided by
+%   Wu have a relatively low noise floor. Thus, samples that exceed 0.0001
+%   are considered the first and last point in the signal. See 
+%   threshclipaudio for more details
 hint_ampthresh = 0.0001;
 
-% Random noise seed for noise sample selection
+% We want to hard code the random noise seed for HINT randomization for
+% reproducibility reasons. Here, we use '1000'. 
 hint_random_noise_seed = '1000';
 
-% MLST threshold 
+% Amplitude used for MLST signal detection.
+%   The noise floor is considerably higher for the MLST (looks like the
+%   beginning and ends of the signal were not zero padded as with the
+%   HINT), so we have to use a more liberal threshold to reliably detect
+%   signal from the noise floor. 
 mlst_ampthresh = 0.01; 
 
 % Hagerman settings
-%   hagerman_snrs: the SNRs to test
+%   hagerman_snrs: the SNRs to test. Currently, we test from -10:5:15 dB
+%   SNRs
 %   hagerman_sentence_number:   number of sentences to use in hagerman
-%   recordings
+%   recordings. 
 hagerman_snrs = [-10:5:15];
 hagerman_sentence_number = 40; % use 5 for testing purposes, will need to change to 40 for the experiment proper.
 
 %% SOUND CARD CHECK STIMULI
 %   These stimuli are used to run a basic soundcard check. The test itself
 %   is meant to be run in conjunction with some additional hardware,
-%   including an oscilloscope.
+%   including an oscilloscope and/or frequency analyzer. 
 tone = sin_gen(1000, 60, FS);
 
 % Write to file
@@ -61,9 +99,20 @@ clear tone
 
 %% MAKE A WHITE NOISE SAMPLE
 % ===================================
-% CWB wants to try using this rather than the speech shaped noise sample
-% provided with the HINT. This will be used as an alternative noise sample
-% below.
+% CWB originally tried to reshape the original HINT speech shaped noise
+% sample to match the spectra for other corpuses/conditions. However, there
+% are some peculiarities in this noise sample that may not be addressed by
+% match_spectra. Specifically, CWB worried about his ability to reshape
+% some of the high-frequency information. This is vague, I know, but
+% ultimately moot.
+%
+% Consequently, CWB decided to create a novel white noise stimulus to use
+% for spectral reshaping. The procedure goes approximately as follows.
+%
+%   1. Load the original HINT speech shaped noise stimulus
+%   2. Create a white noise sample of the same length as (1)
+%   3. RMS scale the white nose sample to match the RMS of (1)
+%   4. Write the RMS-scaled white noise sample.
 % ===================================
 
 % go ahead and load the HINT file so we can RMS match to this. 
@@ -84,13 +133,46 @@ audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white
 
 %% CREATE HINT + SPEECH SHAPED NOISE (SPSHN) STIMULI
 % ===================================
-% Create a calibrated HINT SPSHN file, then use this to calibrate the
-% concatenated HINT corpus. 
-% ===================================
-
-% ===================================
-% Match the long-term spectrum of the spshn spectrum to the long-term
-% spectrum of the concatenated HINT corpus
+% Here, we create the HINT + SPSHN corpus. Here are the approximate
+% procedures and rationale.
+%
+%   1. Load all original HINT sentence waveforms.
+%   2. Remove silent periods from beginning and end of waveforms.
+%   3. Temporally concatenate all waveforms
+%
+% Steps 1 - 3 result in a large acoustic waveform that can be used to
+% estimate the long-term spectrum of the HINT speech corpus.
+%
+%   4. Reshape the spectrum of the white noise sample above to match the
+%   long-term spectrum of the HINT corpus. Spectral matching is done a
+%   multi-step process here. 
+%
+%       - Match spectra from [125 inf]. This creates a spectrally matched 
+%         noise sample that has NOT been bandpass filtered yet. In other
+%         words, we're just matching the overall spectral shape. This
+%         allows us to pass in a spectrally matched noise sample into
+%         SIN_CalAudio, which does RMS scaling to match the RMS of noise
+%         masker and target speech. 
+%
+%       - Bandpass filter the noise sample (and all stimuli). Also RMS
+%       scale them to match. These steps are handled in SIN_CalAudio.m.
+%
+%   5. Add SPSHN to the HINT sentences. 
+%
+% Steps 4 - 5 result in two-channel wav files. The first channel is the
+% speech track and the second is the noise track. These can then be mixed
+% using player_main's mixer.
+%
+%   6. Spectral checking. The calibrated stimuli are then reloaded from
+%   file, thresholded, and temporally concatenated as done above. The
+%   long-term spectra is then compared to the spectrally-matched noise
+%   sample. A figure is generated with this summary information.
+%
+%   7. The SPL of the sounds are compared at a digital level using RMS. A
+%   plot is also generated. 
+%
+%   8. Create a lookup table for the calibrated stimuli. This is an XLSX
+%   spreadsheet. 
 % ===================================
 
 % Get a list of HINT sentences using SIN functions
@@ -105,8 +187,8 @@ opts.specific.wav_regexp = '[0-9]{2}.wav$';
 [~, hint_audio_files] = SIN_stiminfo(opts); 
 hint_audio_files = concatenate_lists(hint_audio_files); 
 
-% Load the speech shaped noise file
-% warning('CWB substituted white noise for SPSHN'); 
+% Load the white noise file
+%   Note that the hint_sps
 [hint_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav')); 
 % [hint_spshn, spshn_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
@@ -190,7 +272,15 @@ hint_spshn = SIN_loaddata(calibration_file);
 
 % Replace this call with plot_psd
 plot_psd({ hint_time_series hint_spshn }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
-    
+legend('HINT Sentences', 'HINT SPSHN')
+title('HINT Spectra'); 
+
+% Check RMS levels
+figure
+plot(db([rms(hint_time_series) rms(hint_spshn)]), 's', 'linewidth', 2)
+ylabel('RMS (dB)'); 
+title('HINT / SPSHN relative levels'); 
+
 % ===================================
 % Add speech-shaped noise to newly created HINT stimuli
 %   This section of code adds silent periods to the beginning and end of
@@ -215,20 +305,51 @@ createHINTlookup(';bandpass;0dB+spshn');
 
 %% CREATE HINT + MULTI-TALKER BABBLE (ISTS) STIMULI
 % ===================================
-% Create a calibrated, spectrally matched ISTS stimulus for HINT
+% The procedure used to create the HINT + ISTS stimuli is similar to the
+% procedure used to create the HINT + SPSHN stimuli above, but there are
+% important differences. Below is an approximate outline of the procedures
+% CWB devised.
 %
-%   The ISTS should be calibrated and spectrally matched to the HINT SPSHN
-%   sample described above. This will (effectively) bandpass filter the 
-%   ISTS as well, since the SPSHN is already bandpass filtered. 
+%   1. Load the original ISTS stimulus provided by Wu and also downloaded
+%   from the web.
 %
-%   This will need to be saved as a separate file because its spectrum may
-%   not be appropriate for other tests (likely). 
+%   2. Bandpass filter the ISTS stimulus. Again, we're only interested in
+%   the range from 125 - 10,000 Hz. So Apply the bandpass filter here.
 %
-%   Note: We need to create a 3-talker ISTS by temporally shifting and
-%   adding the single-talker ISTS.
+%   3. Match the spectrum of the ISTS stimulus to concatenated,
+%   bandpass-filtered HINT corpus. 
 %
-%   Note: Wu mentioned that we'll likely need 4-talker ISTS instead of 3,
-%   so CWB needs to rework part of this code. 
+%   4. RMS scale the now spectrally matched ISTS track to match the
+%   calibration stimulus (hint spshn). 
+%
+% The result from 1 - 4 is a *single channel* ISTS stimulus that is
+% spectrally matched to the HINT corpus. It is also RMS-scaled to ~0 dB
+% SPL. 
+%
+%   5. Remix the single-channel ISTS to make a 4-channel,
+%   spectrally-matched ISTS stimulus for the HINT. 
+%
+% The result of 5 is a 4-channel ISTS stimulus. Each channel should be
+% spectrally matched and RMS scaled to ~0 dB SPL. Thus, if these are
+% combined in some way (e.g., combining across the 4-channels to make a
+% single-channel, 4-talker babble), then we have to account for the
+% dB SPL changes caused by remixing the audio.
+%
+%   6. Add ISTS noise track to HINT stimuli. This is done by collapsing the
+%   4-channel ISTS babble into a single channel file. During the noise
+%   addition process, we rescale each of the 4 ISTS channels such that
+%   their SUM will be ~0 dB SPL. 
+%
+% The result of 6 is a two-channel audio stimulus. Track 1 is the HINT
+% sentence. Track 2 is the 4-talker ISTS babble. 
+%
+%   7. PSDs are plotted with the HINT speech tracks, 4-talker ISTS, and the
+%   SPSHN tracks. ISTS/SPSHN tracks are loaded FROM the files produced in
+%   6, so this is a good check, CWB thinks. However, the spectra might
+%   differ slightly due to the windowing (fade in/out) introduced to the
+%   noise tracks during step 6. 
+%
+%   8. Create a HINT lookup table for the ISTS stimuli. 
 % ===================================
 
 % Load original ISTS
@@ -297,17 +418,43 @@ addnoise2HINT(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT_IS
     'ampthresh', hint_ampthresh*hint_scale, ...
     'random_noise_seed', str2double(hint_random_noise_seed)); % seed with subject identifier. hard-coded here, but will wrap this into a function later.
 
-% Clear SPSHN and ISTS variables and read them in fresh from file to make
-% sure we have calibrated these correctly and nothing is botched when
-% writing to file.
-clear ists_filt ists
-[ists, ists_fs] = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT_ISTS_4_talker;bandpass;0dB.wav'));
+% Re-read in the HINT speech tracks, ISTS, and SPSHN from the noise-mixed
+% files to confirm that our spectral matching is as good as we think it is.
+% This will be approximate due to thresholding at beginning and end of
+% sounds. 
+opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]spshn.wav$';
+
+% Get the file names and massage them into a useful format.
+[~, hint_audio_files] = SIN_stiminfo(opts); 
+hint_audio_files = concatenate_lists(hint_audio_files); 
+
+% Concatenate the HINT Corpus
+[spshn] = concat_audio_files(hint_audio_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0; 1]);
+
+% Read in 4-talker ISTS
+opts.specific.wav_regexp = '[0-9]{2};bandpass;0dB[+]4talker_ists.wav$';
+
+% Get the file names and massage them into a useful format.
+[~, hint_audio_files] = SIN_stiminfo(opts); 
+hint_audio_files = concatenate_lists(hint_audio_files); 
+
+% Concatenate the HINT Corpus
+[ists] = concat_audio_files(hint_audio_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0; 1]);
+
+% clear ists_filt ists
+% [ists, ists_fs] = audioread(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT_ISTS_4_talker;bandpass;0dB.wav'));
 
 if ists_fs ~= FS, error('Mismatched sample rates'); end 
 
 % Plot PSDs of calibrated files
-plot_psd({ hint_time_series hint_spshn ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
-legend('Concatenated Sentences', 'SPSHN', 'ISTS', 'location', 'NorthOutside')
+plot_psd({ hint_time_series hint_spshn spshn ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+legend('Concatenated Sentences', 'SPSHN', 'SPSHN from HINT Files', 'ISTS from HINT files', 'location', 'NorthOutside')
 title('HINT PSDs')
 set(gca, 'XScale', 'log')
 ylabel('PSD (dB/Hz)');
@@ -317,8 +464,8 @@ grid on
 % Compute decibel differences between the concatenated HINT corpus, SPSHN,
 % and ISTS
 figure
-plot(1, [db(rms(hint_time_series)) db(rms(hint_spshn)) db(rms(ists))], 's')
-legend('Concatenated HINT Corpus', 'SPSHN', 'ISTS', 'location', 'NorthOutside');
+plot(1, [db(rms(hint_time_series)) db(rms(hint_spshn)) db(rms(spshn)) db(rms(ists))], 's')
+legend('Concatenated Sentences', 'SPSHN', 'SPSHN from HINT Files', 'ISTS from HINT files', 'location', 'NorthOutside')
 ylabel('dB')
 title('Relative HINT Stimulus Levels'); 
 
@@ -327,10 +474,32 @@ createHINTlookup(';bandpass;0dB+4talker_ists');
 
 %% ACCEPTABLE NOISE LEVEL (ANL) CALIBRATION
 % ===================================
-%   This segment of code writes a bandpass and RMS normalized version of
-%   the ANL. 
+% The ANL calibration is relatively simple by comparison to the HINT
+% calibration code. Here's an approximate step-by-step procedure.
 %
-%   Note: we do NOT want to do any spectral matching here.
+%   1. Load original ANL file. This is actually a STEREO file. The first
+%   track is the target discourse track. Track 2 is the masker
+%   (multi-talker babble) track.
+%
+%   2. Bandpass filter both channels of the ANL. Again, we're only
+%   interested in the 125 - 10kHz range, so filter the stimuli.
+%
+%   3. Match the RMS between ANL channels. CWB noted that the RMS levels
+%   between the target and masker tracks differ by ~0.49 dB (masker track
+%   louder than target track). While having these two values strictly
+%   matched will not affect ANL estimates (this is a relative measure
+%   anyway), CWB opted to RMS scale the masker track to match the RMS of
+%   the target track. 
+%
+%   4. Match ANL to calibration sound (That's the spshn noise track from
+%   HINT). 
+%
+%   5. Write the ANL track.
+%
+% The result of 1 - 5 is a two-channel track. Note that CWB did *not* do
+% any spectral matching of any kind here. The rationale is that the ANL
+% stimulus is a stock stimulus that should be used as is to the degree
+% possible. So CWB limited filtering to a bandpass filter. 
 % ===================================
 
 % Load ANL
@@ -421,14 +590,12 @@ hint_spshn = SIN_loaddata(calibration_file);
 hagerman_time_series = hagerman_time_series .* (rms(hint_spshn)./rms(hagerman_time_series));
 
 % Load ORIGINAL the speech shaped noise file
-%   We want to basically start over so we aren't filting this noise file
+%   We want to basically start over so we aren't filtering this noise file
 %   more than the one used for HINT. If we started with the completed
 %   version of HINT-SPSHN and filtered that, then our filter order would be
 %   twice what we expect it to be here. So some recreating the wheel is
 %   necessary. 
-% warning('CWB using white noise to start rather than HINT-Noise'); 
 [hagerman_spshn, hagerman_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-white_noise.wav')); 
-% [hagerman_spshn, hagerman_fs] = SIN_loaddata(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-Noise.wav')); 
 
 % Just use channel 1 of hint_spshn
 hagerman_spshn = hagerman_spshn(:,1); 
@@ -495,28 +662,65 @@ db(rms(hint_spshn)) - db(rms(hagerman_ists_filt))
 audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'Hagerman-ISTS;bandpass;0dB.wav'), hagerman_ists_filt, hint_fs, 'BitsperSample', audio_bit_depth);
 
 % ===================================
-% Confirm that hagerman_time_series (concatenated HINT sentences), Hagerman
-% Speech Shaped Noise, and the Hagerman ISTS are well-matched spectrally
-% and in terms of sound pressure level (SPL). 
+% Confirm that the Hagerman speech and noise tracks are well matched both
+% spectrally and in terms of dB SPL.
+%   - The safest way to check the noise tracks is to load them directly
+%   from the written files and run the spectral analysis on THOSE data.
+%   Recall that the noise samples may necessarily be repeated in
+%   createHagerman to create a noise track that is sufficiently long enough
+%   for the target speech track. 
 % ===================================
 
-% Get pwelch for concatenated hint sentences
-[Pxx, pwelch_freqs] = pwelch(hagerman_time_series, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+% Load the hagerman spshn track from one of the files
+opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', '2999'); 
 
-% Get pwelch for speech shaped noise sample
-P_spshn = pwelch(hagerman_spshn_filt, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+% Change wav file filter to get just ONE file
+opts.specific.wav_regexp = 'spshn;bandpass;0dB;0dB SNR;TinvNinv.wav$';
+[~, hagerman_spshn_files] = SIN_stiminfo(opts); 
+hagerman_spshn_files = concatenate_lists(hagerman_spshn_files); 
 
-% Get pwelch for ISTS
-P_ists = pwelch(hagerman_ists_filt, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+% Read in the first noise track
+hagerman_spshn = concat_audio_files(hagerman_spshn_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0;1;1;1;1;0]); 
 
-figure, hold on
-plot(pwelch_freqs, db([Pxx P_spshn P_ists], 'power'), 'linewidth', 1.5)
-legend('Concatenated Sentences', 'SPSHN', 'ISTS', 'location', 'NorthOutside')
+% Read in ISTS
+opts.specific.wav_regexp = 'ists;bandpass;0dB;0dB SNR;TinvNinv.wav$';
+[~, hagerman_ists_files] = SIN_stiminfo(opts); 
+hagerman_ists_files = concatenate_lists(hagerman_ists_files); 
+
+% Read in the first noise track
+hagerman_ists = concat_audio_files(hagerman_ists_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0;1;1;1;1;0]); 
+
+% Plot PSDs of calibrated files
+plot_psd({ hagerman_time_series hagerman_spshn hagerman_spshn_filt hagerman_ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+legend('Concatenated Sentences', 'SPSHN from Files', 'SPSHN', 'ISTS from Files', 'location', 'NorthOutside')
 title('Hagerman PSDs')
 set(gca, 'XScale', 'log')
 ylabel('PSD (dB/Hz)');
 xlabel('Frequency (Hz)');
 grid on
+% Get pwelch for concatenated hint sentences
+% [Pxx, pwelch_freqs] = pwelch(hagerman_time_series, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+
+% Get pwelch for speech shaped noise sample
+% P_spshn = pwelch(hagerman_spshn_filt, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+
+% Get pwelch for ISTS
+% P_ists = pwelch(hagerman_ists_filt, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
+
+% figure, hold on
+% plot(pwelch_freqs, db([Pxx P_spshn P_ists], 'power'), 'linewidth', 1.5)
+% legend('Concatenated Sentences', 'SPSHN', 'ISTS', 'location', 'NorthOutside')
+% title('Hagerman PSDs')
+% set(gca, 'XScale', 'log')
+% ylabel('PSD (dB/Hz)');
+% xlabel('Frequency (Hz)');
+% grid on
 
 % RMS levels for Hagerman stimuli
 figure
@@ -591,7 +795,6 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
 !move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD.mp4" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD_DONOTUSE.mp4"
 !move "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD.mp3" "C:\Users\Public\GitHub\SIN\playback\MLST (adult)\List_12\12_T3_309_LD_DONOTUSE.mp3"
 
-
 %% CREATE MLST + SPEECH SHAPED NOISE (SPSHN) STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + an single-channel
 %   speech shaped noise track (SPSHN). The calibration procedure should be
@@ -610,7 +813,7 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
 % ===================================
 
 % Get a list of MLST sentences using SIN functions
-opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 80 dB SPL, +0 dB SNR)', '');
+opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', '');
 opts = opts(1);
 
 % Change the regular expression used to search for audio files; we want the
@@ -648,7 +851,7 @@ mlst_fs = mlst_fs .* (FS./mlst_fs); % reset this just in case I use it by accide
 % sample rate check
 if mlst_fs ~= FS, error('Mismatched sample rates'); end 
 
-% We need to create a SPSHN stimulus that is spectrally-matched to the HINT
+% We need to create a SPSHN stimulus that is spectrally-matched to the MLST
 % speech corpus (concatenated sentences). We just need to spectrally match
 % in a high-pass sense. We don't bandpass filter here because bandpass
 % filtering is implicitly done in the call to SIN_CalAudio below. 
@@ -746,8 +949,12 @@ for i=1:numel(mlst_av_files)
     time_series = SIN_loaddata(mlst_av_files{i}); 
     
     % Check for clipping 
+    %   If we encounter clipping, this indicates that there was weird
+    %   filtering artifacts during encoding process. Post the file to the
+    %   screen and keep track of them. 
     if max(max(abs(time_series))) > 1
         bad_mlst_files{end+1} = mlst_av_files{i}; 
+        display(mlst_av_files{i});
     end % if max(max
     
 end % for i=1:numel(mlst_av_files)

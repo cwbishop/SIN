@@ -360,7 +360,14 @@ for i=1:numel(d.snrs)
         end %if ...
         
         % Make file name
-        fname = fullfile(PATHSTR, [NAME ';' num2str(d.snrs(i)) 'dB SNR;' tstr nstr EXT]);
+        %   For file ordering reasons, we need to force SNR labels to be
+        %   two digits for positive SNRs. 
+        if d.snrs(i) >= 0
+            fname = fullfile(PATHSTR, sprintf('%s;%.2ddB SNR;%s%s%s', NAME, d.snrs(i), tstr, nstr, EXT));
+        else
+            fname = fullfile(PATHSTR, [NAME ';' num2str(d.snrs(i)) 'dB SNR;' tstr nstr EXT]);
+        end 
+            
         
         % Append file name to return variable 
         output_file_names{end+1, 1} = fname; 
