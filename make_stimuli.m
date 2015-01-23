@@ -661,49 +661,7 @@ db(rms(hint_spshn)) - db(rms(hagerman_ists_filt))
 % Write spectrally matched/calibrated ISTS for HINT
 audiowrite(fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'Hagerman-ISTS;bandpass;0dB.wav'), hagerman_ists_filt, hint_fs, 'BitsperSample', audio_bit_depth);
 
-% ===================================
-% Confirm that the Hagerman speech and noise tracks are well matched both
-% spectrally and in terms of dB SPL.
-%   - The safest way to check the noise tracks is to load them directly
-%   from the written files and run the spectral analysis on THOSE data.
-%   Recall that the noise samples may necessarily be repeated in
-%   createHagerman to create a noise track that is sufficiently long enough
-%   for the target speech track. 
-% ===================================
 
-% Load the hagerman spshn track from one of the files
-opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', '2999'); 
-
-% Change wav file filter to get just ONE file
-opts.specific.wav_regexp = 'spshn;bandpass;0dB;0dB SNR;TinvNinv.wav$';
-[~, hagerman_spshn_files] = SIN_stiminfo(opts); 
-hagerman_spshn_files = concatenate_lists(hagerman_spshn_files); 
-
-% Read in the first noise track
-hagerman_spshn = concat_audio_files(hagerman_spshn_files, ...
-    'remove_silence', true, ...
-    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
-    'mixer', [0;1;1;1;1;0]); 
-
-% Read in ISTS
-opts.specific.wav_regexp = 'ists;bandpass;0dB;0dB SNR;TinvNinv.wav$';
-[~, hagerman_ists_files] = SIN_stiminfo(opts); 
-hagerman_ists_files = concatenate_lists(hagerman_ists_files); 
-
-% Read in the first noise track
-hagerman_ists = concat_audio_files(hagerman_ists_files, ...
-    'remove_silence', true, ...
-    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
-    'mixer', [0;1;1;1;1;0]); 
-
-% Plot PSDs of calibrated files
-plot_psd({ hagerman_time_series hagerman_spshn hagerman_spshn_filt hagerman_ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
-legend('Concatenated Sentences', 'SPSHN from Files', 'SPSHN', 'ISTS from Files', 'location', 'NorthOutside')
-title('Hagerman PSDs')
-set(gca, 'XScale', 'log')
-ylabel('PSD (dB/Hz)');
-xlabel('Frequency (Hz)');
-grid on
 % Get pwelch for concatenated hint sentences
 % [Pxx, pwelch_freqs] = pwelch(hagerman_time_series, pwelch_window, pwelch_noverlap, pwelch_nfft, hint_fs); 
 
@@ -776,6 +734,50 @@ createHagerman('target_tracks', {hagerman_audio_files}, ...
     'write_signal_mask',    true, ...
     'estimate_noise_floor', true, ...    
     'noise_floor_sec',  10);
+
+% ===================================
+% Confirm that the Hagerman speech and noise tracks are well matched both
+% spectrally and in terms of dB SPL.
+%   - The safest way to check the noise tracks is to load them directly
+%   from the written files and run the spectral analysis on THOSE data.
+%   Recall that the noise samples may necessarily be repeated in
+%   createHagerman to create a noise track that is sufficiently long enough
+%   for the target speech track. 
+% ===================================
+
+% Load the hagerman spshn track from one of the files
+opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', '2999'); 
+
+% Change wav file filter to get just ONE file
+opts.specific.wav_regexp = 'spshn;bandpass;0dB;00dB SNR;TinvNinv.wav$';
+[~, hagerman_spshn_files] = SIN_stiminfo(opts); 
+hagerman_spshn_files = concatenate_lists(hagerman_spshn_files); 
+
+% Read in the first noise track
+hagerman_spshn = concat_audio_files(hagerman_spshn_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0;1;1;1;1;0]); 
+
+% Read in ISTS
+opts.specific.wav_regexp = 'ists;bandpass;0dB;00dB SNR;TinvNinv.wav$';
+[~, hagerman_ists_files] = SIN_stiminfo(opts); 
+hagerman_ists_files = concatenate_lists(hagerman_ists_files); 
+
+% Read in the first noise track
+hagerman_ists = concat_audio_files(hagerman_ists_files, ...
+    'remove_silence', true, ...
+    'amplitude_threshold', hint_ampthresh.*hint_scale, ...
+    'mixer', [0;1;1;1;1;0]); 
+
+% Plot PSDs of calibrated files
+plot_psd({ hagerman_time_series hagerman_spshn hagerman_spshn_filt hagerman_ists }, @pwelch, pwelch_window, pwelch_noverlap, pwelch_nfft, FS); 
+legend('Concatenated Sentences', 'SPSHN from Files', 'SPSHN', 'ISTS from Files', 'location', 'NorthOutside')
+title('Hagerman PSDs')
+set(gca, 'XScale', 'log')
+ylabel('PSD (dB/Hz)');
+xlabel('Frequency (Hz)');
+grid on
 
 %% MLST CLEANUP
 %   There are two lists that have 13 stimuli instead of 12. CWB contacted
@@ -1398,7 +1400,7 @@ hint_spshn = SIN_loaddata(calibration_file);
 word_span_scale = rms(hint_spshn)./rms(word_span_carrier); 
 
 % Load word span play lists
-opts = SIN_TestSetup('Word Span', ''); 
+opts = SIN_TestSetup('Word Span (70 dB SPL)', ''); 
 
 % Change regular expression for wav file selection
 opts.specific.wav_regexp = '[0-9]{2}.wav$';
