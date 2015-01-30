@@ -430,7 +430,9 @@ guidata(handles.figure1, handles);
 function update_recall_dropdown_list(hObject, eventdata, handles)
 %% DESCRIPTION ...
 
-unique_recognition_words = unique(handles.return_variables.recognition);
+% We need to ensure that "NR" is an option. To tack it onto the recognition
+% list and let the code sort out the mess.
+unique_recognition_words = unique({handles.return_variables.recognition{:}, 'NR'}');
 
 % Note: we want to remove empty fields from this list *and* sort the list
 % to ease searching.

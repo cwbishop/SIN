@@ -613,6 +613,11 @@ d.sandbox.number_of_trials = number_of_trials;
 
 while trial <= number_of_trials
 
+    %% UPDATE USER ABOUT PROGRESS
+    %   CWB found it frustrating at times to not know how far along he is
+    %   during testing. This will simply present the trial number and total
+    %   number of remaining trials. 
+    display(['Player Progress: Trial ' num2str(trial) ' of ' num2str(number_of_trials)]);
     
     %% BUFFER POSITION
     if trial == 1
@@ -683,7 +688,9 @@ while trial <= number_of_trials
     % appended stimulus information (e.g., if modifier_append2playllist is
     % called). This must occur *after* modifiers are called in case the
     % modifiers change something about the number of trials (e.g., updates
-    % the stimulus, etc.). 
+    % the stimulus, etc.).
+    %
+    % Few, this saved CWB's butt! Glad I included it!
     number_of_trials = numel(stim); 
     d.sandbox.number_of_trials = number_of_trials; 
     

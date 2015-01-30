@@ -122,7 +122,8 @@ recall_average = sum(recall_correct)/sum(word_total);
 %% SUMMARY PLOTS
 if d.plot
     
-   
+    figure
+    
     % Bar plot with all information 
     y = [[ (recognition_correct./word_total)'; (judgment_correct./word_total)'; (recall_correct./word_total)'] [recognition_average; judgment_average; recall_average]].*100;    
     bar(y');
