@@ -1,4 +1,4 @@
-function [weights] = analysis_weight_estimation(results, varargin)
+function [weights_norm, weights] = analysis_weight_estimation(results, varargin)
 %% DESCRIPTION:
 %
 %   This function uses a series of recordings to estimate the location and
@@ -50,7 +50,13 @@ function [weights] = analysis_weight_estimation(results, varargin)
 %
 % OUTPUT:
 %
-%   weights:    a speaker x channel weighting matrix.
+%   weights_norm:   a speaker x channel normalized weighting matrix. These
+%                   are RMS measures normalized to the reference_location. 
+%
+%   weights:    same as weights_norm, except not normalized to
+%               reference_location. It proved useful in some circumstances
+%               to have a speaker and ear-specific estimate of RMS. That's
+%               what this is. 
 %
 % Development:
 %
@@ -95,4 +101,4 @@ end % d.apply_filter
 weights = cell2mat(cellfun(@rms, concatenate_lists(recs), 'UniformOutput', false)); 
 
 % Normalize to the reference location
-weights = weights./(ones(size(weights,1), 1)*weights(d.reference_location,:));
+weights_norm = weights./(ones(size(weights,1), 1)*weights(d.reference_location,:));

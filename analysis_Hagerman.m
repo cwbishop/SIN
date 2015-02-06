@@ -1,4 +1,4 @@
-function [snr_requested, snr_theoretical, snr_empirical, target_empirical, attenuation, noise_empirical, target_theoretical, noise_theoretical] = analysis_Hagerman(results, varargin)
+function [snr_requested, snr_theoretical, snr_empirical, target_empirical, attenuation, noise_empirical, target_theoretical, noise_theoretical, haspi] = analysis_Hagerman(results, varargin)
 %% DESCRIPTION:
 %
 %   This function analyzes Hagerman-style (that is, phase inversion
@@ -56,17 +56,10 @@ function [snr_requested, snr_theoretical, snr_empirical, target_empirical, atten
 %                           detected. In these cases, one of the two
 %                           estimates is discarded. 
 %
-%   'apply_weights':    string, path to results file used to estimate
-%                       location and channel specific weights. These
-%                       weights are used to "adjust" the theoretical SNR
-%                       estimates. This, in "theory", will produce a better
-%                       match between theoretical and empirical estimates. 
-%
-%                       This has a special value 'auto' that will
-%                       automatically select the best matched weights file.
-%                       This is done in the function
-%                       Hagerman_find_weight_estimation.m. See that
-%                       function for more details. 
+%   'channels': integer array, contains channel numbers to include in
+%               Hagerman analysis. Note that the user should EXCLUDE all
+%               channels that have no data (all zeros). On the Amp Lab PC,
+%               that means only including channels 1 and 2. 
 %
 %   'analysis_window':  two-element array specifying the window used for
 %                       analysis. Positive elements are referenced to the
@@ -85,10 +78,69 @@ function [snr_requested, snr_theoretical, snr_empirical, target_empirical, atten
 %                       Example 3: [-30 inf] uses only the last 30 sec of
 %                       the recording
 %
-%   'channels': integer array, contains channel numbers to include in
-%               Hagerman analysis. Note that the user should EXCLUDE all
-%               channels that have no data (all zeros). On the Amp Lab PC,
-%               that means only including channels 1 and 2. 
+%
+% Weight Estimation Parameters:
+%
+% When we record from multiple speakers at once and are using directional
+% microphones (e.g., recording from KEMAR), then we have to adjust our
+% input SNR estimates for head shadowing and directional effects. This can
+% be done by playing a reference sound from each location in turn and
+% recording it through the identical recording loop. These recordings can
+% then be reduced to a series of weights (e.g., relative RMS values) that
+% can be used to adjust the input SNR *at the ear*. The parameters below
+% control weight estimation.
+%
+%   'apply_weights':    string, path to results file used to estimate
+%                       location and channel specific weights. These
+%                       weights are used to "adjust" the theoretical SNR
+%                       estimates. This, in "theory", will produce a better
+%                       match between theoretical and empirical estimates. 
+%
+%                       This has a special value 'auto' that will
+%                       automatically select the best matched weights file.
+%                       This is done in the function
+%                       Hagerman_find_weight_estimation.m. See that
+%                       function for more details. 
+%
+% HASPI/HASQI Parameters:
+%
+% We would like to incorporate metrics other than SNR in our Hagerman
+% analyses as well. One is the hearing-aid speech perception index (HASPI)
+% described by Kates and Arehart (2014) Speech Comm. The parameters here
+% are used (in conjunction with others) to configure the HASPI estimates.
+% These parameters are also applied to the hearing-aid speech quality index
+% (HASQI) described elsewhere (CWB can't get the paper at the moment). 
+%
+% NOTE: At time of writing, CWB is not sure if HASPI and HASQI should be
+% calculated using the full (aided) recordings or the truncated segments.
+% He *thinks* the truncated segments is a better idea (e.g., the last 30
+% seconds), but definitely unsure. Need to think about this more.
+%
+% NOTE: HASPI/HASQI absolutely *require* the user to include a weight
+% estimation file. The weight estimation file is used to estimate absolute
+% levels of the microphones.
+%
+%   'HL':   a 1 x 6 vector of pure tone thresholds (audiogram). HLs should
+%           correspond to [250, 500, 1000, 2000, 4000, 6000] Hz. 
+%
+%   'haspi_mic_gain':               the microphone gain difference between
+%                                   weight estimation and the recording
+%                                   session. Often times the gain settings
+%                                   are adjusted and we have to account for
+%                                   these adjustments here. For instance,
+%                                   the mic gain may be turned down in the
+%                                   aided condition relative to the weight
+%                                   estimation segment. XXX Description of
+%                                   sign XXX
+%
+%   'haspi_reference_mixer':
+%
+%   'haspi_reference_dbspl':    the SPL level of the reference sound. When
+%                               written, this was 65 dB, but this might
+%                               change. HASPI/HASQI wants an RMS = 1 to be
+%                               equivalent to 65 dB SPL. Need this
+%                               information to take care of this scaling in
+%                               code. 
 %
 % Filtering Parameters:
 %
@@ -169,6 +221,8 @@ end % if numel(fnames)
 
 %% GROUP FILENAMES AND DATA TRACES
 %   The data traces are the recordings written to the structure
+display('Loading files from structure'); 
+
 for i=1:numel(filenames)
     
     data{i,1} = filenames{i};
@@ -177,7 +231,9 @@ for i=1:numel(filenames)
     %   We will only estimate filter coefficients if the user wants to apply a
     %   filter below.
     if d.apply_filter
-
+        
+        display(['Filtering (' num2str(i) '/' num2str(numel(filenames)) ')']); 
+        
         % Note that frequency vector is normalized to Nyquist
         [b, a] = butter(d.filter_order, d.filter_frequency_range./(FS/2), d.filter_type);
 
@@ -286,21 +342,25 @@ snr_theoretical = nan(numel(group_numbers), numel(d.channels));
 snr_empirical = nan(numel(group_numbers), numel(d.channels));
 
 % Load weights if the user tells us to. 
+display('Weight Estimation'); 
 if ~isempty(d.apply_weights)
+
+    % Modified call to use centralized SIN_load_results function
+    weight_results = SIN_load_results(d.apply_weights); 
+    weight_results = weight_results{1}; 
     
-    weight_results = load(d.apply_weights); 
-    weights = analysis_weight_estimation(weight_results.results, ...
+    [weights_norm, weights] = analysis_weight_estimation(weight_results, ...
         'reference_location', 1, d);     
     
     % Reduce weight estimates to the recording channels we'll be using for
     % analysis
-    weights = weights(:, d.channels); 
+    weights_norm = weights_norm(:, d.channels); 
     
 else
     
     % If the user does not give us any corrective weights, then set all
     % weights to 1, which effectively means no correction is applied. 
-    weights = ones(size(mixer,2), numel(d.channels));
+    weights_norm = ones(size(mixer,2), numel(d.channels));
     
 end % if ~isempty(d.apply_weights)
 
@@ -355,7 +415,7 @@ for i=1:numel(group_numbers)
     
     % Find +1/+1
     ind = findcell(group_filenames, [d.target_string d.original_string d.noise_string d.original_string]);
-    oo_theoretical = playback_data{mask(ind)};
+    oo_original = playback_data{mask(ind)};
     oo_empirical = data{mask(ind), 2}; 
     
     % Only look at selected channels
@@ -365,32 +425,32 @@ for i=1:numel(group_numbers)
     %   This is a logical vector written to file that tells us at which
     %   samples the signal is nominally present. Only these samples should
     %   be used in SNR estimation. 
-    signal_mask = logical(oo_theoretical(:, end));     
+    signal_mask = logical(oo_original(:, end));     
     
     % Apply mixer and corrective weights. 
     %   In order to derive the "theoretical" waveform, we need to mix the
     %   data with the mod_mixer used in player_main, then sum over
     %   channels.
-    oo_theoretical = oo_theoretical * mixer * weights; 
+    oo_theoretical = oo_original * mixer * weights_norm; 
     
     % Find +1/-1
     ind = findcell(group_filenames, [d.target_string d.original_string d.noise_string d.inverted_string]);
     oi_theoretical = playback_data{mask(ind)};
-    oi_theoretical = oi_theoretical * mixer * weights; 
+    oi_theoretical = oi_theoretical * mixer * weights_norm; 
     oi_empirical = data{mask(ind), 2}; 
     oi_empirical = oi_empirical(:, d.channels); 
     
     % Find -1/-1
     ind = findcell(group_filenames, [d.target_string d.inverted_string d.noise_string d.inverted_string]);
     ii_theoretical = playback_data{mask(ind)};
-    ii_theoretical = ii_theoretical * mixer * weights; 
+    ii_theoretical = ii_theoretical * mixer * weights_norm; 
     ii_empirical = data{mask(ind), 2}; 
     ii_empirical = ii_empirical(:, d.channels); 
     
     % Find -1/+1
     ind = findcell(group_filenames, [d.target_string d.inverted_string d.noise_string d.original_string]);
     io_theoretical = playback_data{mask(ind)};
-    io_theoretical = io_theoretical * mixer * weights; 
+    io_theoretical = io_theoretical * mixer * weights_norm; 
     io_empirical = data{mask(ind), 2};     
     io_empirical = io_empirical(:, d.channels); 
     
@@ -414,7 +474,8 @@ for i=1:numel(group_numbers)
     %   tracks.
     residual_track{i} = oo_empirical + ii_empirical;    
     
-    %% QUALITY INDEX
+    %% QUALITY INDICES
+    %
     %   Calculate the quality index. This is a relative measure that can be
     %   loosely thought of as "attenuation due to summation". Intuitively,
     %   we're comparing the signal loss due to summing two signals together.
@@ -425,9 +486,54 @@ for i=1:numel(group_numbers)
     %   possible. CWB decided to do this because it would be the most
     %   conservative estimate of "attenuation due to summation" we can
     %   calculate. 
+    %   
+    %   CWB, Wu, and Miller devised this quality index. There are others
+    %   described below. 
+%   
+    display('Estimating Attenuation'); 
     attenuation(i, :) = db(rms(residual_track{i})) - min([db(rms(oo_empirical)); db(rms(ii_empirical))]);
 %     attenuation(i, :) = db(rms(residual_track{i})) - min([db(rms(target_empirical{i})); db(rms(noise_empirical{i}))]);
     attenuation(i,:) = attenuation(i,:).*-1; % flip sign; 
+    
+    %% HASPI/HASQI (James Kates) 
+    %
+    %   In this section, we estimate the HASPI/HASQI values for the
+    %   each SNR. This is done just one input (oo_theoretical) and output
+    %   (oo_empirical). Each ear is estimated separately. oo_empirical used
+    %   because that's the original phase orientation for noise and target
+    %   track.
+    display('Estimating HASPI/HASQI'); 
+    
+    % HASPI reference track
+    %   Mix the sound and collapse into a single reference track. 
+    haspi_reference = sum(oo_original * d.haspi_reference_mixer, 2);
+    
+    % Calculate scaling factor for haspi_reference. This will force the RMS 
+    % of the reference sound to equal 1 
+%     haspi_scale = db2amp(-db(rms(haspi_reference)));
+    
+    % Apply scaling factor to haspi_reference
+%     haspi_reference = haspi_reference * haspi_scale; 
+    
+    % Here we loop through each recording channel and calculate the
+    % intelligibility (HASPI) and quality (HASQI) indices.
+    for c=1:numel(d.channels)
+        display(['Estimating HASPI, SNR = ' num2str(snr_requested(i,1)) ', Channel = ' num2str(d.channels(c))]);
+        
+        % HASPI        
+        warning('Have not accounted for changes in mic gain in empirical recording'); 
+        haspi(i,c) = HASPI_v1(haspi_reference, FS, oo_empirical(:,d.channels(c)), FS, d.HL, 65 - db(rms(haspi_reference)));
+        
+    end % for c=1:numel(d.channels)
+    % Check to make sure we are only dealing with a SINGLE channel in the
+    % reference. Any more than that gets *extremely* complex with the
+    % weighting matrix. 
+%     if numel(find(d.haspi_reference_mixer)) ~= 1
+%         error('Can only accept a single data/speaker combination for HASPI calculations (for now)');
+%     end % if numel(find(d.haspi_referece_mixer)) ~= 1
+    
+    % Loop through each channel
+    
     
 end % for i=1:numel(grps)
 
@@ -450,6 +556,7 @@ noise_theoretical = {noise_theoretical{I}}';
 snr_requested = snr_requested(I, :); 
 residual_track = residual_track(I); 
 attenuation = attenuation(I,:); 
+haspi = haspi(I,:); 
 
 %% ESTIMATE THEORETICAL SNR (RMS)
 %   As a first pass, we'll take a look at the SNR as measured using a basic
@@ -619,6 +726,15 @@ if d.pflag > 0
     xlabel('Theoretical SNR (dB)');
     ylabel('Attenuation (more positive is better)');
     grid on
+    
+    % HASPI plots
+    figure
+    hold on
+    plot(snr_requested, haspi, 's-', 'linewidth', 2)
+    grid on
+    xlabel('Input SNR (dB, approx.)');
+    ylabel('HASPI');
+    title(results.RunTime.specific.testID)
     
 end % if d.pflag
 
