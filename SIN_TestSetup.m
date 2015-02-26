@@ -1153,9 +1153,14 @@ switch testID
         opts.player.playertype = 'wmp';
         
         % Remove the modifier_dbBscale_mixer
-        ind = getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer);
-        mask = 1:length(opts.player.modifier);
-        mask = mask~=ind;
+        %
+        % Also remove the exit after modifier. This is unncessary for this
+        % test. 
+        %
+        % Also remove "append2playlist. We won't be doing that at all. 
+        ind = [getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_dBscale_mixer) getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_exit_after) getMatchingStruct(opts.player.modifier, 'fhandle', @modifier_append2playlist)];
+        mask = true(length(opts.player.modifier),1);
+        mask(ind) = false;
         opts.player.modifier = {opts.player.modifier{mask}}; 
         
         % For plotting purposes, track the first channel
