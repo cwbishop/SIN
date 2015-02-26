@@ -27,6 +27,12 @@ function [results] = SIN_load_results(filenames, varargin)
 %% GATHER PARAMETERS
 d=varargin2struct(varargin{:}); 
 
+%% ERROR CHECKING
+%   Need file names to have the same number 
+if ~iscell(filenames) 
+    filenames = {filenames};
+end % 
+
 %% INITIALIZE RETURN VARIABLE
 results = cell(numel(filenames),1); 
 
