@@ -539,6 +539,45 @@ switch testID
         
         % Change modmixer 
         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, db2amp(+25), 0);
+      
+    case 'Word Span (70 dB SPL, diotic)'
+        
+        % This is *identical* to the Word SPan 70 dB test, except at 90 dB.
+        % This is intended for users with PTA < 40 dB HL
+        opts = SIN_TestSetup('Word Span (70 dB SPL)', subjectID); 
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change mod_mixer
+        %   Need the speech routed to both ears. 
+        opts.player.mod_mixer(1,2) = opts.player.mod_mixer(1,1);
+        
+    case 'Word Span (80 dB SPL, diotic)'
+        
+        % This is *identical* to the Word SPan 70 dB test, except at 90 dB.
+        % This is intended for users with PTA < 40 dB HL
+        opts = SIN_TestSetup('Word Span (80 dB SPL)', subjectID); 
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change mod_mixer
+        %   Need the speech routed to both ears. 
+        opts.player.mod_mixer(1,2) = opts.player.mod_mixer(1,1); 
+        
+    case 'Word Span (90 dB SPL, diotic)'
+        
+        % This is *identical* to the Word SPan 70 dB test, except at 90 dB.
+        % This is intended for users with PTA < 40 dB HL
+        opts = SIN_TestSetup('Word Span (90 dB SPL)', subjectID); 
+        
+        % Change testID
+        opts.specific.testID = testID; 
+        
+        % Change mod_mixer
+        %   Need the speech routed to both ears. 
+        opts.player.mod_mixer(1,2) = opts.player.mod_mixer(1,1);      
         
     case 'ANL (Practice)'
         % ANL is actually a sequence of tests. The list includes the
@@ -996,7 +1035,43 @@ switch testID
         % Now remove first stimulus from playback list. HINT manual says we
         % should move onto second stimulus
         opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }'; 
-      
+        
+    case 'HINT (Traditional, 2 lists, diotic)'
+        
+        % This administers the HINT as it is traditionally described,
+        % albeit with sounds presented from a single speaker (or earphone).
+        % Masker is SPSHN.
+        
+        % Start out with the SNR-50, SPSHN as a template.
+        opts = SIN_TestSetup('HINT (SNR-50, SPSHN)', subjectID);         
+        
+        
+        for i = 1:length(opts)            
+            
+            opts(i).specific.testID = testID;  
+            
+            % Change mixer settings so we present the same stimulus to both
+            % ears.
+            opts(i).player.mod_mixer = fillPlaybackMixer(opts(1).player.playback_map, [ [db2amp(-20); 1] [db2amp(-20); 1] ], 0);
+            
+            % Modify test ID and change mod_mixer to play sounds diotically.         
+            % Change the modifier_dbscale_mixer to change BOTH earphones
+            % simultaneously.
+            ind = getMatchingStruct(opts(i).player.modifier, 'fhandle', @modifier_dBscale_mixer);
+            opts(i).player.modifier{ind}.physical_channels = [1 2];
+            
+        end % 
+                
+        % Remove exit after modifier. We don't need to place any
+        % constraints.
+        %
+        % Also remove the "append2playlist" modifier since we won't be
+        % adding any stimuli.
+        mods2remove = [getMatchingStruct(opts(2).player.modifier, 'fhandle', @modifier_exit_after) getMatchingStruct(opts(2).player.modifier, 'fhandle', @modifier_append2playlist)];
+        mask = true(length(opts(2).player.modifier),1);
+        mask(mods2remove) = false;
+        opts(2).player.modifier = {opts(2).player.modifier{mask}}; 
+        
     case 'MLST (Audio, Practice)'
         
         % Practice session based on 'MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
