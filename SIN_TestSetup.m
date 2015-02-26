@@ -1145,7 +1145,7 @@ switch testID
         % used as a scaffold, so add the 8 back in to get us back to 0 dB
         % SNR, then add another 15 dB on top of it to put us in the +15 dB
         % range. 
-        opts.player.noise_mixer = opts.player.noise_mixer.*db2amp(15 + 8); % multiply to apply dB change
+        opts.player.noise_mixer = opts.player.noise_mixer.*db2amp(10 + 8); % multiply to apply dB change
         
     case 'MLST (Audio, Aided, ISTS, 65 dB SPL, +8 dB SNR)'
         

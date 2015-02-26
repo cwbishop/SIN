@@ -1247,12 +1247,12 @@ legend('MLST WAV Files', 'MLST MP4 Files', 'MLST SPSHN', 'location', 'EastOutsid
 
 % =================
 % Create lookup tables for MLST SPSHN
-%   Need separate lookup talbes for 0 dB and +15 dB case
+%   Need separate lookup talbes for 0 dB and +10 dB case
 % =================
 createMLSTlookup('suffix', ';bandpass;0dB_UW', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UW.mp4$');
 createMLSTlookup('suffix', ';bandpass;0dB_UofI', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;0dB_UofI.mp4$');
-createMLSTlookup('suffix', ';bandpass;+10dB_UW', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UW.mp4$');
-createMLSTlookup('suffix', ';bandpass;+10dB_UofI', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]15dB_UofI.mp4$');
+createMLSTlookup('suffix', ';bandpass;+10dB_UW', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]10dB_UW.mp4$');
+createMLSTlookup('suffix', ';bandpass;+10dB_UofI', 'testID', 'MLST (AV, Aided, SPSHN, 75 dB SPL, +0 dB SNR)', 'wav_regexp', '[0-9]{1,2}_T[0-9]{1,2}_[0-9]{3}_[HL][DS];bandpass;[+]10dB_UofI.mp4$');
 
 %% CREATE MLST + 4-talker ISTS STIMULI (65 dB and 80 dB)
 %   Ultimately, we need a single channel speech track + 4 channels of the
