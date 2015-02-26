@@ -31,8 +31,15 @@ function opts=SIN_TestSetup(testID, subjectID)
 % multi-channel maskers is the Hagerman, but the correction factor is dealt
 % with implicitly in the call to createHagerman (see line 292 of
 % createHagerman). 
-mlst_ists_4speaker_correction_db = -6.0147;
-mlst_spshn_4speaker_correction_db = -6.0262;
+% mlst_ists_4speaker_correction_db = -6.0147;
+% mlst_spshn_4speaker_correction_db = -6.0262;
+
+% Although the "theoretical" correction necessary to hit 75 dB from the 4
+% speakers is about -6 dB, CWB's empircal measures showed that we needed to
+% adjust by ~2 dB (to ~4 dB) to hit 75 dB noise levels). He took these
+% measures at UW using the RadioShack handheld SLM. 
+mlst_ists_4speaker_correction_db = -4.0147;
+mlst_spshn_4speaker_correction_db = -4.0262; % 
 
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 

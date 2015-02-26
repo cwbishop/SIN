@@ -45,6 +45,11 @@ allresults = struct(); % structure containing results information for each test/
 % Loop through all tests (eventually)
 for t=1:length(testID)
         
+    % Display the test ID so the user knows which test and file name is
+    % running
+    display(['Running ' testID]);
+    display(['Data saved to: ' opts(1).specific.saveData2mat]);         
+    
     % Switch
     %   Each TEST ID has a unique set of instructions. 
     switch testID{t}
