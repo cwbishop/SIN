@@ -1043,7 +1043,7 @@ switch testID
         % should move onto second stimulus
         opts(2).specific.genPlaylist.files = { opts(2).specific.genPlaylist.files{2:end} }'; 
         
-    case 'HINT (Traditional, 2 lists, diotic)'
+    case 'HINT (Traditional, diotic)'
         
         % This administers the HINT as it is traditionally described,
         % albeit with sounds presented from a single speaker (or earphone).
@@ -1078,6 +1078,38 @@ switch testID
         mask = true(length(opts(2).player.modifier),1);
         mask(mods2remove) = false;
         opts(2).player.modifier = {opts(2).player.modifier{mask}}; 
+        
+        %% Allow user to select lists manually.
+        
+        % Get HINT lists to select
+        [hint_lists, hint_files] =SIN_stiminfo(opts(2));
+        
+        % Compile short hand list selection
+        hint_lists_short = {}; 
+        for i = 1:length(hint_lists)
+            [PATHSTR,NAME,EXT] = fileparts(hint_lists{i}(1:end-1)); 
+            hint_lists_short{i} = NAME;             
+        end % for i
+        
+        % Open selection GUI and select lists
+        [selection_text, selection_index] = SIN_select(hint_lists_short, ...
+            'title', 'HINT List Selection', ...
+            'prompt', 'Select Lists to Test (Hold CTRL to Select Multiple Lists)', ...
+            'max_selections', numel(hint_lists_short)); 
+        
+        % Add hint_files and lists to appropriate fields.
+        %   This will ensure that list tracking is handled properly.
+        playlist = concatenate_lists({hint_files{selection_index}});
+        opts(2).specific.genPlaylist.files = {playlist{2:end}};
+        opts(2).specific.genPlaylist.lists = {hint_lists{selection_index}}';
+        
+        % Replace stimuli in "roving phase" with the first stimulus. This
+        % will be used to find the approximate start location for the
+        % remainder of HINT.
+        opts(1).specific.genPlaylist.files = repmat({playlist{1}}, 20, 1); 
+        
+        % Also add the lists here for accurate list tracking
+        opts(1).specific.genPlaylist.lists = opts(2).specific.genPlaylist.lists;
         
     case 'MLST (Audio, Practice)'
         
