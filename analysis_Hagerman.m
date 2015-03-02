@@ -120,6 +120,12 @@ function [snr_requested, snr_theoretical, snr_empirical, target_empirical, atten
 % estimation file. The weight estimation file is used to estimate absolute
 % levels of the microphones.
 %
+%   'run_haspi':    bool, flag to run HASPI/HASQI analyses. These are *very
+%                   *slow, so we don't want to enable these analyses during
+%                   run time for "spot checking". Instead, we'll want to
+%                   run these when we have more time and computational
+%                   resources.
+%
 %   'HL':   a 1 x 6 vector of pure tone thresholds (audiogram). HLs should
 %           correspond to [250, 500, 1000, 2000, 4000, 6000] Hz. 
 %
@@ -133,7 +139,11 @@ function [snr_requested, snr_theoretical, snr_empirical, target_empirical, atten
 %                                   estimation segment. XXX Description of
 %                                   sign XXX
 %
-%   'haspi_reference_mixer':
+%   'haspi_reference_mixer':    D x 1 vector, where D is the number of
+%                               channels in the original playback file.
+%                               These are mixing weights used to estimate
+%                               the "ideal" signal for the HASPI/HASQI
+%                               calculations. Ex.: [1;0;0;0;0;0]
 %
 %   'haspi_reference_dbspl':    the SPL level of the reference sound. When
 %                               written, this was 65 dB, but this might
@@ -502,36 +512,37 @@ for i=1:numel(group_numbers)
     %   (oo_empirical). Each ear is estimated separately. oo_empirical used
     %   because that's the original phase orientation for noise and target
     %   track.
-    display('Estimating HASPI/HASQI'); 
-    
-    % HASPI reference track
-    %   Mix the sound and collapse into a single reference track. 
-    haspi_reference = sum(oo_original * d.haspi_reference_mixer, 2);
-    
-    % Calculate scaling factor for haspi_reference. This will force the RMS 
-    % of the reference sound to equal 1 
-%     haspi_scale = db2amp(-db(rms(haspi_reference)));
-    
-    % Apply scaling factor to haspi_reference
-%     haspi_reference = haspi_reference * haspi_scale; 
-    
-    % Here we loop through each recording channel and calculate the
-    % intelligibility (HASPI) and quality (HASQI) indices.
-    for c=1:numel(d.channels)
-        display(['Estimating HASPI, SNR = ' num2str(snr_requested(i,1)) ', Channel = ' num2str(d.channels(c))]);
-        
-        % HASPI        
-        warning('Have not accounted for changes in mic gain in empirical recording'); 
-        haspi(i,c) = HASPI_v1(haspi_reference, FS, oo_empirical(:,d.channels(c)), FS, d.HL, 65 - db(rms(haspi_reference)));
-        
-    end % for c=1:numel(d.channels)
-    % Check to make sure we are only dealing with a SINGLE channel in the
-    % reference. Any more than that gets *extremely* complex with the
-    % weighting matrix. 
-%     if numel(find(d.haspi_reference_mixer)) ~= 1
-%         error('Can only accept a single data/speaker combination for HASPI calculations (for now)');
-%     end % if numel(find(d.haspi_referece_mixer)) ~= 1
-    
+    if d.run_haspi
+        display('Estimating HASPI/HASQI'); 
+
+        % HASPI reference track
+        %   Mix the sound and collapse into a single reference track. 
+        haspi_reference = sum(oo_original * d.haspi_reference_mixer, 2);
+
+        % Calculate scaling factor for haspi_reference. This will force the RMS 
+        % of the reference sound to equal 1 
+    %     haspi_scale = db2amp(-db(rms(haspi_reference)));
+
+        % Apply scaling factor to haspi_reference
+    %     haspi_reference = haspi_reference * haspi_scale; 
+
+        % Here we loop through each recording channel and calculate the
+        % intelligibility (HASPI) and quality (HASQI) indices.
+        for c=1:numel(d.channels)
+            display(['Estimating HASPI, SNR = ' num2str(snr_requested(i,1)) ', Channel = ' num2str(d.channels(c))]);
+
+            % HASPI        
+            warning('Have not accounted for changes in mic gain in empirical recording'); 
+            haspi(i,c) = HASPI_v1(haspi_reference, FS, oo_empirical(:,d.channels(c)), FS, d.HL, 65 - db(rms(haspi_reference)));
+
+        end % for c=1:numel(d.channels)
+        % Check to make sure we are only dealing with a SINGLE channel in the
+        % reference. Any more than that gets *extremely* complex with the
+        % weighting matrix. 
+    %     if numel(find(d.haspi_reference_mixer)) ~= 1
+    %         error('Can only accept a single data/speaker combination for HASPI calculations (for now)');
+    %     end % if numel(find(d.haspi_referece_mixer)) ~= 1
+    end % if d.run_haspi    
     % Loop through each channel
     
     
