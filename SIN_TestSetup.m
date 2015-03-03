@@ -54,12 +54,13 @@ if ~exist('subjectID', 'var'), subjectID = ''; end
 % however, are identical. 
 %
 % Mapping is based on the first digit of the subject ID
-if ~isempty(subjectID) && isequal(subjectID(1), '1')
-    SITE_EXT = '_UW';
-elseif ~isempty(subjectID) && isequal(subjectID(1), '2')
+if ~isempty(subjectID) && isequal(subjectID(1), '2')
     SITE_EXT = '_UofI';
 else    
-    SITE_EXT = '';
+    
+    % The UW mapping is the "normal" mapping most people will want/need. 
+    SITE_EXT = '_UW';
+    
 end % 
 
 switch testID
