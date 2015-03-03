@@ -58,7 +58,7 @@ if ~isempty(subjectID) && isequal(subjectID(1), '1')
     SITE_EXT = '_UW';
 elseif ~isempty(subjectID) && isequal(subjectID(1), '2')
     SITE_EXT = '_UofI';
-else
+else    
     SITE_EXT = '';
 end % 
 
@@ -125,7 +125,13 @@ switch testID
         
         % subject ID motif. Described using regexp. Used in
         % SIN_register_subject.m
-        opts.general.subjectID_regexp='^[1 2][0-9]{3}$';
+        %
+        % CWB relaxed this to allow any subject ID format. Proved useful
+        % when using SIN for other studies (e.g., McClannahan's study)
+        %
+        % .* just means it has to have SOME character in there. No
+        % formatting, though. 
+        opts.general.subjectID_regexp='.*';
         
         % List SHA-1 key for SIN's Git repository
         %   This may prove useful when trying to recreate specific testing
