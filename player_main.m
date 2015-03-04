@@ -351,7 +351,10 @@ stim=cell(length(playback_list),1); % preallocate for speed.
 if d.player.preload
     
     for i=1:length(playback_list)    
-
+        
+        % The user needs more feedback, so let's give him/her some.    
+        display(['Loading playback file ' num2str(i) ' of ' num2str(length(playback_list))]); 
+        
         [tstim, fsx]=SIN_loaddata(playback_list{i}, t);
         
         % If fsx is not defined (the case when raw data traces are
