@@ -126,8 +126,11 @@ function [snr_requested, snr_theoretical, snr_empirical, target_empirical, atten
 %                   run these when we have more time and computational
 %                   resources.
 %
-%   'HL':   a 1 x 6 vector of pure tone thresholds (audiogram). HLs should
-%           correspond to [250, 500, 1000, 2000, 4000, 6000] Hz. 
+%   'HL':   a 2 x 6 vector of pure tone thresholds (audiogram). HLs should
+%           correspond to [250, 500, 1000, 2000, 4000, 6000] Hz. The first
+%           row corresponds to the first channel (typically left ear) and
+%           the second row corresponds to the second channel (typically
+%           right ear). 
 %
 %   'haspi_mic_gain':               the microphone gain difference between
 %                                   weight estimation and the recording
@@ -513,6 +516,7 @@ for i=1:numel(group_numbers)
     %   because that's the original phase orientation for noise and target
     %   track.
     if d.run_haspi
+        
         display('Estimating HASPI/HASQI'); 
 
         % HASPI reference track
@@ -533,7 +537,7 @@ for i=1:numel(group_numbers)
 
             % HASPI        
             warning('Have not accounted for changes in mic gain in empirical recording'); 
-            haspi(i,c) = HASPI_v1(haspi_reference, FS, oo_empirical(:,d.channels(c)), FS, d.HL, 65 - db(rms(haspi_reference)));
+            haspi(i,c) = HASPI_v1(haspi_reference, FS, oo_empirical(:,d.channels(c)), FS, d.HL(c,:), 65 - db(rms(haspi_reference)));
 
         end % for c=1:numel(d.channels)
         % Check to make sure we are only dealing with a SINGLE channel in the
@@ -542,6 +546,11 @@ for i=1:numel(group_numbers)
     %     if numel(find(d.haspi_reference_mixer)) ~= 1
     %         error('Can only accept a single data/speaker combination for HASPI calculations (for now)');
     %     end % if numel(find(d.haspi_referece_mixer)) ~= 1
+    else
+        
+        % Define empty variables so things won't crash. 
+        haspi = [];
+        hasqi = [];
     end % if d.run_haspi    
     % Loop through each channel
     
@@ -567,7 +576,10 @@ noise_theoretical = {noise_theoretical{I}}';
 snr_requested = snr_requested(I, :); 
 residual_track = residual_track(I); 
 attenuation = attenuation(I,:); 
-haspi = haspi(I,:); 
+
+if d.run_haspi
+    haspi = haspi(I,:); 
+end 
 
 %% ESTIMATE THEORETICAL SNR (RMS)
 %   As a first pass, we'll take a look at the SNR as measured using a basic
@@ -739,14 +751,15 @@ if d.pflag > 0
     grid on
     
     % HASPI plots
-    figure
-    hold on
-    plot(snr_requested, haspi, 's-', 'linewidth', 2)
-    grid on
-    xlabel('Input SNR (dB, approx.)');
-    ylabel('HASPI');
-    title(results.RunTime.specific.testID)
-    
+    if d.run_haspi
+        figure
+        hold on
+        plot(snr_requested, haspi, 's-', 'linewidth', 2)
+        grid on
+        xlabel('Input SNR (dB, approx.)');
+        ylabel('HASPI');
+        title(results.RunTime.specific.testID)
+    end % if d.run_haspi
 end % if d.pflag
 
 function [target, noise] = process_hagerman(oo, oi, ii, io, fs, varargin)

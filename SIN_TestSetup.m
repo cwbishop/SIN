@@ -38,8 +38,14 @@ function opts=SIN_TestSetup(testID, subjectID)
 % speakers is about -6 dB, CWB's empircal measures showed that we needed to
 % adjust by ~2 dB (to ~4 dB) to hit 75 dB noise levels). He took these
 % measures at UW using the RadioShack handheld SLM. 
-mlst_ists_4speaker_correction_db = -4.0147;
-mlst_spshn_4speaker_correction_db = -4.0262; % 
+%
+% Wu took a measurement with Larsen Davis mic and SLM and found the 4
+% speaker noise to be TOO LOUD. Confirmed that they were spot on with the
+% cheap radioshack SLM, however. So need to adjust back to -6 dB and
+% confirm with Larson Davis SLM. These aren't strictly 6 dB, but they're
+% close enough that it won't matter much. 
+mlst_ists_4speaker_correction_db = -6;
+mlst_spshn_4speaker_correction_db = -6; % 
 
 if ~exist('testID', 'var') || isempty(testID), 
     testID='testlist'; 
@@ -143,6 +149,14 @@ switch testID
         %   This will vary by project. Field used to generate test list in
         %   SIN_GUI. CWB does not recall using it elsewhere. 
         opts.general.testlist = SIN_TestSetup('testlist', ''); 
+        
+        % Add computer information
+        [status, hostname] = system('hostname');
+        if status
+            error('Could not find hostname'); 
+        else
+            opts.general.computer.hostname = deblank(hostname); 
+        end % if ~status
         
         % Set subject information
         %   - Set subject identifier (subjectID)
@@ -1512,7 +1526,8 @@ switch testID
                 'filter_type', 'high', ...
                 'filter_order', 4, ...
                 'filter_frequency_range', 125, ...
-                'analysis_window',  [-30 inf] ... % use only the last 30 seconds in analyses. 
+                'analysis_window',  [-30 inf], ... % use only the last 30 seconds in analyses. 
+                'run_haspi',    false ... % Don't run HASPI/HASQI from the GUI. These will be incredibly slow and make it tough to run tests on the fly.
                 )); 
     case 'Hagerman (Unaided, ISTS)'       
         
