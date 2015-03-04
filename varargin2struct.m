@@ -23,7 +23,10 @@ function d=varargin2struct(varargin)
 % Flag for while loop
 %   140611 CWB: Fixed infinite loop when users pass in an empty argument
 %   list.
-if nargin>0
+%
+%   150304 CWB: Still getting stuck in infinite loop often. Decided to do
+%   something about it here by checking if varargin is an empty cell. 
+if nargin>0 && ~isempty(varargin{1})
     keep_running=true; 
 else 
     keep_running=false;

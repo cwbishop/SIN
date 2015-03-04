@@ -751,6 +751,7 @@ switch testID
                 'RTSest',   'reversal_mean',  ... % specify first trial to include in average. Requires 'trial' field as well
                 'start_at_trial', opts(2).player.modcheck.startalgoat(2), ... % Only want to look at the trials that are used for the 3down1up algo
                 'start_at_reversal', 1,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
+                'trials_to_score', Inf, ... % we'll include all trials in our scoring, since the reversals can happen at any point. 
                 'include_next_trial', true, ...
                 'plot', true)); % generate plot
         
@@ -918,6 +919,7 @@ switch testID
                 'RTSest',   'trial_mean',  ... % specify first trial to include in average. Requires 'trial' field as well
                 'start_at_trial', 4,  ... % start at trial 4 (the first trial has been eaten up by the dynamic search)
                 'include_next_trial', true, ...
+                'trials_to_score', 17, ... % We're using two lists, so we want to include 17 total trials in scoring algorithm (see HINT manual)
                 'plot', true)); % generate plot
     
         % ============================
@@ -1072,7 +1074,7 @@ switch testID
             % Change the modifier_dbscale_mixer to change BOTH earphones
             % simultaneously.
             ind = getMatchingStruct(opts(i).player.modifier, 'fhandle', @modifier_dBscale_mixer);
-            opts(i).player.modifier{ind}.physical_channels = [1 2];
+            opts(i).player.modifier{ind}.physical_channels = [1 2];            
             
         end % 
                 
@@ -1117,6 +1119,20 @@ switch testID
         
         % Also add the lists here for accurate list tracking
         opts(1).specific.genPlaylist.lists = opts(2).specific.genPlaylist.lists;
+        
+        % Update analyses based on the number of stimuli presented. We want
+        % to exclude the first 4 - 5 trials, depending on how we count.
+        for i=1:length(opts)
+                
+            opts(i).analysis.params.trials_to_score = length(opts(2).specific.genPlaylist.files)  - 3;
+            
+            % If we are appending a trial to the scoring, then we'll want
+            % to include this in the scoring as well.
+            if opts(i).analysis.params.include_next_trial
+                opts(i).analysis.params.trials_to_score = opts(i).analysis.params.trials_to_score + 1;
+            end % if opts(i).analysis.params.include_next_trial
+            
+        end % for i=1:length(opts)
         
     case 'MLST (Audio, Practice)'
         

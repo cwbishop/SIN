@@ -168,8 +168,10 @@ end % if ...
 
 %% IF FIRST FILE IN PLAYLIST IS PRESENTED
 %   If we are presenting the first stimulus in the appended stimulus train,
-%   then append the list to the subject's used list data structure. 
-if d.player.modifier{modifier_num}.stimuli_appended && (trial == d.player.modifier{modifier_num}.append_at_trial(end) + 1) 
+%   then append the list to the subject's used list data structure.
+%
+%   Added in the "isfield" check for reverse compatibility. 
+if isfield(d.player.modifier{modifier_num}, 'stimuli_appended') && d.player.modifier{modifier_num}.stimuli_appended && (trial == d.player.modifier{modifier_num}.append_at_trial(end) + 1) 
     
     % If the player is in the 'exit' state, then we want to ...
     %   1) Remove the appended files from the playback list (sort of

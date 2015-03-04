@@ -82,6 +82,15 @@ function results = analysis_HINT(results, varargin)
 %                       in the mod_mixer time series. (required for all
 %                       scoring approaches) 
 %
+%   'trials_to_score':  integer, the number of trials to include in the
+%                       scoring (or reversal detection). If Inf, all trials
+%                       after the start_at_trial are considered. Otherwise,
+%                       trials are limited to
+%                       start_at_trial:start_at_trial+trials_to_score. Only
+%                       these trials will be included considered for all
+%                       scoring approaches (mean, reversal_mean, etc.).
+%                       (default = Inf)
+%
 %   'start_at_reversal':    integer, the first reversal that should be
 %                           considered in the time series. (Only necessary
 %                           for 'reversal_mean' scoring). 
@@ -177,7 +186,14 @@ time_series = db(modmix(channel_mask), 'voltage');
 
 %% TRIM TIME SERIES
 %   Remove the trials we don't want to use in scoring.
-time_series_trim = time_series(d.start_at_trial:end); 
+
+% Need to handle the "Inf" case here if users want to include all trials.
+if d.trials_to_score == Inf
+    
+    % Need to add the 1 because we subtract 1 below. 
+    d.trials_to_score = length(time_series) - d.start_at_trial + 1;
+end % 
+time_series_trim = time_series(d.start_at_trial:d.start_at_trial + d.trials_to_score - 1); 
 
 %% CALCULATE RTS
 switch d.RTSest
@@ -208,7 +224,7 @@ results(end).analysis.results = struct( ....
 
 % Print SRT value to terminal
 %   This makes it easier to copy/paste into
-display(['RTS = ' num2str(rts)]); 
+display(['SRT = ' num2str(rts)]); 
 
 %% CREATE PLOTS
 if d.plot
@@ -236,7 +252,7 @@ if d.plot
         'linewidth', 3, ...
         'marker',   's', ...
         'linestyle', '', ...
-        'legend',   {{'Time Course', 'RTS Trials', 'RTS Est.'}}, ...
+        'legend',   {{'Time Course', 'SRT Trials', 'SRT Est.'}}, ...
         'fignum',   h);
     
     % Label the rts point
