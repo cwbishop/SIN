@@ -40,7 +40,6 @@ function results = SIN_runTest(opts, playlist)
 testID = {opts(1).specific.testID}; 
 
 %% INITIALIZE RETURN VARIABLES
-allresults = struct(); % structure containing results information for each test/test stage. 
 
 % Loop through all tests (eventually)
 for t=1:length(testID)
@@ -49,6 +48,12 @@ for t=1:length(testID)
     % running
     display(['Running ' testID]);
     display(['Data saved to: ' opts(1).specific.saveData2mat]);         
+    
+    % Clear the previous results from the work space. These can be very
+    % large and make tests run very sluggishly. Better to remove them prior
+    % to run time.
+    display('Clearing previous test results to improve performance');
+    evalin('base', 'clear results'); 
     
     % Switch
     %   Each TEST ID has a unique set of instructions. 
@@ -195,6 +200,20 @@ for t=1:length(testID)
 %     if results(1).RunTime.analysis.run
 %         results = results(1).RunTime.analysis.fhand(results, results(1).RunTime.analysis.params);
 %     end % if results(1).analysis.run
+    
+    %% Tell the user we're saving the data.
+    
+    % Estimate the size of the results structure
+    var_info = whos('results');
+    mbytes = var_info.bytes/(1000^2);
+    
+    display(['Saving results to file: ' opts(1).specific.saveData2mat]); 
+    display(['Results are ' num2str(mbytes) ' MB in size']);
+    
+    % Let the user know this could take a while if it's over a GB. 
+    if mbytes > 1000
+        display('This might take a while. Please be patient'); 
+    end 
     
     % Save to results file
     %   Results should have whatever data are explicitly stored in the
