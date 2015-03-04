@@ -115,8 +115,18 @@ runtime = results(end).RunTime;
 %   to tack on a new trial. The best way to do this at present is to check
 %   the mic_recording to see if the recordings were gathered (at the end
 %   each trial).
-if (numel(runtime.sandbox.mic_recording) == size(runtime.sandbox.mod_mixer,3)) && d.include_next_trial
-    % Here, we append the next trial. 
+
+% Save the TOTAL TRIALS to a constant
+TOTAL_TRIALS = length(runtime.sandbox.mic_recording);
+
+% Truncate the mod mixer to match the number of actual trials presented.
+runtime.sandbox.mod_mixer = runtime.sandbox.mod_mixer(:,:,1:TOTAL_TRIALS);
+
+% Append an "additional" trial if include_next_trial is true
+if d.include_next_trial
+    
+    % Increase the trial number for indexing purposes.
+    runtime.sandbox.trial = TOTAL_TRIALS + 1; 
     
     % Choose which algo we're supposed to use
     [algo_handle, algo_index] = HINT_chooseAlgo(runtime.player.modcheck.algo, runtime.player.modcheck.startalgoat, runtime.sandbox.trial);
@@ -136,11 +146,11 @@ if (numel(runtime.sandbox.mic_recording) == size(runtime.sandbox.mod_mixer,3)) &
         [~, runtime] = runtime.player.modifier{i}.fhandle([], mod_code, runtime); 
     end % 
 
-elseif (numel(runtime.sandbox.mic_recording) ~= size(runtime.sandbox.mod_mixer,3)) && ~d.include_next_trial 
-    % Here, we the next trial has already been estimated during sound
-    % playback (although the last sound was not presented). User does not
-    % want to include the next trial, so we trim it out.
-    runtime.sandbox.mod_mixer = runtime.sandbox.mod_mixer(:,:,1:end-1);
+% elseif (numel(runtime.sandbox.mic_recording) ~= size(runtime.sandbox.mod_mixer,3)) && ~d.include_next_trial 
+%     % Here, we the next trial has already been estimated during sound
+%     % playback (although the last sound was not presented). User does not
+%     % want to include the next trial, so we trim it out.
+%     runtime.sandbox.mod_mixer = runtime.sandbox.mod_mixer(:,:,1:end-1);
 end % 
 
 % Sanity check to make sure we don't have too many trials in the mod_mixer
@@ -196,6 +206,10 @@ rts = mean(time_series_trim(rts_mask));
 results(end).analysis.results = struct( ....
     'rts',  rts); % 
 
+% Print SRT value to terminal
+%   This makes it easier to copy/paste into
+display(['RTS = ' num2str(rts)]); 
+
 %% CREATE PLOTS
 if d.plot
     
@@ -226,7 +240,7 @@ if d.plot
         'fignum',   h);
     
     % Label the rts point
-    label_datapoint(-10, rts-3, 'text', ['RTS= ', num2str(rts)], 'color', 'b', 'fontsize', 12, 'fontweight', 'bold');
+    label_datapoint(-10, rts-3, 'text', ['SRT = ', num2str(rts)], 'color', 'b', 'fontsize', 12, 'fontweight', 'bold');    
     
     % Add Figure to results structure
     results(end).analysis.results.figure = handle2struct(h); 
