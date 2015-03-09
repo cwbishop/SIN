@@ -123,7 +123,8 @@ end % if ~d.player.modifier{modifier_num}.initialized
 if trial == numel(d.sandbox.playback_list);
     
     % Tell user we're adding stimuli
-    cprintf('blue', 'Adding stimuli to playback list and loading them.'); 
+    %cprintf('blue', 'Adding stimuli to playback list and loading them.'); 
+    display('Adding stimuli to playback list and loading them.'); 
     
     opts = d; 
     opts.specific.genPlaylist = d.player.modifier{modifier_num};
