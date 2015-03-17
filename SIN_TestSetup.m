@@ -407,12 +407,21 @@ switch testID
         calibration_file = fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav');
         
         % Write a two channel version of the file
-        [cal, fs] = SIN_loaddata(calibration_file);         
+        [cal, fs] = SIN_loaddata(calibration_file); 
+        info = audioinfo(calibration_file);        
         cal = [cal zeros(size(cal))];
-        [PATHSTR,NAME,EXT] = fileparts(calibration_file);        
-         
+        [PATHSTR,NAME,EXT] = fileparts(calibration_file);         
+        output_file = fullfile(PATHSTR, [ NAME '2CHAN' EXT]);
+        audiowrite(output_file, cal, fs, 'BitsPerSample', info.BitsPerSample); 
+        [PATHSTR,NAME,EXT] = fileparts(output_file);         
+        % Setup player for playback through windows media player. We'll use
+        % the MLST as a starting point 
+        opts = SIN_TestSetup('MLST (Audio, Practice)', subjectID); 
         
-        
+        % Change file lookup information around 
+        opts.specific.root = fullfile(opts.general.root, 'playback', 'Noise');
+        opts.specific.list_regexp = '';
+        opts.specific.wav_regexp = [NAME EXT];
         
     case 'Audio Test (10 Hz click train)'
         
