@@ -1,0 +1,7 @@
+Place the calibrator on the correct microphone (Left for channel 1, Right for channel 2).
+
+Start calibration tone.
+
+Click continue to begin recording.
+
+After recording from BOTH channels, check the recordings using the "Review Recordings" button.

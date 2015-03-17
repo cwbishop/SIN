@@ -225,6 +225,112 @@ switch testID
         % Return so we do not assign a UUID to defaults. 
         return
         
+    case 'Record Calibration Tone'        
+        
+        % This is a bear bones test to create a fixed-duration recording.
+        % The basic approach is to hook up a calibrator to our microphones,
+        % ask the user what the output levels of the calibrator is (e.g.,
+        % 124 dB SPL), then record the tone for a fixed time frame.
+        
+        % Use the Hagerman as a starting point since that just does
+        % playback and recording of sound files. We'll create a temporary
+        % file of a fixed length (say, 20 seconds) and add in some user
+        % prompts along the way during test setup. That should make things
+        % relatively painless.
+        %% SETUP FOR HAGERMAN STYLE RECORDINGS
+        %   This specific experiment has some basic needs. 
+        %       - Play back and record a specific set of files in
+        %       randomized order. 
+        %       - Create some plots/summary statistics after run time. 
+        %   That's it! Let's see how quickly that can be done ...
+        % ============================
+        % Get default information
+        % ============================
+        opts=SIN_TestSetup('Defaults', subjectID); 
+        
+        % ============================
+        % Test specific information. These arguments are used by
+        % test-specific auxiliary functions, like importHINT and the like. 
+        % ============================
+        
+        % set the testID (required)
+        opts.specific.testID = testID;
+        
+        % root directory for HINT stimuli and lookup list
+        opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
+        
+        % set a regular expression to find available lists within the HINT
+        % root directory.
+        %   Look for all directories beginning with "List" and ending in
+        %   two digits. 
+        opts.specific.list_regexp=''; 
+                
+        % Set regular expression for wav files
+        opts.specific.wav_regexp = 'spshn;bandpass;0dB[(noise floor)]'; % Use calibrated noise files (calibrated to 0 dB)
+        
+        % full path to HINT lookup list. Currently an XLSX file provided by
+        % Wu. Used by importHINT.m
+                
+        % The following set of subfields are required for playlist
+        % generation. They are used in a call to SIN_getPlaylist, which in
+        % turn invokes SIN_stiminfo and other supportive functions.         
+        opts.specific.genPlaylist.NLists = 1; % Set to 1 since we are essentially presenting '1 list'
+        opts.specific.genPlaylist.Randomize = ''; % randomize playback order. 
+        opts.specific.genPlaylist.Repeats = 'any'; % 
+        opts.specific.genPlaylist.Append2UsedList = false; % Theres not really anything here to track, so don't worry about adding it to the used stimulus list. 
+        
+        % ============================
+        % Player configuration
+        %   The fields below are used by the designated player to configure
+        %   playback.
+        %
+        %   - Note: some of these are set in 'Project AD' above
+        % ============================
+        
+        % Function handle for designated player
+        opts.player.player_handle = @player_main; 
+        
+        opts.player = varargin2struct( ...
+            opts.player, ...
+            'adaptive_mode',    'none', ... % 'bytrial' means modchecks performed after each trial.
+            'record_mic',       true, ...   % record playback and vocal responses via recording device. 
+            'append_files',     false, ...  % append files before playback (makes one long trial)
+            'window_fhandle',   @hann, ...  % windowing function handle (see 'window.m' for more options)
+            'window_dur',       0.005, ...  % window duration in seconds.
+            'playback_mode',    'standard', ... % play each file once and only once 
+            'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'startplaybackat',    0, ...  % start playback at beginning of files
+            'contnoise',    [], ... % no continuous noise to play (for this example) 
+            'wait_for_stop',    true,   ... % Wait for sound playback to end before returning control to player_main
+            'state',    'run'); % Start in run state
+            
+        % ============================
+        % Modification check (modcheck) configuration        
+        % ============================
+        opts.player.modcheck=struct(); % Empty modcheck (don't need one here)
+        
+        % ============================
+        % Modifier configuration        
+        % ============================
+        %   No modifiers for playback
+        % Modifier to scale mixing information
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle', @modifier_ShowInstructions, ...
+            'body', fileread(fullfile(opts.general.instruction_dir, 'record_calibration_tone.txt')), ...
+            'header', sprintf(['Calibrate Channel 1 (Left)']), ... % header
+            'mod_stage', ''); 
+               
+        % Prompt user for calibration level and store it in the specific
+        % field. 
+        cal_info = inputdlg({'Enter the SPL of the calibration tone in dB', ...
+            'Enter the microphone gain in dB.'});
+        opts.specific.cal_info = cal_info;
+       
+        % Duplicate test for second channel.
+        
+        % Change analysis function (we don't need one).
+        
     case 'Calibrate Speaker Levels'
         
         % The calibration routine is pretty straightforward. All we need to
