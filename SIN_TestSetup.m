@@ -299,7 +299,7 @@ switch testID
             'window_dur',       0.005, ...  % window duration in seconds.
             'playback_mode',    'standard', ... % play each file once and only once 
             'playertype',       'ptb (standard)', ... % use standard PTB playback. Streaming can introduce issues.                          '
-            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [] , 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
+            'mod_mixer',    fillPlaybackMixer(opts.player.playback_map, [0;0;0;0;0;0], 0), ... % play stimuli at full amplitude. They are already scaled in the files. 
             'startplaybackat',    0, ...  % start playback at beginning of files
             'contnoise',    [], ... % no continuous noise to play (for this example) 
             'wait_for_stop',    true,   ... % Wait for sound playback to end before returning control to player_main
@@ -328,6 +328,7 @@ switch testID
         opts.specific.cal_info = cal_info;
        
         % Duplicate test for second channel.
+        opts(2) = opts; 
         
         % Change analysis function (we don't need one).
         
@@ -398,6 +399,20 @@ switch testID
         
         % Reset options
         opts = cal; 
+    case 'Calibrate Windows Media Player'
+        
+        % Play the calibration stimulus through windows media player.
+        
+        % 
+        calibration_file = fullfile(fileparts(which('runSIN')), 'playback', 'Noise', 'HINT-SPSHN;bandpass;0dB.wav');
+        
+        % Write a two channel version of the file
+        [cal, fs] = SIN_loaddata(calibration_file);         
+        cal = [cal zeros(size(cal))];
+        [PATHSTR,NAME,EXT] = fileparts(calibration_file);        
+         
+        
+        
         
     case 'Audio Test (10 Hz click train)'
         
