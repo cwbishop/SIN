@@ -399,6 +399,7 @@ switch testID
         
         % Reset options
         opts = cal; 
+        
     case 'Calibrate Windows Media Player'
         
         % Play the calibration stimulus through windows media player.
@@ -408,8 +409,17 @@ switch testID
         
         % Write a two channel version of the file
         [cal, fs] = SIN_loaddata(calibration_file); 
-        info = audioinfo(calibration_file);        
-        cal = [cal zeros(size(cal))];
+        info = audioinfo(calibration_file);       
+        
+        % We need to route the calibration sound to either channel 1 (UW)
+        % or channel 2 (U of I). We can use the SITE_EXT to determine which
+        % site we are at
+        if isequal(SITE_EXT, '_UW')
+            cal = [cal zeros(size(cal))];
+        elseif isequal(SITE_EXT, '_UofI')
+            cal = [zeros(size(cal)) cal];
+        end % if isequal(SITE_EXT ...
+        
         [PATHSTR,NAME,EXT] = fileparts(calibration_file);         
         output_file = fullfile(PATHSTR, [ NAME '2CHAN' EXT]);
         audiowrite(output_file, cal, fs, 'BitsPerSample', info.BitsPerSample); 
@@ -418,11 +428,33 @@ switch testID
         % the MLST as a starting point 
         opts = SIN_TestSetup('MLST (Audio, Practice)', subjectID); 
         
+        % Change test ID
+        opts.specific.testID = testID; 
+        
         % Change file lookup information around 
         opts.specific.root = fullfile(opts.general.root, 'playback', 'Noise');
         opts.specific.list_regexp = '';
         opts.specific.wav_regexp = [NAME EXT];
         
+        % We don't need a mod check
+        opts.player.modcheck = struct();
+        
+        % We don't need any modifiers, except instructions, which we'll add
+        % in below.
+        opts.player.modifier = {struct()};
+        
+        % Add in instructions
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle', @modifier_ShowInstructions, ...
+            'body', fileread(fullfile(opts.general.instruction_dir, 'calibrate_windows_media_player.txt')), ...
+            'header', sprintf(['Instructions: ' testID]), ... % header
+            'mod_stage', '');
+        
+        % Set lists to 1 so playlist generation won't buck
+        opts.specific.genPlaylist.NLists = 1;
+        
+        % Also clear out lists field from MLST call
+        opts.specific.genPlaylist.lists = {}; 
     case 'Audio Test (10 Hz click train)'
         
         % A test to perform a timing test of the playback/recording loop.

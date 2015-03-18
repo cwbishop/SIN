@@ -1,0 +1,9 @@
+A sound will play from the speaker at 0 degrees azimuth. 
+
+- Set the SLM dial to 60, response to “Slow”, and weighting to “C”. 
+
+- Enter the testing booth
+
+- Place the SPL meter at the location of the listener’s head with the sensor facing the active speaker. 
+
+- Meter should read 65 dB (±1 dB). If not, see Troubleshooting.
