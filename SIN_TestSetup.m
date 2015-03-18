@@ -377,10 +377,18 @@ switch testID
         
         % Redo key mapping to prevent users from increasing/decreasing
         % volume.
+        %
+        % 050318 CWB: Discovered this doesn't work properly. Need to remove
+        % the modifiers to prevent scaling. 
          opts.player.modcheck.map(opts.player.modcheck.keys(1:2))=false; 
         
-        % Clear analysis
-        opts.analysis.run = false; 
+        % Remove all modifiers and add in the ones we want.
+        opts.player.modifier = {struct()}; 
+        
+        % Add in playback control.
+        opts.player.modifier{end+1} = struct( ...
+            'fhandle', @modifier_PlaybackControl, ...
+            'mod_stage',    'premix');  % Apply during premixing phase. 
         
         % Now create a test stage for each speaker in turn. All we should
         % have to do is modify the mod_mixer to present the sound from the
@@ -1591,7 +1599,7 @@ switch testID
         % set the testID (required)
         opts.specific.testID = testID;
         
-        % root directory for HINT stimuli and lookup list
+        % root directory for Hagerman stimuli and lookup list
         opts.specific.root=fullfile(opts.general.root, 'playback', 'Hagerman');        
         
         % set a regular expression to find available lists within the HINT
@@ -1599,7 +1607,13 @@ switch testID
         %   Look for all directories beginning with "List" and ending in
         %   two digits. 
         opts.specific.list_regexp=''; 
-                
+             
+        % Prompt user for calibration level and store it in the specific
+        % field. 
+        cal_info = inputdlg({'Enter the gain for the LEFT microphone (Channel 1) in dB.', ...
+            'Enter the gain for the RIGHT microphone (Channel 2) in dB'});
+        opts.specific.cal_info = cal_info;
+        
         % Set regular expression for wav files
         opts.specific.wav_regexp = 'spshn;bandpass;0dB'; % Use calibrated noise files (calibrated to 0 dB)
         
@@ -2193,6 +2207,7 @@ switch testID
             'title', 'Acceptable Noise Level (ANL)');
 
         % Assign keys in map
+        %   CWB isn't sure this has an actual function. 
         opts.player.modcheck.map(opts.player.modcheck.keys)=1; 
         
         % ============================
