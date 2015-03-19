@@ -1776,6 +1776,11 @@ switch testID
         % Set the mixer to all zeros
         opts.player.mod_mixer = fillPlaybackMixer(opts.player.playback_map, [], 0);
         
+        % Record mic gains. 
+        cal_info = inputdlg({'Enter the gain for the LEFT microphone (Channel 1) in dB.', ...
+            'Enter the gain for the RIGHT microphone (Channel 2) in dB'});
+        opts.specific.cal_info.mic_gain = cal_info;
+        
         % Create a test sequence to play (and record) the sound from each
         % speaker in turn.         
         for i=1:opts(1).player.playback_map.channel_number
