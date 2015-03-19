@@ -322,10 +322,16 @@ switch testID
             'mod_stage', ''); 
                
         % Prompt user for calibration level and store it in the specific
-        % field. 
+        % field. Also ask for details about calibration tone frequency and
+        % mic gain levels. These will be important for estimating absolute
+        % levels when necessary. 
         cal_info = inputdlg({'Enter the SPL of the calibration tone in dB', ...
-            'Enter the microphone gain in dB.'});
-        opts.specific.cal_info = cal_info;
+            'Enter calibration tone frequency in Hz.', ...
+            'Enter the gain for the LEFT microphone (Channel 1) in dB.', ...
+            'Enter the gain for the RIGHT microphone (Channel 2) in dB'});
+        opts.specific.cal_info.cal_tone_db = cal_info{1};
+        opts.specific.cal_info.cal_tone_hz = cal_info{2};
+        opts.specific.cal_info.mic_gain = {cal_info{3:4}}';
        
         % Duplicate test for second channel.
         opts(2) = opts; 
@@ -1612,7 +1618,7 @@ switch testID
         % field. 
         cal_info = inputdlg({'Enter the gain for the LEFT microphone (Channel 1) in dB.', ...
             'Enter the gain for the RIGHT microphone (Channel 2) in dB'});
-        opts.specific.cal_info = cal_info;
+        opts.specific.cal_info.mic_gain = cal_info;
         
         % Set regular expression for wav files
         opts.specific.wav_regexp = 'spshn;bandpass;0dB'; % Use calibrated noise files (calibrated to 0 dB)
