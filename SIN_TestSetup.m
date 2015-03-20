@@ -1603,7 +1603,7 @@ switch testID
         opts.player.mod_mixer = zeros(size(opts.player.mod_mixer)); 
         opts.player.mod_mixer(1,1) = 1; % routes speech to front speaker 
         
-    case 'Hagerman (Unaided, ISTS, Set Mic Levels)'
+    case 'Hagerman (Aided, ISTS, Set Mic Levels)'
         
         % Here we simply play a single file with the lowest SNR (-10 dB)
         % so the experimenter can set the mic levels accordingly. We'll use
@@ -1617,7 +1617,7 @@ switch testID
         % Change wav_regexp to get a single file at poorest SNR
         opts.specific.wav_regexp = [opts.specific.wav_regexp ';-10dB SNR;TorigNorig'];
         
-    case 'Hagerman (Unaided, SPSHN, Set Mic Levels)'
+    case 'Hagerman (Aided, SPSHN, Set Mic Levels)'
         
         opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID); 
         
