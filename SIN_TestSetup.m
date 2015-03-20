@@ -1584,6 +1584,49 @@ switch testID
         opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID); 
         opts.specific.testID = testID; 
         
+    case 'Hagerman (Unaided, Record Clean Speech)'
+        
+        % Here, we record speech in the absence of noise. To do this, we
+        % should be able to use the Hagerman (Unaided, SPSHN) and just 
+        % change the wav_regexp field to select a single file for playback.
+        % We only need to record the speech in one orientation, CWB thinks.
+        opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID);
+        
+        % Change the test ID
+        opts.specific.testID = testID;
+        
+        % Change the regular expression.
+        opts.specific.wav_regexp = [opts.specific.wav_regexp ';00dB SNR;TorigNorig'];
+        
+        % Change the mixer settings so we only present the speech signal
+        % from the front speaker
+        opts.player.mod_mixer = zeros(size(opts.player.mod_mixer)); 
+        opts.player.mod_mixer(1,1) = 1; % routes speech to front speaker 
+        
+    case 'Hagerman (Unaided, ISTS, Set Mic Levels)'
+        
+        % Here we simply play a single file with the lowest SNR (-10 dB)
+        % so the experimenter can set the mic levels accordingly. We'll use
+        % the ISTS stimuli in this case. We'll make another test to deal
+        % with SPSHN.
+        opts = SIN_TestSetup('Hagerman (Unaided, ISTS)', subjectID); 
+        
+        % Change the test ID
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to get a single file at poorest SNR
+        opts.specific.wav_regexp = [opts.specific.wav_regexp ';-10dB SNR;TorigNorig'];
+        
+    case 'Hagerman (Unaided, SPSHN, Set Mic Levels)'
+        
+        opts = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID); 
+        
+        % Change the test ID
+        opts.specific.testID = testID; 
+        
+        % Change wav_regexp to get a single file at poorest SNR
+        opts.specific.wav_regexp = [opts.specific.wav_regexp ';-10dB SNR;TorigNorig'];
+        
     case 'Hagerman (Unaided, SPSHN)'
         
         %% SETUP FOR HAGERMAN STYLE RECORDINGS
@@ -1955,6 +1998,8 @@ switch testID
         % Add the analysis from hagerman, whatever it currently is
         hag = SIN_TestSetup('Hagerman (Unaided, SPSHN)', subjectID);         
         opts.analysis = hag.analysis; 
+        
+    
         
     case 'HINT (First Correct)'
         
