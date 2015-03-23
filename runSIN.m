@@ -512,7 +512,7 @@ end
 load_results_button_Callback(hObject, eventdata, handles)
 
 % Now review the recordings
-evalin('base', ['SIN_review_recordings(results,' '''assign_to_workspace''' ', true);']); 
+evalin('base', ['SIN_review_recordings(results,' '''assign_to_workspace''' ', true, ' '''sound_playback''' ', 2, ' '''playback_channels''' ', 1:2 );']); 
 
 
 % --- Executes on button press in button_stop.

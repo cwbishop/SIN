@@ -1332,6 +1332,10 @@ switch testID
         % Change testID
         for i=1:numel(opts)
             opts(i).specific.testID = testID; 
+            
+            % Don't stop if we encounter an error.
+            opts(i).player.stop_if_error = false;
+            
         end % for i=1:numel(opts)
         
     case 'MLST (AV, Practice)'
@@ -1342,6 +1346,10 @@ switch testID
         % Change testID
         for i=1:numel(opts)
             opts(i).specific.testID = testID; 
+            
+            % Don't stop if we encounter an error.
+            opts(i).player.stop_if_error = false;
+            
         end % for i=1:numel(opts)
         
     case 'MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
