@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 17-Dec-2014 13:42:25
+% Last Modified by GUIDE v2.5 03-Apr-2015 17:20:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -588,3 +588,22 @@ else
     post_feedback(hObject, eventdata, handles, ['Results already loaded.'], 1); % post error message to terminal
     
 end % 
+
+
+% --- Executes on button press in test_checklist_button.
+function test_checklist_button_Callback(hObject, eventdata, handles)
+% hObject    handle to test_checklist_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Here, we review the tests for a given subject.
+contents = cellstr(get(handles.subject_popup,'String'));
+[test_list, is_complete] = test_checklist('subject_id', contents{get(handles.subject_popup,'Value')});
+
+% Display a warning for all tests that have not been run
+if any(~is_complete)
+    % If we have any incomplete tests, give a warning
+    warndlg({sprintf('No Data Found for the Following Tests:\n'), test_list{~is_complete}}'); 
+else
+    message('All tests appear to be complete. But double/triple check!');
+end % if / else
