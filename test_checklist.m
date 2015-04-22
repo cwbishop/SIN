@@ -13,9 +13,15 @@ function [all_tests, is_complete] = test_checklist(varargin)
 %
 % Parameters:
 %
+%   subject_tests: cell array of subject tests. 
+%
+% Alternative to subject_tests:
+%   
 %   subject_id: string, subject ID
 %
 %   subject_directory:  string, directory in which subject data are stored.
+%
+% Must provide: 
 %
 %   test_regexp:    regular expression used to filter available tests
 %                   listed in SIN_TestSetup.
@@ -36,12 +42,13 @@ function [all_tests, is_complete] = test_checklist(varargin)
 opts = varargin2struct(varargin{:}); 
 
 %% DEFAULTS
+if ~isfield(opts, 'subject_tests') || ~iscell(opts.subject_tests), opts.subject_tests = {}; end 
 
 % Populate List Regular Expression
-if ~isfield(opts, 'test_regexp') || isempty(test_regexp)
+if ~isfield(opts, 'test_regexp') || isempty(opts.test_regexp)
     
     % A list of likely regular expressions that the user may want to use
-    regexp_list = {'MLST', 'HINT', 'ANL', 'Hagerman'}; 
+    regexp_list = {'MLST', 'HINT', 'ANL', 'Hagerman', 'Word Span'}; 
         
     [opts.test_regexp] = SIN_select(regexp_list, ...
         'title', 'Filter Selection', ...
@@ -54,7 +61,7 @@ if ~isfield(opts, 'test_regexp') || isempty(test_regexp)
 end % if ~isfield(opts, 'test_regexp') ...
 
 % Populate subject selection
-if ~isfield(opts, 'subject_id') || isempty(opts.subject_id)
+if (~isfield(opts, 'subject_id') || isempty(opts.subject_id)) && isempty(opts.subject_tests)
     
     % Get a full list of current subjects
     subject_list = SIN_getsubjects; 
@@ -73,6 +80,12 @@ end % if ~isfield
 %   These are all the tests supported by SIN currently.
 all_tests = SIN_TestSetup; 
 
+%% TRANSLATE STRING TO regular expression
+%   If the user happens to input a string that has special characters or
+%   something in it, we need it to be regexp friendly. So, use
+%   regexptranslate to do it.
+opts.test_regexp = regexptranslate('escape', opts.test_regexp); 
+
 % Filter the test list to only include those that satisfy the regular
 % expression.
 [~, mask] = regexp_cell(all_tests, opts.test_regexp);
@@ -80,13 +93,18 @@ all_tests = {all_tests{mask}}';
 
 %% GET SUBJECT TESTS
 %   These are the tests we have saved data for this particular subject.
-subject_tests = SIN_gettests('subjectID', opts.subject_id, ...
-    'regexp', '.mat'); 
+%
+%   User can provide a cell array of subject tests as well and we'll assume
+%   this query has already been completed. 
+if isempty(opts.subject_tests)
+    opts.subject_tests = SIN_gettests('subjectID', opts.subject_id, ...
+        'regexp', '.mat'); 
+end % 
 
 %% DISCARD PATH INFORMATION
-for i=1:length(subject_tests)
-    [~, subject_tests{i}, EXT] = fileparts(subject_tests{i});
-    subject_tests{i} = [subject_tests{i} EXT];    
+for i=1:length(opts.subject_tests)
+    [~, opts.subject_tests{i}, EXT] = fileparts(opts.subject_tests{i});
+    opts.subject_tests{i} = [opts.subject_tests{i} EXT];    
 end % for i=1:lebgth(sub...
 
 %% SEARCH FOR DATA FOR ALL TESTS
@@ -97,8 +115,8 @@ is_complete = false(length(all_tests),1);
 for i=1:length(all_tests)
     
     % Look for a match!
-    [exp_index] = strfind(subject_tests, all_tests{i});
-    display(all_tests{i});
+    [exp_index] = strfind(opts.subject_tests, all_tests{i});
+%     display(all_tests{i});
     
     % Set the is_complete flag
     if ~isempty(cell2mat(exp_index))

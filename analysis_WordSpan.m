@@ -118,6 +118,12 @@ end % for i=1:numel(response_data)
 recognition_average = sum(recognition_correct)/sum(word_total);
 judgment_average = sum(judgment_correct)/sum(word_total);
 recall_average = sum(recall_correct)/sum(word_total); 
+set_size = [2:numel(recognition_correct) + 1]';
+
+% Convert to percentage
+recognition_correct = recognition_correct./word_total;
+judgment_correct = judgment_correct./word_total;
+recall_correct = recall_correct./word_total;
 
 %% SUMMARY PLOTS
 if d.plot
@@ -125,7 +131,7 @@ if d.plot
     figure
     
     % Bar plot with all information 
-    y = [[ (recognition_correct./word_total)'; (judgment_correct./word_total)'; (recall_correct./word_total)'] [recognition_average; judgment_average; recall_average]].*100;    
+    y = [[ (recognition_correct)'; (judgment_correct)'; (recall_correct)'] [recognition_average; judgment_average; recall_average]].*100;    
     bar(y');
     
     % Legend and labels
@@ -134,7 +140,7 @@ if d.plot
     xlabel('Set Size'); 
     
     % Set x-ticks and tick labels
-    set(gca, 'XTick', 2:numel(recognition_correct) + 1)
+    set(gca, 'XTick', set_size)
     
     % Get current labels
     l = get(gca, 'XTickLabel'); 
@@ -146,3 +152,21 @@ if d.plot
     set(gca, 'XTickLabel', l_new);    
     
 end % if d.plot
+
+%% CREATE A DATA TABLE TO DISPLAY FOR THE USER
+% Get row names
+for i=1:length(set_size(1:end))
+    if i==1
+        rname{i} = 'Null';
+    else
+        rname{i} = num2str(set_size(i));
+    end % if i ==1
+    
+end % for 
+
+% Create a table of results
+%   These will be printed to terminal for easy scribbage. 
+wordspan_results = table(set_size(1:end-1), recognition_correct(2:end)*100, judgment_correct(2:end).*100, recall_correct(2:end).*100, ...
+    'VariableNames', {'set_size', 'recognition_correct', 'judgment_correct', 'recall_correct'});
+
+display(wordspan_results);

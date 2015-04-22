@@ -154,3 +154,6 @@ if d.plot > 0
     end % if ...
     
 end % if d.plot
+
+% Display the data point to the terminal
+display(ANL);

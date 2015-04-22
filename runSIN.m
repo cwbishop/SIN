@@ -58,7 +58,7 @@ function varargout = runSIN(varargin)
 
 % Edit the above text to modify the response to help runSIN
 
-% Last Modified by GUIDE v2.5 03-Apr-2015 17:20:01
+% Last Modified by GUIDE v2.5 16-Apr-2015 09:53:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -306,6 +306,11 @@ handles.subjectID = SIN_getsubjects;
 % Get available tests
 handles.testlist = SIN_TestSetup('testlist', ''); 
 
+% Should we apply the completed tests mask?
+handles.test_filter = get(handles.checkbox_complete_tests,'Value');
+
+
+
 % Attach updated information to figure
 guidata(hObject, handles);
 
@@ -331,8 +336,34 @@ if ~isequal(subjectID, 'Select Subject');
     
 end % if ~isequal ...
 
+% If test_filter is set, then remove completed tests. That is, tests that
+% we have saved data for. 
+mask = true(length(handles.testlist), 1);
+if handles.test_filter
+    
+    % Now see if each test is present in the list of subject tests.
+    if ~isempty(handles.subject_tests)
+        for i=1:length(handles.testlist)
+
+
+            [~, is_complete] = test_checklist('subject_tests', {handles.subject_tests}, 'test_regexp', handles.testlist{i});         
+
+            if any(is_complete)
+                mask(i,1) = false;
+            end % if any(is_complete)
+
+        end % for i=1:length(handles.testlist)   
+    end % if     
+end % if handles.test_filter
+
+% Stuff the handles 
+handles.test_mask = mask; 
+
 % Populate test list
-set(handles.test_popup, 'String', [{'Select Test' handles.testlist{:}}]); 
+set(handles.test_popup, 'String', [{'Select Test' handles.testlist{handles.test_mask}}]); 
+
+% assign data to figure
+guidata(handles.runSIN, handles);
 
 function subjectid_Callback(hObject, eventdata, handles)
 % hObject    handle to subjectid (see GCBO)
@@ -607,3 +638,15 @@ if any(~is_complete)
 else
     message('All tests appear to be complete. But double/triple check!');
 end % if / else
+
+
+% --- Executes on button press in checkbox_complete_tests.
+function checkbox_complete_tests_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_complete_tests (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_complete_tests
+
+%% REFRESH POPUPS
+refresh_popups(hObject, eventdata, handles); 
