@@ -1327,7 +1327,7 @@ switch testID
     case 'MLST (Audio, Practice)'
         
         % Practice session based on 'MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
-        opts = SIN_TestSetup('MLST (Audio, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (Audio, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID); 
         
         % Change testID
         for i=1:numel(opts)
@@ -1341,7 +1341,7 @@ switch testID
     case 'MLST (AV, Practice)'
         
         % Practice session based on 'MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)'
-        opts = SIN_TestSetup('MLST (AV, Aided, SPSHN, 65 dB SPL, +8 dB SNR)', subjectID); 
+        opts = SIN_TestSetup('MLST (AV, Aided, ISTS, 75 dB SPL, +0 dB SNR)', subjectID); 
         
         % Change testID
         for i=1:numel(opts)
