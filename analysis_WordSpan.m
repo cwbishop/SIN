@@ -103,10 +103,23 @@ for i=3:numel(response_data)
             %   Note: Also note that we have to exlude "NR" responses here.
             %   We don't want to count a recognition "NR" as a correct
             %   recall if the recall is also "NR"
-            if isequal(response_data(i).recognition{z}, response_data(i).recall{z}) ...
-                    && ~isequal(response_data(i).recognition{z}, 'NR')
+            % 
+            % 20150605CWB: Bug in recall scoring. We want to discard order,
+            % so use ismember istead of isequal.
+            
+            % if isequal(response_data(i).recognition{z}, response_data(i).recall{z}) ...
+            
+            % Need to track the number of recall
+%             if ~isequal(response_data(i).recall{z}, 'NR') ...
+%                     && ~isempty(response_data(i).recall{z})
+%                 recall_total(word_number) = recall_total(word_number) + 1; 
+%             end % if 
+            
+            if ismember(response_data(i).recall{z}, response_data(i).recognition) ...
+                    && ~isequal(response_data(i).recognition{z}, 'NR') ...
+                    && ~isempty(response_data(i).recall{z})
                 recall_correct(word_number) = recall_correct(word_number) + 1; 
-            end % if isequal
+            end % if ismember
         
         end % if ~isempty(
         
