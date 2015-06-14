@@ -309,8 +309,6 @@ handles.testlist = SIN_TestSetup('testlist', '');
 % Should we apply the completed tests mask?
 handles.test_filter = get(handles.checkbox_complete_tests,'Value');
 
-
-
 % Attach updated information to figure
 guidata(hObject, handles);
 
@@ -323,6 +321,8 @@ set(handles.subject_popup, 'String', [{'Select Subject'} handles.subjectID])
 contents = cellstr(get(handles.subject_popup,'String'));
 subjectID = contents{get(handles.subject_popup,'Value')};
 
+
+
 % Use subjectID to populate subject tests field
 if ~isequal(subjectID, 'Select Subject'); 
     [tests, dtimes] = SIN_gettests('subjectID', subjectID); 
@@ -331,6 +331,11 @@ if ~isequal(subjectID, 'Select Subject');
     handles.subject_tests = tests;
     handles.test_times = dtimes; 
     
+    % If the value of the review popup is out of range, reset it to 1
+    if get(handles.review_popup, 'Value') > length(tests)
+        set(handles.review_popup, 'Value', 1)
+    end
+
     % Populate popup
     set(handles.review_popup, 'String', {'Select Test' [char(tests)]});
     
@@ -344,8 +349,7 @@ if handles.test_filter
     % Now see if each test is present in the list of subject tests.
     if ~isempty(handles.subject_tests)
         for i=1:length(handles.testlist)
-
-
+            
             [~, is_complete] = test_checklist('subject_tests', {handles.subject_tests}, 'test_regexp', handles.testlist{i});         
 
             if any(is_complete)
@@ -358,6 +362,12 @@ end % if handles.test_filter
 
 % Stuff the handles 
 handles.test_mask = mask; 
+
+
+% If the popup value is out of range, reset to 1.
+if get(handles.test_popup, 'Value') > length({handles.testlist{handles.test_mask}})
+    set(handles.test_popup, 'Value', 1);
+end
 
 % Populate test list
 set(handles.test_popup, 'String', [{'Select Test' handles.testlist{handles.test_mask}}]); 
