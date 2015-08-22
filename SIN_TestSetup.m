@@ -1610,7 +1610,16 @@ switch testID
         % from the front speaker
         opts.player.mod_mixer = zeros(size(opts.player.mod_mixer)); 
         opts.player.mod_mixer(1,1) = 1; % routes speech to front speaker 
+   
+    case 'Hagerman (Aided, Record Clean Speech)'
         
+        % Use the unaided clean speech as a scaffold.
+        opts = SIN_TestSetup('Hagerman (Unaided, Record Clean Speech)', subjectID);
+        
+        % Change test id
+        opts.specific.testID = testID;
+        
+        % DONE
     case 'Hagerman (Aided, ISTS, Set Mic Levels)'
         
         % Here we simply play a single file with the lowest SNR (-10 dB)
